@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Royal Kingdom Growth Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== Design tokens: change these to rebrand ============================ */
+:root {
+  --ink: #11241a;          /* headings, cover */
+  --text: #2b3d32;         /* body */
+  --muted: #56685c;        /* captions, sources */
+  --line: #dde7d8;         /* rules, borders */
+  --paper: #fbfaf5;        /* page */
+  --card: #ffffff;
+  --brand: #2c6b2f;        /* primary accent */
+  --brand-deep: #1d5b3c;
+  --highlight: #dcf3bd;    /* lime wash */
+  --good: #2c6b2f;  --good-bg: #2f7d321c;
+  --watch: #8a6414; --watch-bg: #9a6b121c;
+  --fix: #a8372a;   --fix-bg: #b3412c1c;
+  --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; background: var(--paper); color: var(--text); font: 400 15px/1.6 var(--sans); }
+.doc { max-width: 860px; margin: 0 auto; padding: 0 28px 64px; }
+h1, h2, h3 { font-family: var(--serif); color: var(--ink); font-weight: 600; letter-spacing: -0.01em; }
+h2 { font-size: 28px; line-height: 1.15; margin: 0 0 10px; }
+h3 { font-size: 18px; margin: 0 0 6px; }
+p { margin: 0 0 10px; max-width: 64ch; }
+.eyebrow { font: 700 11px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--brand); margin-bottom: 10px; }
+.lede { font-size: 17px; color: var(--ink); }
+.source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.section { padding: 44px 0 8px; }
+.section + .section { border-top: 1px solid var(--line); }
+.takeaway { background: var(--highlight); color: var(--ink); padding: 10px 14px; border-radius: 10px; font-weight: 600; margin: 14px 0; display: inline-block; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+svg text { font-family: var(--sans); }
+
+/* ===== Cover ============================================================= */
+.cover { background: var(--ink); color: #eef4ea; border-radius: 0 0 28px 28px; padding: 64px 48px 48px; margin: 0 -28px; min-height: 520px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+.cover::after { content: ''; position: absolute; right: -120px; top: -120px; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, #2c6b2f 0%, transparent 70%); opacity: .55; }
+.cover .eyebrow { color: #b9e39a; }
+.cover h1 { color: #fff; font-size: 46px; line-height: 1.05; margin: 0 0 16px; max-width: 16ch; position: relative; z-index: 1; }
+.cover .lede { color: #d7e6d2; max-width: 46ch; position: relative; z-index: 1; }
+.cover-meta { display: flex; gap: 36px; font-size: 13px; color: #b7c9b3; position: relative; z-index: 1; }
+.cover-meta strong { display: block; color: #fff; font-weight: 600; }
+
+/* ===== Stat tiles ========================================================= */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+.stat .num { font: 600 40px/1 var(--serif); color: var(--ink); }
+.stat .num small { font-size: 18px; color: var(--muted); }
+.stat .label { margin-top: 8px; font-size: 13px; color: var(--text); }
+.stat.good { border-top: 4px solid var(--good); }
+.stat.watch { border-top: 4px solid var(--watch); }
+.stat.fix { border-top: 4px solid var(--fix); }
+
+/* ===== Chips ============================================================= */
+.chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font: 600 11px/1.6 var(--sans); }
+.chip.good { color: var(--good); background: var(--good-bg); }
+.chip.watch { color: var(--watch); background: var(--watch-bg); }
+.chip.fix { color: var(--fix); background: var(--fix-bg); }
+.chip.neutral { color: var(--muted); background: #0000000a; }
+
+/* ===== Scorecard ========================================================= */
+.scorecard { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.scorecard td { padding: 11px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.scorecard td:first-child { font-weight: 600; color: var(--ink); width: 34%; }
+.scorecard td:last-child { text-align: right; width: 84px; }
+.meter { height: 8px; background: #e9efe5; border-radius: 99px; overflow: hidden; width: 120px; display: inline-block; vertical-align: middle; margin-right: 10px; }
+.meter > i { display: block; height: 100%; border-radius: 99px; }
+.meter.good > i { background: var(--good); } .meter.watch > i { background: var(--watch); } .meter.fix > i { background: var(--fix); }
+
+/* ===== AI answer mockup ================================================== */
+.chat { background: #f3f5f1; border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+.chat .who { font: 700 10px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.bubble { border-radius: 16px; padding: 10px 14px; margin-bottom: 10px; font-size: 13.5px; max-width: 92%; }
+.bubble.user { background: var(--ink); color: #fff; margin-left: auto; border-bottom-right-radius: 4px; }
+.bubble.ai { background: #fff; border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.bubble.ai mark { background: var(--fix-bg); color: var(--fix); padding: 0 3px; border-radius: 4px; }
+.cites { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.cites span { font-size: 10.5px; background: #fff; border: 1px solid var(--line); border-radius: 99px; padding: 2px 8px; color: var(--muted); }
+
+/* ===== Versus panel ====================================================== */
+.versus { display: grid; grid-template-columns: 1fr 44px 1fr; align-items: stretch; }
+.versus .vs { display: grid; place-items: center; font: 600 14px var(--serif); color: var(--muted); }
+
+/* ===== Check matrix ====================================================== */
+.matrix { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.matrix th { text-align: left; font: 700 10.5px/1 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 8px; border-bottom: 2px solid var(--line); }
+.matrix td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.matrix td.c { text-align: center; width: 110px; }
+.yes { color: var(--good); font-weight: 700; } .no { color: var(--fix); font-weight: 700; }
+
+/* ===== Fix cards ========================================================= */
+.fixes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; counter-reset: fix; }
+.fix-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px 14px 52px; position: relative; }
+.fix-card::before { counter-increment: fix; content: counter(fix); position: absolute; left: 16px; top: 16px; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff; font: 700 12px/24px var(--sans); text-align: center; }
+.fix-card h3 { font-size: 15.5px; }
+.fix-card p { font-size: 13px; margin: 0 0 8px; }
+
+/* ===== Timeline ========================================================== */
+.timeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; position: relative; margin-top: 10px; }
+.timeline::before { content: ''; position: absolute; left: 12px; right: 12px; top: 13px; height: 2px; background: var(--line); }
+.step { padding: 0 12px 0 0; position: relative; }
+.step .dot { width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: #fff; font: 700 12px/28px var(--sans); text-align: center; position: relative; }
+.step h3 { font-size: 14.5px; margin-top: 12px; }
+.step p { font-size: 12.5px; }
+
+/* ===== Offer cards ======================================================= */
+.offers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: stretch; }
+.offer { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; }
+.offer.recommended { border: 2px solid var(--brand); box-shadow: 0 10px 30px #2c6b2f1f; }
+.offer .tag { align-self: flex-start; margin-bottom: 10px; }
+.offer .price { font: 600 24px/1.1 var(--serif); color: var(--ink); margin: 10px 0 2px; }
+.offer .price small { font: 400 12px var(--sans); color: var(--muted); }
+.offer ul { padding-left: 18px; margin: 10px 0 0; font-size: 13px; }
+.offer li { margin-bottom: 4px; }
+
+/* ===== Footer ============================================================ */
+.method { font-size: 12px; color: var(--muted); }
+.method ol { padding-left: 18px; }
+.sign { margin-top: 26px; display: flex; justify-content: space-between; align-items: end; border-top: 2px solid var(--ink); padding-top: 14px; font-size: 13px; }
+
+/* ===== Print ============================================================= */
+@page { size: A4; margin: 14mm 14mm 16mm; }
+@media print {
+  body { background: #fff; font-size: 10.5pt; }
+  .doc { max-width: none; padding: 0; }
+  .cover { margin: -14mm -14mm 0; border-radius: 0; min-height: 270mm; padding: 30mm 20mm 20mm; }
+  .page-break { break-before: page; }
+  .section { padding-top: 6mm; }
+  .card, .stat, .fix-card, .offer, .chat, figure, table, .timeline { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+}
+@media (max-width: 640px) {
+  .stats, .grid-2, .grid-3, .fixes, .offers, .timeline { grid-template-columns: 1fr; }
+  .versus { grid-template-columns: 1fr; } .versus .vs { padding: 8px; }
+  .cover { padding: 48px 24px 32px; } .cover h1 { font-size: 34px; }
+}
+</style>
+<style>
+.record { border-left: 4px solid var(--brand); background: var(--card); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin-top: 14px; font-size: 13.5px; }
+.record strong { color: var(--ink); }
+.quote-small { font-size: 13px; color: var(--text); margin-top: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+</style>
+</head>
+<body>
+<main class="doc">
+
+<header class="cover">
+  <div>
+    <div class="eyebrow">Growth &amp; trust audit · September 2026</div>
+    <h1>How buyers abroad find, check and choose Royal Kingdom Estate</h1>
+    <p class="lede">Your buyers rate you highly. But when someone in Atlanta or London asks an AI assistant who to trust with land in Ghana, you're not on the list, and when they check your name, the story they read isn't yours.</p>
+  </div>
+  <div class="cover-meta">
+    <div><strong>Royal Kingdom Estate</strong>Prepared for</div>
+    <div><strong>Aksen Labs</strong>Prepared by</div>
+    <div><strong>30 Sep 2026</strong>Date</div>
+  </div>
+</header>
+
+<section class="section">
+  <div class="eyebrow">At a glance</div>
+  <h2>Your reputation is better than what the machines say about you</h2>
+  <div class="stats">
+    <div class="stat good"><div class="num">4.5<small>★</small></div><div class="label">Google rating from 57 reviews. 45 of them are five stars.</div></div>
+    <div class="stat fix"><div class="num">0<small> of 10</small></div><div class="label">AI answers that name you when a buyer asks which Accra developers to trust.</div></div>
+    <div class="stat watch"><div class="num">48<small>/100</small></div><div class="label">An automated "trust score" buyers find when they search your name with "scam".</div></div>
+  </div>
+  <p class="source">Sources: Google Maps; ChatGPT and Gemini via OpenRouter; scam-detector.com. All checked 29–30 Sep 2026.</p>
+</section>
+
+<section class="section page-break">
+  <div class="eyebrow">How buyers choose now</div>
+  <h2>Buyers ask AI first, and lose you at three points</h2>
+  <p>A buyer abroad rarely starts on your website. They ask ChatGPT, Gemini or Google "who can I trust?", get a shortlist of three to six names, check each one, and only then send a WhatsApp.</p>
+  <figure style="margin:18px 0 0">
+    <svg viewBox="0 0 800 222" width="100%" role="img" aria-label="Buyer journey: ask, shortlist, check, contact. Royal Kingdom loses buyers at shortlist, check and contact.">
+      <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#56685c"/></marker></defs>
+      <g font-size="13">
+        <rect x="10" y="30" width="170" height="78" rx="14" fill="#fff" stroke="#dde7d8"/>
+        <text x="95" y="62" text-anchor="middle" font-weight="700" fill="#11241a">1 · Ask</text>
+        <text x="95" y="84" text-anchor="middle" fill="#56685c" font-size="11.5">"Who can I trust?"</text>
+        <rect x="210" y="30" width="170" height="78" rx="14" fill="#fff" stroke="#dde7d8"/>
+        <text x="295" y="62" text-anchor="middle" font-weight="700" fill="#11241a">2 · Shortlist</text>
+        <text x="295" y="84" text-anchor="middle" fill="#56685c" font-size="11.5">AI names 3–6 firms</text>
+        <rect x="410" y="30" width="170" height="78" rx="14" fill="#fff" stroke="#dde7d8"/>
+        <text x="495" y="62" text-anchor="middle" font-weight="700" fill="#11241a">3 · Check</text>
+        <text x="495" y="84" text-anchor="middle" fill="#56685c" font-size="11.5">"Is Royal Kingdom legit?"</text>
+        <rect x="610" y="30" width="170" height="78" rx="14" fill="#11241a"/>
+        <text x="695" y="62" text-anchor="middle" font-weight="700" fill="#fff">4 · Contact</text>
+        <text x="695" y="84" text-anchor="middle" fill="#b9e39a" font-size="11.5">WhatsApp, call, form</text>
+      </g>
+      <g stroke="#56685c" stroke-width="1.6" marker-end="url(#arr)">
+        <line x1="182" y1="69" x2="206" y2="69"/><line x1="382" y1="69" x2="406" y2="69"/><line x1="582" y1="69" x2="606" y2="69"/>
+      </g>
+      <g font-size="11.5">
+        <path d="M295 110 v34" stroke="#a8372a" stroke-width="1.6" stroke-dasharray="3 3"/>
+        <rect x="215" y="146" width="160" height="56" rx="10" fill="#b3412c1c"/>
+        <text x="295" y="168" text-anchor="middle" fill="#a8372a" font-weight="700">Not on the list</text>
+        <text x="295" y="186" text-anchor="middle" fill="#a8372a">named in 0 of 10 answers</text>
+        <path d="M495 110 v34" stroke="#a8372a" stroke-width="1.6" stroke-dasharray="3 3"/>
+        <rect x="415" y="146" width="160" height="56" rx="10" fill="#b3412c1c"/>
+        <text x="495" y="168" text-anchor="middle" fill="#a8372a" font-weight="700">The wrong story</text>
+        <text x="495" y="186" text-anchor="middle" fill="#a8372a">a court case, not your reviews</text>
+        <path d="M695 110 v34" stroke="#8a6414" stroke-width="1.6" stroke-dasharray="3 3"/>
+        <rect x="615" y="146" width="160" height="56" rx="10" fill="#9a6b121c"/>
+        <text x="695" y="168" text-anchor="middle" fill="#8a6414" font-weight="700">No quick answers</text>
+        <text x="695" y="186" text-anchor="middle" fill="#8a6414">a form; no WhatsApp button</text>
+      </g>
+    </svg>
+  </figure>
+  <div class="takeaway">Leads = buyers asking × share who see you on the shortlist × share who trust what they find</div>
+  <p>Your US tour, Instagram (16K followers) and blog all create buyers at step 1. Fixing steps 2 and 3 multiplies everything you already spend on marketing.</p>
+</section>
+
+<section class="section page-break">
+  <div class="eyebrow">What buyers read about you</div>
+  <h2>Your buyers say one thing. AI tells new buyers another.</h2>
+  <div class="versus" style="margin-top:14px">
+    <div class="card">
+      <h3>What your buyers say</h3>
+      <svg viewBox="0 0 320 160" width="100%" role="img" aria-label="Google star ratings: 45 five-star, 4 four-star, 2 three-star, 2 two-star, 4 one-star">
+        <g font-size="12" fill="#2b3d32">
+          <text x="0" y="22">5★</text><rect x="30" y="10" width="220" height="16" rx="4" fill="#2c6b2f"/><text x="258" y="23" font-weight="700">45</text>
+          <text x="0" y="52">4★</text><rect x="30" y="40" width="20" height="16" rx="4" fill="#2c6b2f" opacity=".7"/><text x="58" y="53">4</text>
+          <text x="0" y="82">3★</text><rect x="30" y="70" width="10" height="16" rx="4" fill="#8a6414"/><text x="48" y="83">2</text>
+          <text x="0" y="112">2★</text><rect x="30" y="100" width="10" height="16" rx="4" fill="#a8372a" opacity=".7"/><text x="48" y="113">2</text>
+          <text x="0" y="142">1★</text><rect x="30" y="130" width="20" height="16" rx="4" fill="#a8372a"/><text x="58" y="143">4</text>
+        </g>
+      </svg>
+      <p class="quote-small">"…our experience was nothing but positive from beginning to end. As foreigners from Canada, we were warned many times about the risks of buying land in…" (Google review)</p>
+      <p class="source">Google Maps, 30 Sep 2026: 4.5★ from 57 reviews</p>
+    </div>
+    <div class="vs">vs</div>
+    <div class="chat">
+      <p class="who">A buyer asks ChatGPT (with web search)</p>
+      <div class="bubble user">I'm thinking of buying from Royal Kingdom Estate. Any complaints or red flags I should know about?</div>
+      <div class="bubble ai">"…I found some <mark>meaningful caution flags</mark>—but not enough evidence to label the company a scam.<br><br>A <mark>2024 Accra court case</mark> involving land allegedly resold to Royal Kingdom Estate Limited…<br><br>Its newer 500-acre Aburi eco-community has received criticism…<br><br>A <mark>scam-scor[ing site]</mark>…"</div>
+      <div class="cites"><span>oyerepafmonline.com</span><span>newsghana.com.gh</span><span>scam-detector.com</span><span>royalkingdomestate.com</span></div>
+    </div>
+  </div>
+  <div class="record"><strong>The record, which nobody online is telling:</strong> in that 2024 case, three individuals were charged with reselling land at Tse Addo that had already been leased to someone else. Royal Kingdom Estate Limited was <strong>one of the buyers they sold it to</strong>, not the accused (Ghanaian Times, 13 Aug 2024). Because your website doesn't say so, AI tells the story without you. ChatGPT never mentions your 45 five-star reviews.</div>
+  <p class="quote-small">Without web search, ChatGPT doesn't recognise you at all: <em>"'Royal Kingdom Estate' isn't specific enough to identify reliably—there may be multiple businesses with similar names."</em> A similarly named firm, "Elite Kingdom", has fraud reports online, which makes clear signals about who you are even more important.</p>
+  <p class="source">ChatGPT (gpt-5.6) via OpenRouter, 30 Sep 2026. Excerpts are verbatim; "…" marks omitted text. AI answers vary from day to day, so treat this as a snapshot.</p>
+</section>
+
+<section class="section page-break">
+  <div class="eyebrow">Who gets the shortlist</div>
+  <h2>When buyers ask who to trust, AI names your competitors</h2>
+  <p>We asked three questions buyers abroad ask ("Which developers in Accra would you recommend for Ghanaians abroad?", "Where can I safely buy litigation-free land near Accra from the US?", "Compare the most trusted developers in Accra") ten times across ChatGPT and Gemini, with and without web search.</p>
+  <figure class="card" style="margin:14px 0 0">
+    <svg viewBox="0 0 640 300" width="100%" role="img" aria-label="Developers named by AI: Devtraco 4, Regimanuel Gray 3, Appolonia City 3, Clifton Homes 2, Lakeside Estate 2, Trasacco 2, Adom City 1, TDC 1, Royal Kingdom Estate 0">
+      <g font-size="12.5" fill="#2b3d32">
+        <text x="0" y="24">Devtraco</text><rect x="180" y="11" width="360" height="18" rx="4" fill="#56685c"/><text x="548" y="25" font-weight="700">4</text>
+        <text x="0" y="56">Regimanuel Gray</text><rect x="180" y="43" width="270" height="18" rx="4" fill="#56685c"/><text x="458" y="57" font-weight="700">3</text>
+        <text x="0" y="88">Appolonia City</text><rect x="180" y="75" width="270" height="18" rx="4" fill="#56685c"/><text x="458" y="89" font-weight="700">3</text>
+        <text x="0" y="120">Clifton Homes</text><rect x="180" y="107" width="180" height="18" rx="4" fill="#56685c"/><text x="368" y="121" font-weight="700">2</text>
+        <text x="0" y="152">Lakeside Estate</text><rect x="180" y="139" width="180" height="18" rx="4" fill="#56685c"/><text x="368" y="153" font-weight="700">2</text>
+        <text x="0" y="184">Trasacco</text><rect x="180" y="171" width="180" height="18" rx="4" fill="#56685c"/><text x="368" y="185" font-weight="700">2</text>
+        <text x="0" y="216">Adom City</text><rect x="180" y="203" width="90" height="18" rx="4" fill="#56685c"/><text x="278" y="217" font-weight="700">1</text>
+        <text x="0" y="248">TDC</text><rect x="180" y="235" width="90" height="18" rx="4" fill="#56685c"/><text x="278" y="249" font-weight="700">1</text>
+        <line x1="0" y1="264" x2="640" y2="264" stroke="#dde7d8"/>
+        <text x="0" y="288" font-weight="700" fill="#a8372a">Royal Kingdom Estate</text><rect x="180" y="275" width="3" height="18" fill="#a8372a"/><text x="192" y="289" font-weight="700" fill="#a8372a">0: not named in any answer</text>
+      </g>
+    </svg>
+  </figure>
+  <p class="source">Times each business was recommended in ChatGPT's answers (6 answers). Gemini's 4 answers also did not name Royal Kingdom. OpenRouter, 30 Sep 2026.</p>
+</section>
+
+<section class="section">
+  <div class="eyebrow">Where AI gets its answers</div>
+  <h2>AI quotes registers and news, not your reviews</h2>
+  <p>Every source ChatGPT cited, grouped by how much you can influence it. This is your to-do list: the places AI trusts are the places to be.</p>
+  <div class="legend"><span class="chip good">You control</span><span class="chip watch">You can influence</span><span class="chip neutral">Competitors</span><span class="chip fix">Outside your control</span></div>
+  <figure class="card" style="margin:8px 0 0">
+    <svg viewBox="0 0 640 214" width="100%" role="img" aria-label="Sources AI cited: registers and associations 7, news and directories 5, competitors' websites 4, your website 3, scam-rating sites 2, your Google reviews 0">
+      <g font-size="12.5" fill="#2b3d32">
+        <text x="0" y="24">Registers &amp; associations</text><rect x="210" y="11" width="336" height="18" rx="4" fill="#8a6414"/><text x="554" y="25" font-weight="700">7</text>
+        <text x="0" y="40" font-size="10.5" fill="#56685c">REAC licensed list, GREDA, Lands Commission, CCI France</text>
+        <text x="0" y="66">News &amp; directories</text><rect x="210" y="53" width="240" height="18" rx="4" fill="#8a6414"/><text x="458" y="67" font-weight="700">5</text>
+        <text x="0" y="98">Competitors' websites</text><rect x="210" y="85" width="192" height="18" rx="4" fill="#56685c"/><text x="410" y="99" font-weight="700">4</text>
+        <text x="0" y="130">Your website</text><rect x="210" y="117" width="144" height="18" rx="4" fill="#2c6b2f"/><text x="362" y="131" font-weight="700">3</text>
+        <text x="0" y="162">Scam-rating sites</text><rect x="210" y="149" width="96" height="18" rx="4" fill="#a8372a"/><text x="314" y="163" font-weight="700">2</text>
+        <text x="0" y="194" font-weight="700" fill="#a8372a">Your Google reviews</text><rect x="210" y="181" width="3" height="18" fill="#a8372a"/><text x="222" y="195" font-weight="700" fill="#a8372a">0: never cited</text>
+      </g>
+    </svg>
+  </figure>
+  <p class="source">21 citations from ChatGPT's web-search answers, 30 Sep 2026.</p>
+</section>
+
+<section class="section page-break">
+  <div class="eyebrow">Scorecard</div>
+  <h2>Ten signals buyers and AI use to judge you</h2>
+  <table class="scorecard">
+    <tr><td>Google rating</td><td><span class="meter good"><i style="width:90%"></i></span>4.5★ from 57 reviews</td><td><span class="chip good">Strong</span></td></tr>
+    <tr><td>Instagram and content</td><td><span class="meter good"><i style="width:85%"></i></span>16K followers; blog updated weekly</td><td><span class="chip good">Strong</span></td></tr>
+    <tr><td>Reviews compared with buyers served</td><td><span class="meter fix"><i style="width:20%"></i></span>57 reviews against 600+ acres sold</td><td><span class="chip fix">Fix</span></td></tr>
+    <tr><td>Fresh reviews and replies</td><td><span class="meter watch"><i style="width:35%"></i></span>top reviews shown are 8 months old, with no replies</td><td><span class="chip watch">Watch</span></td></tr>
+    <tr><td>Google business category</td><td><span class="meter fix"><i style="width:15%"></i></span>"Industrial real estate agency"</td><td><span class="chip fix">Fix</span></td></tr>
+    <tr><td>Named when buyers ask AI</td><td><span class="meter fix"><i style="width:5%"></i></span>0 of 10 answers</td><td><span class="chip fix">Fix</span></td></tr>
+    <tr><td>What AI says when buyers check</td><td><span class="meter fix"><i style="width:25%"></i></span>leads with a court case and a 48/100 score</td><td><span class="chip fix">Fix</span></td></tr>
+    <tr><td>Facts machines can read</td><td><span class="meter fix"><i style="width:15%"></i></span>no business schema; description reads "Home Page"</td><td><span class="chip fix">Fix</span></td></tr>
+    <tr><td>Old web address</td><td><span class="meter fix"><i style="width:20%"></i></span>royalkingdomestategh.com is still in Google but no longer works</td><td><span class="chip fix">Fix</span></td></tr>
+    <tr><td>Answers after the click</td><td><span class="meter watch"><i style="width:35%"></i></span>a form only; no WhatsApp button or payment plans</td><td><span class="chip watch">Watch</span></td></tr>
+  </table>
+</section>
+
+<section class="section">
+  <div class="eyebrow">After the click</div>
+  <h2>The questions buyers ask before paying $30,000</h2>
+  <table class="matrix">
+    <tr><th>What a buyer abroad wants to know</th><th style="text-align:center">On your project pages?</th></tr>
+    <tr><td>Price and location</td><td class="c yes">✓ Yes</td></tr>
+    <tr><td>Amenities and photos</td><td class="c yes">✓ Yes</td></tr>
+    <tr><td>Payment plan: deposit, instalments, term</td><td class="c no">✗ "Flexible" only</td></tr>
+    <tr><td>Plot size</td><td class="c no">✗ No</td></tr>
+    <tr><td>Documents I'll receive, and the title process</td><td class="c no">✗ No</td></tr>
+    <tr><td>Completion date (homes and apartments)</td><td class="c no">✗ No</td></tr>
+    <tr><td>Book a site visit or video call</td><td class="c no">✗ Form only</td></tr>
+    <tr><td>Message you on WhatsApp</td><td class="c no">✗ No button</td></tr>
+  </table>
+  <p class="source">royalkingdomestate.com: Grace City Prime Lands, The Future, The Decade pages, 29 Sep 2026.</p>
+</section>
+
+<section class="section page-break">
+  <div class="eyebrow">Quick wins</div>
+  <h2>Six things you can fix this week</h2>
+  <div class="fixes">
+    <div class="fix-card"><h3>Change your Google category</h3><p>From "Industrial real estate agency" to a residential real estate developer category, so you show up in the searches your buyers make.</p><span class="chip good">10 minutes</span> <span class="chip neutral">Found in more searches</span></div>
+    <div class="fix-card"><h3>Redirect your old address</h3><p>Re-register royalkingdomestategh.com and point it to your current site, so the Google result that still lists it stops showing an error.</p><span class="chip good">1 hour</span> <span class="chip neutral">Stop losing clicks</span></div>
+    <div class="fix-card"><h3>Add a WhatsApp button</h3><p>On every project page. Buyers abroad expect to message, not fill a form and wait.</p><span class="chip good">1 hour</span> <span class="chip neutral">More enquiries</span></div>
+    <div class="fix-card"><h3>Tell machines who you are</h3><p>Add business schema linking your website, Google profile, LinkedIn and Instagram, plus a real page description, so AI can tell Royal Kingdom apart from similar names.</p><span class="chip watch">Half a day</span> <span class="chip neutral">AI recognises you</span></div>
+    <div class="fix-card"><h3>Publish your side of 2024</h3><p>A short, factual page: you were one of the buyers wronged in the Tse Addo resale case, what happened next, and how you verify land now.</p><span class="chip watch">1 day</span> <span class="chip neutral">Changes what AI says</span></div>
+    <div class="fix-card"><h3>Ask every buyer for a review</h3><p>At document handover, send every buyer, happy or not, a one-tap Google review link. No gifts and no filtering: that's Google's rule, and it's why reviews count.</p><span class="chip watch">Ongoing</span> <span class="chip neutral">Proof AI can quote</span></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="eyebrow">The plan</div>
+  <h2>Thirty days to change what buyers find</h2>
+  <div class="timeline">
+    <div class="step"><div class="dot">1</div><h3>Week 1: Basics</h3><p>Google category, old-address redirect, WhatsApp button, business schema, matching addresses everywhere.</p></div>
+    <div class="step"><div class="dot">2</div><h3>Week 2: Answer pages</h3><p>Payment plans, documents and title, how you verify land, and the 2024 case in your words.</p></div>
+    <div class="step"><div class="dot">3</div><h3>Week 3: Reviews</h3><p>Every buyer asked at handover; a reply to every review within 48 hours.</p></div>
+    <div class="step"><div class="dot">4</div><h3>Week 4: Measure</h3><p>We ask AI the same buyer questions again and show you what changed.</p></div>
+  </div>
+</section>
+
+<section class="section page-break">
+  <div class="eyebrow">How we can help</div>
+  <h2>Start with the one that matters most to you</h2>
+  <div class="offers">
+    <div class="offer recommended"><span class="chip good tag">Start here</span><h3>Trust fix</h3><div class="price">GH¢4,500 <small>one-off</small></div><ul><li>All six quick wins, done for you</li><li>Answer pages written with your team</li><li>Review requests set up on WhatsApp</li><li>A before-and-after AI check</li></ul></div>
+    <div class="offer"><span class="chip neutral tag">Keep score</span><h3>AI visibility report</h3><div class="price">GH¢1,500 <small>a month</small></div><ul><li>Your buyers' questions put to ChatGPT, Gemini, Claude and Perplexity</li><li>Are you named? What do they say?</li><li>Who's named instead, and why</li></ul></div>
+    <div class="offer"><span class="chip neutral tag">Answer every buyer</span><h3>Buyer concierge</h3><div class="price">GH¢8,000 <small>30-day pilot</small></div><ul><li>Answers buyers abroad at any hour, from your projects</li><li>Asks budget, timeline, cash or instalments</li><li>Books video calls in the buyer's time zone</li></ul></div>
+  </div>
+  <div class="takeaway">The trust fix costs about 1.3% of one Grace City plot ($30,000).</div>
+</section>
+
+<section class="section method">
+  <div class="eyebrow">How we checked</div>
+  <ol>
+    <li>Google Maps business profile for Royal Kingdom Estate Ltd, 30 Sep 2026 (totals, star breakdown, category, top reviews).</li>
+    <li>Web searches for "Royal Kingdom Estate" with reviews, scam, complaint, Trustpilot and Reddit, 29–30 Sep 2026.</li>
+    <li>Buyer questions put to ChatGPT (gpt-5.6) and Gemini (3.8 Flash) through OpenRouter, from memory and with web search, 30 Sep 2026. AI answers vary; this is a snapshot.</li>
+    <li>A review of royalkingdomestate.com: home, land, apartments, project and contact pages, 29 Sep 2026.</li>
+    <li>Court report: "3 in court over double sale of land at Tse Addo", Ghanaian Times, 13 Aug 2024.</li>
+  </ol>
+  <p>We don't buy, write or filter reviews. Everything above comes from public sources, and we've kept no personal data.</p>
+  <div class="sign"><div><strong style="color:var(--ink)">[Your name]</strong><br>Aksen Labs, Accra · [phone / WhatsApp]</div><div>30 Sep 2026</div></div>
+</section>
+
+</main>
+</body>
+</html>

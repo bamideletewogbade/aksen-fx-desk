@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aksen Pipeline · Frame & Decor 60</title>
+<style>
+  :root{
+    /* Aksen Labs light theme tokens (agency.css, admin-light.css, globals.css) */
+    --agency-paper:#f9faf7;
+    --paper:#f9faf7;
+    --panel:#ffffff;
+    --panel2:#f6faf3;
+    --line:#e2ebde;
+    --line-soft:#edf3ea;
+    --t-hi:#10261d;
+    --t-body:#24392e;
+    --muted:#53635a;
+    --dim:#718278;
+    --agency-green:#175b3b;
+    --green-hover:#12472e;
+    --agency-lime:#c2f576;
+    --signal:#175b3b;
+    --signal-soft:#eaf5e5;
+    --emerald:#175b3b;
+    --amber:#9a6b16;
+    --amber-soft:#fef7eb;
+    --red:#c23636;
+    --red-soft:#fdeeed;
+    --radius:12px;
+    --gutter:clamp(18px,3.6vw,80px);
+    --mono:ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--t-body);font:14.5px/1.55 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding-bottom:64px}
+  a{color:var(--agency-green);text-decoration:none}
+  a:hover{text-decoration:underline;color:var(--green-hover)}
+  ::selection{background:var(--agency-lime);color:#10261d}
+  .wrap{width:100%;padding:0 var(--gutter)}
+
+  header{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line);background:rgba(249,250,247,.94);backdrop-filter:blur(16px);padding:14px 0 0;margin-bottom:22px}
+  .brandrow{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .brand-signal{width:10px;height:10px;border-radius:2px;background:var(--agency-green);transform:rotate(45deg)}
+  h1{font-size:15px;font-weight:760;letter-spacing:.12em;text-transform:uppercase;color:var(--t-hi)}
+  h1 .gold{color:var(--agency-green);font-family:Georgia,serif;font-style:normal;text-transform:none}
+  .sub{color:var(--dim);font:11.5px var(--mono);letter-spacing:.05em;margin-left:6px}
+  .tabs{display:flex;gap:8px;margin:14px 0 0}
+  .tab{padding:9px 16px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;background:#ffffff;color:var(--muted);cursor:pointer;font:12px var(--mono);letter-spacing:.08em;text-transform:uppercase;transition:all .15s ease}
+  .tab:hover{color:var(--agency-green);background:#f6faf3}
+  .tab.active{background:var(--agency-green);border-color:var(--agency-green);color:#ffffff;font-weight:700}
+
+  .scorestrip{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+  .stat{background:#ffffff;border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;min-width:116px;box-shadow:0 2px 6px rgba(16,38,29,.03)}
+  .stat .n{font-size:25px;font-weight:700;letter-spacing:-.04em;color:var(--t-hi)}
+  .stat .l{font:10px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+  .stat input{background:transparent;border:none;border-bottom:1px dashed var(--dim);color:var(--t-hi);font:inherit;width:46px;text-align:center;outline:none}
+  .stat.editable input{color:var(--agency-green);font-weight:700}
+  .stat.editable{border-color:#bcdbb7;background:#f6faf2}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .chip{padding:6px 13px;border-radius:999px;border:1px solid #d8e5d2;background:#ffffff;color:#3b5742;cursor:pointer;font:12px var(--mono);letter-spacing:.04em;transition:all .15s ease}
+  .chip:hover{color:var(--agency-green);border-color:var(--agency-green);background:#f6faf3}
+  .chip.on{background:var(--agency-green);border-color:var(--agency-green);color:#ffffff;font-weight:700}
+  .chip.on.soft{background:#eef6ec;border-color:#bcdbb7;color:var(--agency-green)}
+  input.search, select.drop{background:#ffffff;border:1px solid #d1dfcb;border-radius:8px;color:var(--t-hi);padding:9px 13px;font-size:13px;outline:none;box-shadow:0 1px 3px rgba(16,38,29,.02)}
+  input.search:focus, select.drop:focus{border-color:var(--agency-green);box-shadow:0 0 0 3px rgba(23,91,59,.1)}
+  input.search{width:240px}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:13px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 17px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(16,38,29,.03)}
+  .card.t1{border-left:3px solid var(--agency-green)}
+  .card .toprow{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+  .card h3{font-size:14.5px;font-weight:650;line-height:1.3;color:var(--t-hi)}
+  .meta{color:var(--dim);font:11px var(--mono)}
+  .meta b{color:var(--t-body);font-weight:600}
+  .badges{display:flex;gap:5px;flex-wrap:wrap}
+  .badge{font:10px var(--mono);font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+  .b-go{background:#e8f5e3;color:var(--agency-green);border:1px solid #b7dfaf}
+  .b-maybe{background:#fdf5e6;color:var(--amber);border:1px solid #f2dbb3}
+  .b-watch{background:#f0f4f1;color:var(--muted);border:1px solid #d2e0d6}
+  .b-thin{background:#fef0f0;color:var(--red);border:1px solid #f8c9c9}
+  .badge.city{background:#eaf3ed;color:var(--agency-green);border:1px solid #c2decb}
+
+  .scores{display:flex;gap:10px;align-items:center}
+  .scores .s{display:flex;flex-direction:column;gap:4px;flex:1}
+  .scores .bar{height:4px;background:#e9f0e6;border-radius:2px;overflow:hidden}
+  .scores .fill{height:100%;background:var(--agency-green);border-radius:2px}
+  .scores label{font:9.5px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+
+  .detail{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:5px}
+  .detail .row{display:flex;gap:8px;align-items:baseline}
+  .detail .k{min-width:64px;color:var(--dim);font:10px var(--mono);text-transform:uppercase;letter-spacing:.07em}
+  .pain{font-size:12.5px;color:#1e382b;background:#f6faf3;border-left:3px solid var(--agency-green);border-radius:0 8px 8px 0;padding:9px 12px;line-height:1.55}
+  .fix{font-size:12px;color:var(--agency-green);font-weight:600}
+
+  .cardfoot{display:flex;gap:7px;align-items:center;margin-top:auto;padding-top:4px;flex-wrap:wrap}
+  select.status{background:#ffffff;border:1px solid #d1dfcb;border-radius:7px;color:var(--t-body);padding:6px 9px;font-size:12px;outline:none}
+  select.status:focus{border-color:var(--agency-green)}
+  .btn{background:#ffffff;border:1px solid #cddcc5;color:var(--agency-green);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;transition:all .15s ease}
+  .btn:hover{border-color:var(--agency-green);background:#f2f7ed}
+  .btn.primary{background:var(--agency-green);border-color:var(--agency-green);color:#ffffff;font-weight:700}
+  .btn.primary:hover{background:var(--green-hover);border-color:var(--green-hover);color:#ffffff}
+  .copied{color:var(--agency-green)!important;border-color:var(--agency-green)!important;background:#edf6ea!important}
+
+  .st-badge{font:10px var(--mono);font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.05em}
+  .st-new{color:var(--dim);background:#f0f4f1}
+  .st-sent{color:var(--agency-green);background:#e8f4ed}
+  .st-followup{color:var(--amber);background:#fdf5e6}
+  .st-replied{color:#a36f10;background:#fef8eb}
+  .st-booked{color:#155726;background:#d8f5cb;border:1px solid #bce6b1}
+  .st-won{color:#ffffff;background:var(--agency-green)}
+  .st-lost{color:var(--red);background:#fde8e8}
+
+  .doc{background:#ffffff;border:1px solid var(--line);border-radius:18px;padding:30px 34px;max-width:1080px;box-shadow:0 4px 18px rgba(16,38,29,.04)}
+  .doc h2{font-size:19px;margin:26px 0 12px;padding-top:18px;border-top:1px solid var(--line);color:var(--t-hi);letter-spacing:-.02em}
+  .doc h2:first-child{margin-top:0;border-top:none;padding-top:0}
+  .doc h3{font:12px var(--mono);margin:18px 0 8px;color:var(--agency-green);text-transform:uppercase;letter-spacing:.08em}
+  .doc p,.doc li{color:var(--muted);font-size:13.5px;margin-bottom:7px}
+  .doc ul,.doc ol{padding-left:20px;margin-bottom:10px}
+  .doc strong{color:var(--t-hi)}
+  .msg{background:#f6faf3;border:1px solid #e0ebe0;border-radius:3px 13px 13px 13px;padding:14px 16px;margin:10px 0;font-size:13px;color:var(--t-body);white-space:pre-wrap;position:relative;line-height:1.6}
+  .msg .copybtn{position:absolute;top:9px;right:9px}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px}
+  th{color:var(--dim);font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid var(--line-soft);color:var(--muted)}
+  td:first-child{color:var(--t-hi)}
+  .calc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin:14px 0}
+  .calc .field{background:#fbfdfa;border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+  .calc label{display:block;font:10px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+  .calc input{background:transparent;border:none;border-bottom:1px dashed #abc5af;color:var(--agency-green);font-size:17px;font-weight:650;width:100%;outline:none}
+  .calc .out{background:#edf6eb;border-color:#b8dbb3}
+  .calc .out label{color:var(--agency-green)}
+  .calc .out input{color:var(--agency-green);border:none;font-size:19px}
+  .gap-card{border:1px dashed #b8ceb5;background:#f9fbf8;border-radius:var(--radius);padding:16px;color:var(--dim);font-size:12.5px;display:flex;align-items:center;justify-content:center;text-align:center;min-height:120px}
+
+  footer{position:fixed;bottom:0;left:0;right:0;background:rgba(249,250,247,.94);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:10px var(--gutter);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font:11px var(--mono);letter-spacing:.04em;color:var(--dim)}
+  footer .btn{padding:5px 11px;font-size:11px}
+  .empty{color:var(--dim);text-align:center;padding:50px 0;grid-column:1/-1}
+  @media(max-width:640px){.cards{grid-template-columns:1fr}.doc{padding:20px}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brandrow">
+      <span class="brand-signal"></span>
+      <h1>Aksen <span class="gold">Pipeline</span></h1>
+      <span class="sub">Frame &amp; Wall Decor · Accra / Lagos / Abuja · researched 2026-10-01</span>
+    </div>
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="prospects">Prospects</div>
+      <div class="tab" data-tab="playbook">Playbook</div>
+      <div class="tab" data-tab="profile">How we work</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- SCORE STRIP -->
+  <div class="scorestrip" id="scorestrip"></div>
+
+  <!-- ============ PROSPECTS TAB ============ -->
+  <section id="tab-prospects">
+    <div class="filters">
+      <input class="search" id="search" placeholder="Search name, handle, phone…">
+      <div id="cityChips"></div>
+      <select class="drop" id="statusFilter">
+        <option value="">All statuses</option>
+        <option value="new">Not contacted</option>
+        <option value="sent">Opener sent</option>
+        <option value="followup">Followed up</option>
+        <option value="replied">Replied</option>
+        <option value="booked">Check booked</option>
+        <option value="won">Won</option>
+        <option value="lost">Lost</option>
+      </select>
+      <select class="drop" id="tierFilter">
+        <option value="">All tiers</option>
+        <option value="1">Tier 1 · handmade</option>
+        <option value="2">Tier 2 · short opener</option>
+        <option value="3">Tier 3 · verify first</option>
+      </select>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <!-- ============ PLAYBOOK TAB ============ -->
+  <section id="tab-playbook" style="display:none">
+    <div class="doc">
+      <h2>The line we sell with</h2>
+      <div class="msg" id="lineMsg">"We don't start from a website. We start from the process your business already runs: the enquiries, the quotes, the orders, the approvals. We build the digital version of that process, and where a decision needs a person, a person makes it. Software carries the work. You keep the judgment."<button class="btn copybtn" onclick="copyEl('lineMsg',this)">Copy</button></div>
+
+      <h2>The cadence</h2>
+      <table>
+        <tr><th>Day</th><th>Action</th></tr>
+        <tr><td>0</td><td>Opener by DM / WhatsApp / email + LinkedIn note if named person exists</td></tr>
+        <tr><td>+3</td><td>Follow-up. Two sentences, makes "not now" easy</td></tr>
+        <tr><td>+7</td><td>Value drop: a mock of their own process digitized</td></tr>
+        <tr><td>+14</td><td>Close the loop, leave the door open</td></tr>
+      </table>
+
+      <h2>Messages</h2>
+
+      <h3>DM 1 · Instagram / WhatsApp</h3>
+      <div class="msg" id="m-dm1">Hi {name}. I came across {page} while mapping frame makers in {city}, and {hook} stand out.
+
+I work with businesses like yours on one thing: the orders that come in by DM and WhatsApp getting buried before they're answered. I put together a free 20-minute Business Check where we map how an order actually travels from message to money, and you get a one-page plan either way.
+
+Worth 20 minutes this week?<button class="btn copybtn" onclick="copyEl('m-dm1',this)">Copy</button></div>
+
+      <h3>DM 1 · with a free fix to open (Framedinlagos, Nickobi, Chuvie)</h3>
+      <div class="msg" id="m-dmfix">Hi {name}. Two small things on {site}: {fix}. Noticed while researching frame makers in {city}. Both are 30-minute fixes and I can walk whoever handles the site through them, free.
+
+The reason I was on the site: I work with businesses that sell by DM and WhatsApp on making sure no order gets buried. Free 20-minute Business Check, one-page plan, no strings. Interested?<button class="btn copybtn" onclick="copyEl('m-dmfix',this)">Copy</button></div>
+
+      <h3>Email 1 · where a verified address exists</h3>
+      <div class="msg" id="m-email">Subject: The orders in your DMs, in one list
+
+Hello {name},
+
+I'll be brief. {hook}.
+
+I run Aksen Labs. We build the digital version of the process a business already runs. For frame and decor sellers, that usually means one thing: every DM and WhatsApp enquiry becoming an order in one list, with nothing answered twice and nothing lost, and a person still approving price and payment before anything ships.
+
+Two things, free, whichever is useful:
+
+1. The 30-minute fixes I spotted on your site: {fix}.
+2. A 20-minute Business Check. We map how an order travels from first message to money in your business today, and you get a one-page plan. Free, and yours to keep either way.
+
+Would either be worth a slot this week or next?
+
+Bishop
+Aksen Labs · WhatsApp +234 915 583 3108<button class="btn copybtn" onclick="copyEl('m-email',this)">Copy</button></div>
+
+      <h3>Follow-up · +3 days</h3>
+      <div class="msg" id="m-fu">Hi {name}, following up once so it's easy: if order-by-DM isn't a pain this quarter, no problem at all. If it ever is, the Business Check stays free and takes 20 minutes. One reply either way is welcome.<button class="btn copybtn" onclick="copyEl('m-fu',this)">Copy</button></div>
+
+      <h3>Close · +14 days</h3>
+      <div class="msg" id="m-close">Hi {name}, I'll stop here so I'm not the person filling your DMs. When the message backlog becomes the thing you want solved, the offer stands: 20 minutes, one page, free. Wishing you a strong quarter.<button class="btn copybtn" onclick="copyEl('m-close',this)">Copy</button></div>
+
+      <h2>Starter offers</h2>
+      <table>
+        <tr><th>Problem they name</th><th>Starter</th><th>Price (NGN / GHS)</th></tr>
+        <tr><td>"Orders get buried in DMs"</td><td>WhatsApp Order Desk</td><td>₦149,000 once, care from ₦19,900/mo · Ghana: from GHS 6,500</td></tr>
+        <tr><td>"Need to look credible online"</td><td>Starter Page</td><td>₦99,000</td></tr>
+        <tr><td>"Leads go cold"</td><td>Lead Pack (30 checked businesses)</td><td>₦29,900</td></tr>
+        <tr><td>Something bigger</td><td>Custom systems</td><td>From ₦450,000, quoted after the call</td></tr>
+      </table>
+      <p><strong>Always:</strong> free Business Check first. Price never appears in a first message.</p>
+
+      <h2>Money math calculator</h2>
+      <p>Label every assumption. Confirm their real numbers in the check before repeating any of it.</p>
+      <div class="calc">
+        <div class="field"><label>Enquiries / month</label><input type="number" id="c-enq" value="60"></div>
+        <div class="field"><label>% lost to slow replies</label><input type="number" id="c-lost" value="8"></div>
+        <div class="field"><label>Average order (₦)</label><input type="number" id="c-avg" value="45000"></div>
+        <div class="field out"><label>Monthly loss (₦)</label><input id="c-out" readonly></div>
+        <div class="field out"><label>Order Desks to break even</label><input id="c-pay" readonly></div>
+      </div>
+
+      <h2>Voice rules</h2>
+      <ul>
+        <li>No em dashes. No "AI-powered", "leverage", "solution", "streamline".</li>
+        <li>No absolutes: no "never misses", "replaces your staff", "guaranteed growth".</li>
+        <li>No invented customers, logos or numbers. TFS is not public proof.</li>
+        <li>Plain words a shop owner uses. Sound like a sharp local operator, not an agency.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ PROFILE TAB ============ -->
+  <section id="tab-profile" style="display:none">
+    <div class="doc">
+      <h2>The ventures</h2>
+      <table>
+        <tr><th>Venture</th><th>What it is</th><th>State</th></tr>
+        <tr><td>Aksen Labs</td><td>Digital transformation agency. The main work, full-time since 22 Sep 2026</td><td>Pre-revenue. Phase 0: close the enquiry loop</td></tr>
+        <tr><td>The Frame Shop (Ope)</td><td>3 Lagos decor brands, one WhatsApp number, shop + admin + agents</td><td>Proposal, nothing signed</td></tr>
+        <tr><td>ProptisGH, Kanea, CV Forge, Royal Kingdom…</td><td>Product experiments across sectors</td><td>Various; CV Forge built, no public address</td></tr>
+      </table>
+
+      <h2>How ideas become products</h2>
+      <ol>
+        <li><strong>Spot the process, not the idea.</strong> Every build starts from a workflow someone already runs.</li>
+        <li><strong>Build the working version to win the work.</strong> Previews are persuasion artifacts.</li>
+        <li><strong>Same shape every time:</strong> customer surface + back office + agent on the business's messaging channel + human-in-the-loop approvals.</li>
+        <li><strong>Docs are the source of truth.</strong> Implementation statements, never launch claims.</li>
+        <li><strong>Prices are invented until validated, and marked so.</strong></li>
+      </ol>
+
+      <h2>The scoreboard</h2>
+      <p>Two numbers only: <strong>conversations with owners this week</strong> and <strong>cedis invoiced this month</strong>. A sent message with no reply is not a conversation. A week with zero owner conversations is a failed week however much shipped.</p>
+
+      <h2>The differentiator</h2>
+      <p>"We don't just build websites, apps or dashboards. We build digital versions of your physical processes, digitizing each workflow where we can, with humans kept in the loop for the decisions that matter." The market promises autonomous agents. We sell the boundary: <strong>AI prepares, a person decides</strong>, enforced by the system.</p>
+
+      <h2>Rules for every session</h2>
+      <ul>
+        <li>Read the venture's own brief before proposing anything.</li>
+        <li>Evidence over enthusiasm. "Not found" is a finding.</li>
+        <li>Never send anything to a prospect autonomously. Drafts only, always.</li>
+        <li>Protect the build-to-sell ratio. Code without a conversation is a worse week, not a better one.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <span>Data: frame-decor-accra-lagos-abuja-list.md · statuses saved in this browser</span>
+  <button class="btn" onclick="copyReport()">Copy status report</button>
+</footer>
+
+<script>
+const D = [
+// ================= ACCRA =================
+{id:"ac1",city:"Accra",tier:1,name:"TNell Wall Frames",also:"formerly Frame Baze",verdict:"go",sc:[5,5,5,4,5],
+ web:"tnellframes.com",ig:"@tnellwallframes",igN:"17K",fb:"TNell Wall Frames",ph:["0245719646","0208730226"],
+ dm:"Edmond Opoku-Agyemang + Wilfred Kpobi",dmRole:"Co-founders (LinkedIn)",
+ addr:"Sakumono Estate, opp. Gafko Vera Hotel",
+ pain:"Sales funnel is DM \u201cWall Gallery\u201d for a free consult, no booking system. 72-hour delivery promise. Actively hiring marketing, client services and admin = scaling past manual ops.",
+ fix:"Free-consult DM funnel is the exact thing an Order Desk replaces.",
+ hook:"the 12x16 wooden canvas gallery sets and the 72-hour install promise",
+ li:"Edmond Opoku-Agyemang"},
+{id:"ac2",city:"Accra",tier:2,name:"Classic Frames",verdict:"maybe",sc:[3,3,3,3,4],
+ ig:"@classicframesgh",igN:"27K",ph:["0268947593"],
+ pain:"Phone-hours-only (M\u2013F 9\u20135, Sat 10\u20132). No website found. High-volume print and frame shop.",
+ hook:"the canvas lamination range"},
+{id:"ac3",city:"Accra",tier:2,name:"Wall Decor GH",verdict:"maybe",sc:[4,3,2,3,4],
+ ig:"@walldecor_gh",igN:"26K",ph:["0263592975","0559886020"],
+ pain:"\u201cNo refunds\u201d in the bio. 3,368 posts of DM-order at scale, mirrors, frames, interior design.",
+ hook:"the mirror and canvas ranges"},
+{id:"ac4",city:"Accra",tier:1,name:"Canvas Showroom Gh",verdict:"maybe",sc:[4,3,2,3,4],
+ ig:"@thecanvasshowroomgh",igN:"24K",ph:["0597126271"],
+ pain:"\u201c50% deposit confirms order\u201d across Accra and Kumasi. Deposits tracked by hand in two cities.",
+ hook:"the luxury canvas ranges across Accra and Kumasi"},
+{id:"ac5",city:"Accra",tier:2,name:"Moode Art Enterprise",verdict:"maybe",sc:[3,3,2,3,4],
+ ig:"@moode.gh",igN:"16K",
+ pain:"Pay on delivery under GHS 500 = cash risk. Manual order confirmations, weekday-hours only.",
+ hook:"the framed art print ranges"},
+{id:"ac6",city:"Accra",tier:1,name:"Chuvie Decor Ghana",verdict:"go",sc:[4,4,4,4,5],
+ web:"chuvieghana.com",em:["info@chuvieghana.com","chuvieghana@gmail.com"],ph:["+233 20 529 1127","+233 20 988 2761"],
+ addr:"Dansoman, Accra + Kumasi office",
+ pain:"Real WooCommerce store with WhatsApp-order buttons, two offices. Cart-to-WhatsApp hand-off is manual.",  fix:"Footer still says \u201cHigh-quality demos and layouts\u201d, theme demo text live.", siteFix:true,
+ hook:"the WhatsApp order buttons on the wallpaper range"},
+{id:"ac7",city:"Accra",tier:2,name:"Bubola & Naibo Gh Ltd",verdict:"maybe",sc:[3,3,3,3,4],
+ ph:["+233 244 311 309"],addr:"Osu, Accra",
+ pain:"Professional framers, mouldings and accessories. Established, active on FB and IG through 2026.",
+ hook:"the professional moulding range"},
+{id:"ac8",city:"Accra",tier:2,name:"The Frameshop Ghana",verdict:"maybe",sc:[3,3,2,3,4],
+ tiktok:"@theframeshopgh1",ph:["0505527276","0247441702"],
+ pain:"LED and jersey framing, TikTok-led, nationwide interest. No site.",
+ hook:"the LED and jersey framing work"},
+{id:"ac9",city:"Accra",tier:2,name:"Wasky Hub Frames",verdict:"maybe",sc:[3,3,2,3,4],
+ ph:["0552326049","0539818889"],
+ pain:"PVC and wooden frames, full size list 6x8 to 36x40, nationwide.",
+ hook:"the full size list from 6x8 to 36x40"},
+{id:"ac10",city:"Accra",tier:2,name:"Beezy Frames & Decor",verdict:"maybe",sc:[3,3,2,3,4],
+ tiktok:"@beezy_frames.decor",ph:["050 112 7192"],
+ pain:"Acrylic mirror frames, ready to hang, TikTok-led.",
+ hook:"the acrylic mirror frames"},
+{id:"ac11",city:"Accra",tier:2,name:"Falaa Frames",verdict:"maybe",sc:[3,2,2,3,4],
+ tiktok:"@falaa.frames",
+ pain:"Affordable frames, Accra and Kumasi, DIY wall-art angle.",
+ hook:"the DIY wall-art angle"},
+{id:"ac12",city:"Accra",tier:2,name:"Aura Interior GH",verdict:"maybe",sc:[3,3,2,3,4],
+ fb:"aurainteriorgh",
+ pain:"Gallery walls, mirror sets, framed art plus interior design services. Facebook-led.",
+ hook:"the gallery wall sets"},
+{id:"ac13",city:"Accra",tier:2,name:"Ayo Decor GH",verdict:"maybe",sc:[3,3,2,3,4],
+ ig:"@ayodecorgh",ph:["0241539965"],
+ pain:"Mirror supply and install, GHS 3,000 for a 4x6ft beveled. Active 2026.",
+ hook:"the beveled mirror installs"},
+{id:"ac14",city:"Accra",tier:2,name:"OK Photo Lab & Branding",verdict:"maybe",sc:[3,2,2,3,4],
+ pain:"Custom frames in varied designs and sizes. IG evidence only.",
+ hook:"the custom frame designs"},
+{id:"ac15",city:"Accra",tier:3,name:"Galeria 151 Framing",verdict:"watch",sc:[3,2,1,3,4],
+ pain:"Bespoke hand-decorated frames. FB referral evidence only; own handle needs verifying.",
+ hook:"the hand-decorated frames"},
+{id:"ac16",city:"Accra",tier:3,name:"CMT Wall Frames & Designs",verdict:"watch",sc:[3,3,2,3,4],
+ ph:["020 665 5449"],addr:"38 Mensah Wood Street, East Legon",
+ pain:"Evidence is two years old. Confirm still trading before any outreach.",
+ hook:"the East Legon showroom"},
+{id:"ac17",city:"Accra",tier:2,name:"The Ninety4 Shop",verdict:"maybe",sc:[3,2,2,3,4],
+ ig:"@the_ninety4_shop",
+ pain:"Custom-made wall frames and decor accents, Accra delivery.",
+ hook:"the custom wall frames"},
+{id:"ac18",city:"Accra",tier:3,name:"Elite Frames Gallery",verdict:"watch",sc:[3,2,2,3,4],
+ ig:"@eliteframes_gallery",ph:["0243513894"],
+ pain:"Laminated frames around \u20b5400. Number also appears in TNell-adjacent posts; confirm it is a separate business.",
+ hook:"the laminated frame range"},
+{id:"ac19",city:"Accra",tier:3,name:"Woodcuts Gallery",verdict:"watch",sc:[3,2,2,3,4],
+ pain:"Custom framing, TikTok discover mention only. Handle needs verifying.",
+ hook:"the custom framing"},
+{id:"ac20",city:"Accra",tier:3,name:"Partner channel: TNell-referred photographers",verdict:"watch",sc:[2,2,1,2,3],
+ pain:"Not direct prospects yet. A referral path worth keeping warm, not pitching.",
+ hook:"the referral path"},
+
+// ================= LAGOS =================
+{id:"lg1",city:"Lagos",tier:1,name:"Framegidi",verdict:"go",sc:[5,4,5,4,5],
+ web:"framegidi.com",ig:"@weareframegidi",igN:"21K",em:["hello@framegidi.com"],ph:["+234 816 590 7633","+234 701 062 5544"],
+ dm:"Dapo Salami",dmRole:"Co-Founder & CEO (LinkedIn, ex QD Salami Photography)",
+ pain:"Custom framing = quote per order, same workflow as Ope's wall-design flow. Real e-commerce but a JS-only site.",
+ fix:"Site renders empty without JS; check what a stranger on mobile data sees.",
+ hook:"the print-to-frame-to-delivery flow, the cleanest among Lagos framers",
+ li:"Dapo Salami"},
+{id:"lg2",city:"Lagos",tier:1,name:"Framedinlagos",verdict:"maybe",sc:[5,3,2,4,5],
+ web:"framedinlagos.com",
+ pain:"Custom framing from \u20a66,999, interiors range.",  fix:"Contact page shows fake US demo addresses and 555 numbers; homepage reviews are template filler. Strong free fix.", siteFix:true,
+ hook:"the custom framing from \u20a66,999"},
+{id:"lg3",city:"Lagos",tier:2,name:"FRAME LAGOS",verdict:"maybe",sc:[3,3,2,3,4],
+ web:"framelagos.com",ig:"@framelagos",igN:"8.2K",
+ pain:"Luxury wall art, murals, mirrors. Lagos, Abuja, Osogbo. JS-rendered site.",
+ hook:"the heritage collections and murals"},
+{id:"lg4",city:"Lagos",tier:1,name:"FrameCity NG",verdict:"maybe",sc:[4,4,2,3,4],
+ ig:"@framecityng",igN:"12K",addr:"Yaba",
+ pain:"Homes, offices, hotels. DM / WhatsApp order at 1,103 posts.",
+ hook:"the hotel and office wall sets"},
+{id:"lg5",city:"Lagos",tier:1,name:"Nickobi Frames",verdict:"maybe-go",sc:[5,3,3,3,5],
+ web:"nickobigroup.com",ig:"@nickobiframes",igN:"1.2K",em:["info@nickobigroup.com"],ph:["+234 816 797 4331"],
+ addr:"80/195 Obafemi Awolowo Way, Olowu St, Ikeja",
+ pain:"Custom framing plus photo studio rental, full artisan process.",  fix:"Blog posts end in lorem ipsum and the header shows +1(800) 123 4567 / oesus@support.com. A stranger-credibility killer.", siteFix:true,
+ hook:"the Ikeja studio plus framing setup"},
+{id:"lg6",city:"Lagos",tier:1,name:"Hazken Digital",verdict:"maybe-go",sc:[3,4,4,3,5],
+ web:"hazken.com/frame",ig:"@hazkendigital",igN:"15K",em:["hazkendigital@gmail.com"],ph:["+234 817 624 6387","+234 902 948 0399"],
+ pain:"Full public price list \u20a68,000 (5x7) to \u20a6225,800 (48x72). Print/design company, frames a product line.",
+ hook:"the full public price list from 5x7 to 48x72"},
+{id:"lg7",city:"Lagos",tier:1,name:"StockFrames & Arts",verdict:"maybe",sc:[4,4,2,4,5],
+ web:"stockframes.com.ng",
+ pain:"WhatsApp-first ordering, no card payments, 60% bank deposit, manual design confirmation loop, nationwide delivery.",
+ hook:"the split canvas sets"},
+{id:"lg8",city:"Lagos",tier:1,name:"Wallframes.ng",verdict:"maybe",sc:[4,4,2,3,4],
+ ig:"@wallframes.ng",igN:"10K",ph:["08099718905","07030301354"],
+ pain:"\u201cNigeria's biggest framing company\u201d, wholesale and retail. Two phones, DM-led.",
+ hook:"the wholesale and retail range"},
+{id:"lg9",city:"Lagos",tier:2,name:"Frameora.ng",verdict:"maybe",sc:[4,3,2,3,4],
+ ig:"@frameora_ng",ph:["+234 902 598 6067"],addr:"New Plaza, Ogijo Bus Stop, Ikorodu",
+ pain:"Acrylic and frameless, installs, claims 12-hour production in Abuja and 48h interstate. Posting weekly.",
+ hook:"the frameless acrylic range and installs"},
+{id:"lg10",city:"Lagos",tier:2,name:"Homey Frames Ltd",verdict:"maybe",sc:[3,3,2,3,4],
+ ig:"@homeyframes",igN:"3.2K",
+ pain:"Art canvas, HD, frameless, crystal frames. Abuja orders arrive by WhatsApp.",
+ hook:"the crystal frame range"},
+{id:"lg11",city:"Lagos",tier:2,name:"The Luxe Wall Frame",verdict:"maybe",sc:[3,3,2,3,4],
+ ph:["08169636403"],addr:"Lekki Phase 1",
+ pain:"Hand-crafted luxury wall art, \u20a630,000 for 50x70. DM-only.",
+ hook:"the hand-crafted luxury pieces"},
+{id:"lg12",city:"Lagos",tier:2,name:"Nodesstore.ng",verdict:"maybe",sc:[3,3,2,3,4],
+ ig:"@nodesstore.ng",
+ pain:"Premium wall art, nationwide delivery, IG-led.",
+ hook:"the premium wall art range"},
+{id:"lg13",city:"Lagos",tier:2,name:"Vivify Interiors Hub",verdict:"maybe",sc:[3,2,2,3,4],
+ fb:"vivify.interiors.hub.2025",addr:"AAT Plaza, shop 9",
+ pain:"Frames plus interiors, Facebook-led video selling.",
+ hook:"the interiors-plus-frames setup"},
+{id:"lg14",city:"Lagos",tier:2,name:"Klala Photography",verdict:"maybe",sc:[3,3,2,3,4],
+ ig:"@klalaphotography",
+ pain:"Canvas frames home and abroad, delivery plus install. Posting Sept 2026.",
+ hook:"the canvas frame delivery work"},
+{id:"lg15",city:"Lagos",tier:2,name:"King's Frames and Prints",verdict:"maybe",sc:[3,2,2,3,4],
+ ig:"@kings.frames",addr:"Surulere",
+ pain:"Frames and crystal lamination, active Aug 2026.",
+ hook:"the crystal lamination work"},
+{id:"lg16",city:"Lagos",tier:2,name:"Jeggz Frames and Interiors",verdict:"maybe",sc:[3,2,3,3,4],
+ dm:"Jegede Isoke",dmRole:"CEO (self-identified on IG, Sep 2026)",
+ pain:"Handle to confirm. Named owner makes outreach direct.",
+ hook:"the frames and interiors pairing"},
+{id:"lg17",city:"Lagos",tier:2,name:"Bossman Frames",verdict:"maybe",sc:[3,2,2,3,4],
+ ig:"@bossman.frames",
+ pain:"Photography plus frames, DM to order.",
+ hook:"the photo-to-frame work"},
+{id:"lg18",city:"Lagos",tier:2,name:"iPrints Nigeria",verdict:"maybe",sc:[3,3,3,3,4],
+ web:"iprints.com.ng",ph:["+234 813 4466 334"],
+ pain:"Print shop with a picture-frame product line. Ask for current price before ordering, per their own site.",
+ hook:"the print-plus-frames line"},
+{id:"lg19",city:"Lagos",tier:2,name:"DumaDumi Pixel",verdict:"maybe",sc:[3,2,2,3,4],
+ tiktok:"@dumadumipixel",addr:"Lekki",
+ pain:"CEO intro video on TikTok, capture the name on next pass. Posting Oct 2026.",
+ hook:"the picture-frame range in Lekki"},
+{id:"lg20",city:"Lagos",tier:2,name:"HNK Interior",verdict:"maybe",sc:[3,4,3,3,4],
+ dm:"Adefunke Soyibo",dmRole:"Named principal (launch post)",ph:["+234 908 919 9696"],
+ pain:"Furniture, lighting, frames, carpets. New manufacturing facility = scaling ops.",
+ hook:"the new manufacturing facility"},
+
+// ================= ABUJA =================
+{id:"ab1",city:"Abuja",tier:1,name:"The Frame Hub",verdict:"maybe-go",sc:[4,4,3,3,4],
+ ig:"@theframehub_",igN:"8K",fb:"theframehubNG",
+ dm:"Ann Uche",dmRole:"Creative Director since Nov 2017 (LinkedIn)",
+ pain:"RC:9080835. \u201c5+ yrs, over 10,000 frames made\u201d, 4,197 posts of DM-order. Mirrors, corporate and gift framing.",
+ fix:"Business is registered; a site is the obvious gap.",
+ hook:"over 10,000 frames made and the mirror range",
+ li:"Ann Uche"},
+{id:"ab2",city:"Abuja",tier:1,name:"Rosy Gallery (Frames in Abuja)",verdict:"maybe",sc:[3,3,2,3,4],
+ ig:"@rosy_gallery_",igN:"18K",
+ pain:"Acrylic frameless, table frames, custom gifts. 1,111 posts, WhatsApp via bio link.",
+ hook:"the frameless acrylic range"},
+{id:"ab3",city:"Abuja",tier:2,name:"Crystal Frames",verdict:"maybe",sc:[3,3,2,3,4],
+ addr:"9a Malabo Street, Wuse",
+ pain:"Physical shop, referenced via IG popular page. Own handle to confirm.",
+ hook:"the Wuse showroom"},
+{id:"ab4",city:"Abuja",tier:2,name:"Manaa Interiors",verdict:"maybe",sc:[3,3,2,3,4],
+ ph:["07032652029"],addr:"Gwarinpa + Wuse 2",
+ pain:"Abuja home decor store, frames included. IG active.",
+ hook:"the Gwarinpa decor store"},
+{id:"ab5",city:"Abuja",tier:2,name:"Diuk's Decor",verdict:"maybe",sc:[3,3,2,3,4],
+ ph:["08031907169","09047522182"],addr:"Wuse Market area",
+ pain:"Wall frames and art, two phone lines, IG-led.",
+ hook:"the wall frame range at Wuse"},
+{id:"ab6",city:"Abuja",tier:2,name:"Rolad Nexus Limited",verdict:"maybe",sc:[3,3,2,3,4],
+ tiktok:"@roladnexuslimited",addr:"Garki",
+ pain:"Acrylic frames, Garki plus nationwide delivery, TikTok-led.",
+ hook:"the acrylic frame delivery range"},
+{id:"ab7",city:"Abuja",tier:2,name:"Belle Belle Home Decor",verdict:"maybe",sc:[3,3,2,3,4],
+ ph:["+234 913 132 1559","+234 814 000 0399"],addr:"Berger Paint Plaza, 6 Alexandria Cresc, behind Banex, Wuse 2",
+ pain:"Wall art frames, physical plaza location, active 2026.",
+ hook:"the Banex-adjacent decor store"},
+{id:"ab8",city:"Abuja",tier:2,name:"Fav Home Decor",verdict:"maybe",sc:[3,2,3,3,4],
+ ph:["08028194982","09026475216"],addr:"Century Mall",
+ pain:"Wall frames, furniture, diffusers. Contact likely Ike Uche, verify ownership.",
+ hook:"the Century Mall store"},
+{id:"ab9",city:"Abuja",tier:3,name:"Olaide Graphics Concept",verdict:"watch",sc:[3,2,2,3,4],
+ ph:["08185312173"],
+ pain:"Frameless acrylic frames, TikTok evidence only.",
+ hook:"the frameless acrylic work"},
+{id:"ab10",city:"Abuja",tier:2,name:"Aura Event Mirrors",verdict:"maybe",sc:[3,2,2,3,4],
+ ig:"@auraeventmirrors",
+ pain:"Welcome mirrors and event decor. Event decor has seasonal spikes worth smoothing.",
+ hook:"the welcome mirrors for events"},
+{id:"ab11",city:"Abuja",tier:2,name:"Print with JuJu Design",verdict:"maybe",sc:[3,2,2,3,4],
+ ph:["09130094563"],addr:"House 88, 1st Avenue, Gwarinpa",
+ pain:"Customized frames and prints, physical plus IG.",
+ hook:"the customized print and frame work"},
+{id:"ab12",city:"Abuja",tier:3,name:"Homey Frames (Abuja orders)",verdict:"watch",sc:[3,2,2,3,4],
+ ph:["09077566456"],
+ pain:"Relationship to Homey Frames Ltd Lagos unclear. Clarify on first contact.",
+ hook:"the Abuja delivery service"},
+{id:"ab13",city:"Abuja",tier:3,name:"Gwarinpa vendor (unnamed)",verdict:"watch",sc:[3,3,2,3,4],
+ ph:["07072457071"],addr:"3rd Avenue, Gwarinpa",
+ pain:"Premium wall frames, brand name not in posts. Get it on approach.",
+ hook:"the premium wall frames on 3rd Avenue"},
+{id:"ab14",city:"Abuja",tier:3,name:"Hillside Hub vendor (unnamed)",verdict:"watch",sc:[3,3,2,3,4],
+ ph:["09035639696","09135365087"],addr:"No. 11 The Hillside Hub, Gwarinpa + Abule Egba Lagos",
+ pain:"One two-city business, brand name not in posts.",
+ hook:"the two-city setup"},
+{id:"ab15",city:"Abuja",tier:3,name:"Apo vendor (unnamed)",verdict:"watch",sc:[3,2,2,3,4],
+ addr:"Awesome Plaza, Apo Resettlement",
+ pain:"IG reel evidence only. Brand name needed.",
+ hook:"the Apo Resettlement shop"},
+{id:"ab16",city:"Abuja",tier:3,name:"Vicky (Dei-Dei)",verdict:"watch",sc:[2,2,2,3,3],
+ tiktok:"@vickyvicky6479",
+ pain:"Informal trader, custom frames in Dei-Dei.",
+ hook:"the custom frames in Dei-Dei"},
+{id:"ab17",city:"Abuja",tier:3,name:"Amaka (framing & mirrors)",verdict:"watch",sc:[3,2,2,3,4],
+ ph:["08105367950"],
+ pain:"Brand helps with framing, mirrors, installs. Handle to capture.",
+ hook:"the framing and mirror installs"}
+];
+
+const STATUSES = {
+  new:{label:"Not contacted",cls:"st-new"},
+  sent:{label:"Opener sent",cls:"st-sent"},
+  followup:{label:"Followed up",cls:"st-followup"},
+  replied:{label:"Replied",cls:"st-replied"},
+  booked:{label:"Check booked",cls:"st-booked"},
+  won:{label:"Won",cls:"st-won"},
+  lost:{label:"Lost",cls:"st-lost"}
+};
+const VERDICTS = {
+  "go":{label:"GO",cls:"b-go"},
+  "maybe-go":{label:"Maybe \u2192 GO",cls:"b-maybe"},
+  "maybe":{label:"Maybe",cls:"b-maybe"},
+  "watch":{label:"Verify first",cls:"b-watch"}
+};
+const SCORE_LABELS = ["Pain","Money","Reach","Demo","Fit"];
+
+let state = {tab:"prospects",city:"",status:"",tier:"",q:""};
+let statuses = {};
+let convThisWeek = 0;
+try{
+  statuses = JSON.parse(localStorage.getItem("aksen_statuses")||"{}");
+  convThisWeek = parseInt(localStorage.getItem("aksen_conv")||"0",10);
+}catch(e){}
+
+function save(){ localStorage.setItem("aksen_statuses",JSON.stringify(statuses)); localStorage.setItem("aksen_conv",String(convThisWeek)); }
+
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+
+function statusOf(id){ return statuses[id] || "new"; }
+
+function renderStrip(){
+  const counts = {};
+  D.forEach(p=>{const s=statusOf(p.id); counts[s]=(counts[s]||0)+1});
+  const t1 = D.filter(p=>p.tier===1).length;
+  const el = document.getElementById("scorestrip");
+  el.innerHTML = `
+    <div class="stat"><div class="n">${D.length}</div><div class="l">Businesses</div></div>
+    <div class="stat"><div class="n">${t1}</div><div class="l">Tier 1</div></div>
+    <div class="stat"><div class="n">${counts.sent||0}</div><div class="l">Openers sent</div></div>
+    <div class="stat"><div class="n">${counts.replied||0}</div><div class="l">Replied</div></div>
+    <div class="stat"><div class="n">${counts.booked||0}</div><div class="l">Checks booked</div></div>
+    <div class="stat"><div class="n">${counts.won||0}</div><div class="l">Won</div></div>
+    <div class="stat editable"><input id="convInput" type="number" min="0" value="${convThisWeek}"><div class="l">Owner convos this week</div></div>`;
+  document.getElementById("convInput").addEventListener("change",e=>{
+    convThisWeek = parseInt(e.target.value||"0",10); save();
+  });
+}
+
+function filtered(){
+  const q = state.q.toLowerCase();
+  return D.filter(p=>{
+    if(state.city && p.city!==state.city) return false;
+    if(state.status && statusOf(p.id)!==state.status) return false;
+    if(state.tier && String(p.tier)!==state.tier) return false;
+    if(q){
+      const hay = [p.name,p.also,p.ig,p.tiktok,p.fb,p.web,p.dm,p.addr,(p.ph||[]).join(" "),(p.em||[]).join(" ")].join(" ").toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function contactLine(p){
+  const bits = [];
+  if(p.web) bits.push(`<a href="https://${esc(p.web)}" target="_blank">${esc(p.web)}</a>`);
+  if(p.ig) bits.push(`<b>${esc(p.ig)}</b>${p.igN?` \u00b7 ${esc(p.igN)}`:""}`);
+  if(p.tiktok) bits.push(`<b>${esc(p.tiktok)}</b>`);
+  if(p.fb) bits.push(`FB: ${esc(p.fb)}`);
+  if(p.ph&&p.ph.length) bits.push(`\u260e ${p.ph.map(esc).join(" \u00b7 ")}`);
+  if(p.em&&p.em.length) bits.push(`\u2709 ${p.em.map(esc).join(" \u00b7 ")}`);
+  if(p.addr) bits.push(`\u{1F4CD} ${esc(p.addr)}`);
+  return bits.join(" &nbsp;\u00b7&nbsp; ");
+}
+
+function firstName(p){
+  if(p.dm) return p.dm.split(" ")[0].split(" +")[0];
+  return p.name.replace(/\s*\(.*\)$/,"");
+}
+
+function cardHTML(p){
+  const st = statusOf(p.id);
+  const stc = STATUSES[st];
+  const vd = VERDICTS[p.verdict] || VERDICTS.maybe;
+  const scoreBars = p.sc.map((v,i)=>`
+    <div class="s"><label>${SCORE_LABELS[i]} ${v}</label><div class="bar"><div class="fill" style="width:${v*20}%"></div></div></div>`).join("");
+  const dmLine = p.dm ? `<div class="row"><span class="k">Owner</span><span><b>${esc(p.dm)}</b>${p.dmRole?` \u00b7 ${esc(p.dmRole)}`:""}</span></div>` : `<div class="row"><span class="k">Owner</span><span>not named publicly</span></div>`;
+  const fixLine = p.fix ? `<div class="fix">\u{1F527} Free fix: ${esc(p.fix)}</div>` : "";
+  const gap = p.name.includes("unnamed");
+  return `
+  <div class="card ${p.tier===1?"t1":""}">
+    <div class="toprow">
+      <div>
+        <h3>${esc(p.name)}${p.also?` <span style="color:var(--dim);font-weight:400;font-size:12px">\u00b7 ${esc(p.also)}</span>`:""}</h3>
+        <div class="meta">Tier ${p.tier}${gap?" \u00b7 brand name unknown":""}</div>
+      </div>
+      <div class="badges"><span class="badge city">${p.city}</span><span class="badge ${vd.cls}">${vd.label}</span></div>
+    </div>
+    <div class="scores">${scoreBars}</div>
+    <div class="detail">
+      <div class="row"><span class="k">Reach</span><span>${contactLine(p)}</span></div>
+      ${dmLine}
+    </div>
+    <div class="pain">${esc(p.pain)}</div>
+    ${fixLine}
+    <div class="cardfoot">
+      <select class="status" data-id="${p.id}">
+        ${Object.entries(STATUSES).map(([k,v])=>`<option value="${k}" ${k===st?"selected":""}>${v.label}</option>`).join("")}
+      </select>
+      <button class="btn primary" onclick="copyOpener('${p.id}',this)">Copy opener</button>
+      <button class="btn" onclick="copyFU('${p.id}',this)">+3d</button>
+      <span class="st-badge ${stc.cls}" data-stbadge="${p.id}">${stc.label}</span>
+    </div>
+  </div>`;
+}
+
+function renderCards(){
+  const list = filtered();
+  const wrap = document.getElementById("cards");
+  if(!list.length){ wrap.innerHTML = `<div class="empty">Nothing matches those filters.</div>`; return; }
+  let html = list.map(cardHTML).join("");
+  if(state.city==="Abuja" && !state.q && !state.status && !state.tier){
+    html += `<div class="gap-card">3 more Abuja slots held open honestly.<br>The market there is DM-vendors whose names aren't published. Close the gap with a browser pass on IG's "Frame Abuja" page.</div>`;
+  }
+  wrap.innerHTML = html;
+  wrap.querySelectorAll("select.status").forEach(sel=>{
+    sel.addEventListener("change",e=>{
+      statuses[e.target.dataset.id]=e.target.value;
+      updateAfterStatus(e.target.dataset.id);
+    });
+  });
+}
+
+function renderCityChips(){
+  const cities = ["Accra","Lagos","Abuja"];
+  const el = document.getElementById("cityChips");
+  el.innerHTML = `<span class="chip ${!state.city?"on":"soft"}" data-city="">All ${D.length}</span>` +
+    cities.map(c=>{
+      const n = D.filter(p=>p.city===c).length;
+      return `<span class="chip ${state.city===c?"on":"soft"}" data-city="${c}">${c} ${n}</span>`;
+    }).join("");
+  el.querySelectorAll(".chip").forEach(ch=>ch.addEventListener("click",()=>{
+    state.city = ch.dataset.city; renderCityChips(); renderCards();
+  }));
+}
+
+// ---------- copy helpers ----------
+function fill(tpl,p){
+  return tpl
+    .replace(/\{name\}/g, firstName(p))
+    .replace(/\{page\}/g, p.ig || p.name)
+    .replace(/\{site\}/g, p.web || (p.ig || p.name))
+    .replace(/\{city\}/g, p.city)
+    .replace(/\{hook\}/g, p.hook || "the work on your page")
+    .replace(/\{fix\}/g, p.fix || "small things worth tidying");
+}
+function copyText(t,btn){
+  const done=()=>{ if(btn){const o=btn.textContent; btn.textContent="Copied \u2713"; btn.classList.add("copied"); setTimeout(()=>{btn.textContent=o;btn.classList.remove("copied")},1400);} };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done); }
+  else{
+    const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select();
+    try{document.execCommand("copy");}catch(e){}
+    document.body.removeChild(ta); done();
+  }
+}
+function msgText(id){
+  return document.getElementById(id).innerText.replace(/\s*Copy\s*$/,"").trim();
+}
+function refreshCard(id){
+  const st = statusOf(id), sc = STATUSES[st];
+  const sel = document.querySelector('select.status[data-id="'+id+'"]');
+  if(sel) sel.value = st;
+  const badge = document.querySelector('[data-stbadge="'+id+'"]');
+  if(badge){ badge.textContent = sc.label; badge.className = "st-badge "+sc.cls; }
+}
+function updateAfterStatus(id){
+  save(); renderStrip();
+  if(state.status){ renderCards(); } else { refreshCard(id); }
+}
+function copyOpener(id,btn){
+  const p = D.find(x=>x.id===id);
+  const tpl = (p.fix && p.siteFix) ? msgText("m-dmfix") : msgText("m-dm1");
+  copyText(fill(tpl,p),btn);
+  if(statusOf(id)==="new"){ statuses[id]="sent"; updateAfterStatus(id); }
+}
+function copyFU(id,btn){
+  const p = D.find(x=>x.id===id);
+  copyText(fill(msgText("m-fu"),p),btn);
+  if(["new","sent"].includes(statusOf(id))){ statuses[id]="followup"; updateAfterStatus(id); }
+}
+function copyEl(id,btn){
+  copyText(msgText(id),btn);
+}
+function copyReport(){
+  const counts={}; D.forEach(p=>{const s=statusOf(p.id); counts[s]=(counts[s]||0)+1});
+  const lines=[`Aksen pipeline, frame & decor list (${D.length} businesses):`];
+  Object.entries(STATUSES).forEach(([k,v])=>{ if(counts[k]) lines.push(`${v.label}: ${counts[k]}`); });
+  lines.push(`Owner conversations this week: ${convThisWeek}`);
+  const booked = D.filter(p=>statusOf(p.id)==="booked").map(p=>`- ${p.name} (${p.city})`);
+  if(booked.length){ lines.push("Checks booked:"); lines.push(...booked); }
+  copyText(lines.join("\n"));
+}
+
+// ---------- money math ----------
+function calc(){
+  const enq=+document.getElementById("c-enq").value||0;
+  const lost=+document.getElementById("c-lost").value||0;
+  const avg=+document.getElementById("c-avg").value||0;
+  const loss = Math.round(enq*lost/100*avg);
+  document.getElementById("c-out").value = loss.toLocaleString();
+  document.getElementById("c-pay").value = loss>0 ? (149000/loss).toFixed(1)+" months" : "n/a";
+}
+["c-enq","c-lost","c-avg"].forEach(id=>document.getElementById(id).addEventListener("input",calc));
+calc();
+
+// ---------- tabs & filters ----------
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  state.tab=t.dataset.tab;
+  ["prospects","playbook","profile"].forEach(n=>{
+    document.getElementById("tab-"+n).style.display = n===state.tab?"":"none";
+  });
+}));
+document.getElementById("search").addEventListener("input",e=>{state.q=e.target.value; renderCards();});
+document.getElementById("statusFilter").addEventListener("change",e=>{state.status=e.target.value; renderCards();});
+document.getElementById("tierFilter").addEventListener("change",e=>{state.tier=e.target.value; renderCards();});
+
+renderCityChips();
+renderStrip();
+renderCards();
+</script>
+</body>
+</html>

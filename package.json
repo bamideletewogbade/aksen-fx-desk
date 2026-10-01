@@ -1,0 +1,17 @@
+{
+  "name": "aksen-fx-desk",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Aksen Labs OTC FX & Remittance Desk with Multi-Agent Liquidity Syndicates, OpenRouter LLM, and JEV Decision Forensics on Cloudflare Workers",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "deploy": "node scripts/build.mjs && wrangler deploy",
+    "dev": "node scripts/build.mjs && wrangler dev --port 8788"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260930.2",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.143.1"
+  }
+}

@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Aksen OTC FX Desk · Naira ⇄ Cedis Autonomous Bureau</title>
+<style>
+  :root{
+    /* Aksen Labs light theme tokens (agency.css, admin-light.css, globals.css) */
+    --agency-paper:#f9faf7;
+    --paper:#f4f7f2;
+    --surface:#ffffff;
+    --surface-subtle:#f5f8f3;
+    --agency-ink:#10261d;
+    --ink:#10261d;
+    --t-body:#24392e;
+    --agency-green:#175b3b;
+    --green-hover:#12472e;
+    --agency-lime:#c2f576;
+    --agency-muted:#53635a;
+    --t-dim:#718278;
+    --line:#e2ebde;
+    --line-soft:#edf3ea;
+    --amber:#9a6b16;
+    --amber-soft:#fef7eb;
+    --red:#c23636;
+    --red-soft:#fdeeed;
+    --radius:14px;
+    --gutter:clamp(14px,3.4vw,56px);
+    --sans:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;max-width:100%;overflow-x:hidden}
+  body{background:var(--agency-paper);color:var(--t-body);font:14px/1.6 var(--sans);padding-bottom:76px;overflow-wrap:break-word;max-width:100%;overflow-x:hidden}
+  a{color:var(--agency-green);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button,input,select{font:inherit}
+  ::selection{background:var(--agency-lime);color:#10261d}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:60;
+    display:flex;align-items:center;justify-content:space-between;
+    height:66px;gap:14px;padding:0 var(--gutter);
+    border-bottom:1px solid var(--line);
+    background:rgba(249,250,247,.95);backdrop-filter:blur(16px);
+  }
+  .topbar-brand{display:flex;align-items:center;flex-shrink:0;order:1}
+  .wordmark{display:inline-flex;align-items:center;gap:9px;font-size:16px;font-weight:760;letter-spacing:.11em;color:var(--ink);white-space:nowrap}
+  .wordmark em{color:var(--agency-muted);font-style:normal;font-weight:500}
+  .brand-signal{width:10px;height:10px;border-radius:2px;background:var(--agency-green);transform:rotate(45deg);flex-shrink:0}
+
+  .nav-tabs{display:flex;gap:6px;align-items:center;margin:0 auto 0 16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;order:2}
+  .nav-tabs::-webkit-scrollbar{display:none}
+  .nav-tab{padding:8px 14px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--agency-muted);font:12px var(--mono);font-weight:600;letter-spacing:.05em;cursor:pointer;transition:all .15s ease;white-space:nowrap;flex-shrink:0}
+  .nav-tab:hover{color:var(--agency-green);background:#f2f7ee}
+  .nav-tab.active{background:#ffffff;border-color:var(--line);color:var(--agency-green);box-shadow:0 2px 6px rgba(16,38,29,.04)}
+
+  .top-right{display:flex;align-items:center;gap:10px;flex-shrink:0;order:3}
+  .rate-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid #cce0c6;background:#eef7eb;border-radius:999px;font:11.5px var(--mono);color:var(--agency-green);font-weight:700;white-space:nowrap}
+  .rate-pill i{width:6px;height:6px;border-radius:50%;background:#2cb45d;display:inline-block;flex-shrink:0}
+  .btn-reset{border:1px solid #cddcc5;border-radius:6px;padding:6px 11px;background:#ffffff;color:var(--agency-muted);font:11px var(--mono);cursor:pointer;transition:all .15s ease;white-space:nowrap}
+  .btn-reset:hover{color:var(--agency-green);border-color:var(--agency-green);background:#f2f7ed}
+
+  @media(max-width:1024px){
+    .topbar{
+      display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+      height:auto;padding:10px var(--gutter);gap:8px 12px;
+    }
+    .topbar-brand{order:1}
+    .top-right{order:2;margin-left:auto}
+    .nav-tabs{
+      order:3;width:100%;margin:2px 0 0;
+      padding:2px 0 4px;gap:6px;
+    }
+  }
+
+  main{padding:0 var(--gutter);max-width:100%;overflow-x:hidden}
+
+  /* ---------- hero ---------- */
+  .hero{padding:28px 0 20px;max-width:1120px}
+  .eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--agency-green);font:700 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;flex-wrap:wrap}
+  .eyebrow>span{width:24px;height:1px;background:currentColor;flex-shrink:0}
+  h1{margin:0;font-size:clamp(26px,4vw,52px);line-height:1.1;letter-spacing:-.04em;font-weight:640;color:var(--ink)}
+  h1 em{color:var(--agency-green);font-family:Georgia,"Times New Roman",serif;font-style:normal;font-weight:400}
+  .hero p{max-width:740px;margin-top:12px;color:var(--agency-muted);font-size:14px;line-height:1.6}
+
+  .notice{display:grid;grid-template-columns:14px 1fr;gap:12px;align-items:start;max-width:1120px;margin:14px 0 24px;
+    padding:12px 16px;border-left:3px solid var(--agency-green);background:#edf5ea;border-radius:0 10px 10px 0;font-size:13px;color:#1e382b;line-height:1.6}
+  .notice i{width:6px;height:6px;margin-top:7px;border-radius:50%;background:var(--agency-green)}
+  .notice b{color:var(--ink)}
+
+  /* ---------- split stage ---------- */
+  .stage-mobile-nav{display:none}
+  @media(max-width:1040px){
+    .stage-mobile-nav{
+      display:flex;gap:8px;margin-bottom:14px;position:sticky;top:98px;z-index:50;
+      background:rgba(249,250,247,.96);backdrop-filter:blur(8px);padding:6px 0;
+    }
+    .stage-mobile-nav .sm-btn{
+      flex:1;padding:9px 12px;border:1px solid #cddcc5;background:#ffffff;border-radius:8px;
+      font:12px var(--mono);font-weight:700;color:var(--agency-muted);cursor:pointer;text-align:center;transition:all .15s ease;
+    }
+    .stage-mobile-nav .sm-btn.active,.stage-mobile-nav .sm-btn:hover{
+      background:#eaf4e6;border-color:var(--agency-green);color:var(--agency-green);
+    }
+  }
+
+  .stage{display:grid;grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);gap:18px;align-items:start}
+  @media(max-width:1040px){.stage{grid-template-columns:1fr}}
+
+  .panel{border:1px solid var(--line);border-radius:18px;background:#ffffff;box-shadow:0 12px 34px rgba(16,38,29,.05);overflow:hidden;transition:all .3s ease;min-width:0}
+  .panel.pulse{border-color:var(--agency-green);box-shadow:0 0 0 3px rgba(23,91,59,.15)}
+  .panel-head{display:grid;grid-template-columns:37px 1fr auto;gap:11px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);background:#f6faf3}
+  .panel-head h2{margin:0;font-size:15px;letter-spacing:-.02em;color:var(--ink);font-weight:650}
+  .panel-head .sub{margin-top:2px;color:var(--agency-muted);font-size:12px}
+  .avatar{display:grid;place-items:center;width:36px;height:36px;border:1px solid #c8dcc2;border-radius:10px;color:var(--agency-green);background:#e6f3e3;font-weight:700}
+  .online{display:flex;align-items:center;gap:6px;color:#55725f;font:11px var(--mono);text-transform:uppercase;letter-spacing:.08em}
+  .online i{width:6px;height:6px;border-radius:99px;background:#2cb45d}
+
+  /* ---------- chat (left) ---------- */
+  #chatlog{height:min(64vh,620px);min-height:440px;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;background:#fafcf8;scroll-behavior:smooth}
+  .agent-message{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;max-width:90%;margin-bottom:16px}
+  .agent-message>span{display:grid;place-items:center;width:27px;height:27px;border-radius:8px;color:var(--agency-green);background:#eaf3e5;border:1px solid #d2e4ce;font:11px var(--mono);font-weight:600;flex-shrink:0}
+  .agent-message p{margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:3px 13px 13px 13px;color:var(--ink);background:#ffffff;box-shadow:0 2px 6px rgba(16,38,29,.03);font-size:13.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+
+  .agent-message.desk-message>span{background:var(--agency-green);color:#ffffff;border-color:var(--agency-green)}
+  .desk-bubble{border-left:3px solid var(--agency-green)!important;background:#f7faf5!important}
+  .desk-tag{display:inline-block;padding:2px 7px;border-radius:4px;background:var(--agency-green);color:#ffffff;font:9.5px var(--mono);font-weight:700;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+
+  .user-message{width:fit-content;max-width:85%;margin:0 0 16px auto;padding:11px 14px;border-radius:13px 3px 13px 13px;color:#10261d;background:#e1f4cb;border:1px solid #cbe4b0;box-shadow:0 2px 6px rgba(16,38,29,.03);font-size:13.5px;font-weight:600;white-space:pre-wrap;word-break:break-word}
+  .typing{margin:0 0 16px 38px;color:var(--agency-muted);font:12px var(--mono)}
+
+  /* interactive rate quote box in chat */
+  .quote-card{margin:8px 0 14px;background:#ffffff;border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 2px 8px rgba(16,38,29,.03);max-width:100%}
+  .quote-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+  .quote-corridor{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink)}
+  .quote-expiry{font:11px var(--mono);color:var(--amber);background:#fef7ea;padding:3px 8px;border-radius:99px;border:1px solid #f2dbb3;display:inline-flex;align-items:center;gap:4px}
+  .quote-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;background:#f8faf6;padding:10px;border-radius:8px;border:1px solid var(--line-soft)}
+  @media(max-width:400px){.quote-grid{grid-template-columns:1fr}}
+  .quote-item label{font:10px var(--mono);color:var(--t-dim);text-transform:uppercase;letter-spacing:.05em;display:block}
+  .quote-item strong{font-size:15px;color:var(--agency-green);letter-spacing:-.02em;word-break:break-word}
+  .quote-footer{margin-top:10px;font-size:11.5px;color:var(--agency-muted);line-height:1.4}
+
+  /* slip upload tile in chat */
+  .receipt-tile{margin-top:9px;padding:12px 14px;border:1px dashed #7aa388;border-radius:10px;background:#f3f9f0;font-size:12.5px;color:#1d4329}
+  .receipt-tile b{color:var(--agency-green)}
+  .receipt-meta{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px;font:11px var(--mono);color:var(--agency-muted)}
+  @media(max-width:420px){.receipt-meta{grid-template-columns:1fr}}
+
+  /* chat composer */
+  .composer{border-top:1px solid var(--line);background:#f6faf3;padding:12px 14px}
+  .choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}
+  .choice-grid.single{grid-template-columns:1fr}
+  .choice{display:flex;align-items:center;gap:8px;min-height:44px;padding:9px 12px;border:1px solid #d4e0cf;border-radius:8px;
+    color:var(--ink);background:#ffffff;font-size:13px;line-height:1.35;cursor:pointer;text-align:left;box-shadow:0 1px 3px rgba(16,38,29,.02);transition:all .15s ease}
+  .choice:hover{border-color:var(--agency-green);background:#f0f7ec;color:var(--agency-green);transform:translateY(-1px)}
+  .choice.accent{background:#f1f8ee;border-color:#b4d6ae;color:var(--agency-green);font-weight:650}
+  .inputrow{display:flex;gap:8px}
+  .inputrow input{flex:1;min-width:0;padding:10px 14px;border:1px solid #cddbc7;border-radius:8px;color:var(--ink);background:#ffffff;font-size:14px;outline:none;min-height:44px}
+  .inputrow input:focus{border-color:var(--agency-green);box-shadow:0 0 0 3px rgba(23,91,59,.1)}
+  .inputrow button{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:8px;color:#ffffff;background:var(--agency-green);font-weight:700;font-size:16px;cursor:pointer;transition:background .16s ease;flex-shrink:0}
+  .inputrow button:hover{background:var(--green-hover)}
+  .hint-line{margin-top:8px;color:var(--t-dim);font:11px var(--mono);letter-spacing:.03em}
+
+  /* ---------- treasury desk (right) ---------- */
+  .treasury-strip{padding:14px 16px;border-bottom:1px solid var(--line);background:#ffffff}
+  .strip-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font:11px var(--mono);color:var(--agency-muted);text-transform:uppercase;letter-spacing:.06em}
+  .pool-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.pool-grid{grid-template-columns:1fr}}
+  .pool-card{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fbfdfa}
+  .pool-card.flag-ng{border-left:3px solid #175b3b}
+  .pool-card.flag-gh{border-left:3px solid #d49526}
+  .pool-card .head{display:flex;justify-content:space-between;align-items:center;color:var(--t-dim);font:10.5px var(--mono);text-transform:uppercase}
+  .pool-card .amount{font-size:19px;font-weight:750;letter-spacing:-.03em;color:var(--ink);margin:6px 0 2px}
+  .pool-card .sub{font-size:11px;color:var(--agency-muted)}
+
+  /* rate & spread manager */
+  .rate-manager{padding:12px 16px;border-bottom:1px solid var(--line-soft);background:#f6faf3;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .rate-control{display:flex;align-items:center;gap:6px;font-size:13px}
+  .rate-control label{font:11px var(--mono);color:var(--agency-muted);text-transform:uppercase}
+  .rate-control input{width:70px;padding:6px 8px;border:1px solid #c7d8c0;border-radius:6px;background:#ffffff;color:var(--agency-green);font-weight:700;font-size:13px;text-align:center;outline:none}
+  .rate-control input:focus{border-color:var(--agency-green)}
+  .spread-tag{font:11px var(--mono);padding:4px 8px;border-radius:6px;background:#eef7ea;color:var(--agency-green);border:1px solid #c9dec3}
+
+  .desk-body{padding:16px;background:#ffffff}
+  .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  @media(max-width:800px){.metric-grid{grid-template-columns:repeat(2,1fr)}}
+  .metric{min-height:76px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fbfdfa}
+  .metric>span{display:flex;align-items:center;gap:6px;color:var(--agency-muted);font-size:11px}
+  .metric>strong{display:block;margin:6px 0 0;color:var(--ink);font-size:20px;letter-spacing:-.03em}
+  .metric.hot{border-color:#bcdbb7;background:#f3f9f0}
+  .metric.hot>strong{color:var(--agency-green)}
+
+  #deskcards{display:grid;gap:14px}
+  .fx-card{padding:15px;border:1px solid var(--line);border-radius:12px;background:#ffffff;box-shadow:0 2px 8px rgba(16,38,29,.03);transition:all .2s ease}
+  .fx-card.pending_deposit{border-left:3px solid var(--amber)}
+  .fx-card.verified{border-left:3px solid #2cb45d;background:#fafdf8}
+  .fx-card.settled{border-left:3px solid var(--agency-green)}
+  .fx-card .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .fx-card h3{margin:0;font-size:15px;color:var(--ink);font-weight:650}
+  .fx-card .oid{color:var(--t-dim);font:11px var(--mono);margin-top:2px}
+
+  .status-badge{padding:4px 9px;border-radius:99px;font:10.5px var(--mono);font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .sb-locked{background:#fdf5e6;color:#9a6b16;border:1px solid #f2dbb3}
+  .sb-verified{background:#d8f5cb;color:#155726;border:1px solid #bce6b1}
+  .sb-settled{background:var(--agency-green);color:#ffffff}
+
+  .fx-conversion{display:flex;align-items:center;gap:12px;margin:12px 0 10px;padding:10px 12px;border-radius:8px;background:#f5f8f3;border:1px solid var(--line-soft);flex-wrap:wrap}
+  .fx-leg{display:flex;flex-direction:column}
+  .fx-leg .c-label{font:10px var(--mono);color:var(--t-dim);text-transform:uppercase}
+  .fx-leg .c-val{font-size:15px;font-weight:750;color:var(--ink)}
+  .fx-arrow{color:var(--agency-green);font-size:16px;font-weight:700}
+
+  .kv-list{display:grid;grid-template-columns:84px 1fr;gap:6px;font-size:12.5px;color:var(--agency-muted)}
+  .kv-list .k{color:var(--t-dim);font:10px var(--mono);text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+  .kv-list .v b{color:var(--ink);word-break:break-word}
+
+  /* JEV decision card */
+  .jev-box{margin-top:12px;padding:11px 13px;border-radius:8px;border:1px solid #bcdbb7;background:#f2faf0;font-size:12px}
+  .jev-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px}
+  .jev-badge{font:10px var(--mono);font-weight:700;color:var(--agency-green);display:flex;align-items:center;gap:5px}
+  .jev-score{font:11px var(--mono);font-weight:700;color:#155726;background:#d8f5cb;padding:2px 7px;border-radius:99px}
+  .jev-row{display:flex;justify-content:space-between;color:#2c4b36;margin-top:3px;flex-wrap:wrap;gap:4px}
+
+  .desk-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .btn{padding:8px 13px;min-height:38px;border:1px solid #cddcc5;border-radius:6px;color:var(--agency-green);background:#ffffff;font-size:12.5px;cursor:pointer;transition:all .15s ease;display:inline-flex;align-items:center;justify-content:center}
+  .btn:hover{border-color:var(--agency-green);background:#f2f7ed}
+  .btn.primary{border:1px solid var(--agency-green);background:var(--agency-green);color:#ffffff;font-weight:700}
+  .btn.primary:hover{background:var(--green-hover);border-color:var(--green-hover)}
+
+  .empty-desk{margin-top:14px;padding:28px 18px;border:1px dashed #c0d3bd;border-radius:12px;text-align:center;background:#f9fbf8;color:var(--agency-muted);font-size:13px}
+  .empty-desk b{color:var(--ink)}
+
+  /* ---------- tab content sections & responsive tables ---------- */
+  .doc-section{background:#ffffff;border:1px solid var(--line);border-radius:18px;padding:32px 36px;max-width:1120px;box-shadow:0 4px 18px rgba(16,38,29,.04);margin-top:8px;min-width:0;overflow:hidden}
+  @media(max-width:768px){.doc-section{padding:20px 16px;border-radius:14px}}
+  @media(max-width:420px){.doc-section{padding:16px 12px;border-radius:12px}}
+  .doc-section h2{font-size:20px;margin:28px 0 12px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink);letter-spacing:-.02em}
+  .doc-section h2:first-child{margin-top:0;border-top:none;padding-top:0}
+  .doc-section h3{font:12px var(--mono);margin:18px 0 8px;color:var(--agency-green);text-transform:uppercase;letter-spacing:.08em}
+  .doc-section p,.doc-section li{color:var(--agency-muted);font-size:14px;margin-bottom:8px}
+  .doc-section ul,.doc-section ol{padding-left:22px;margin-bottom:12px}
+  .doc-section strong{color:var(--ink)}
+
+  .table-wrap{
+    width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    margin:14px 0 20px;border:1px solid var(--line);border-radius:10px;background:#ffffff;
+  }
+  .table-wrap::-webkit-scrollbar{height:6px}
+  .table-wrap::-webkit-scrollbar-thumb{background:#c8dcc3;border-radius:99px}
+  table{border-collapse:collapse;width:100%;min-width:560px;margin:0;font-size:13px}
+  th{color:var(--t-dim);font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px 12px;border-bottom:1px solid var(--line-soft);color:var(--agency-muted)}
+  td:first-child{color:var(--ink);font-weight:600}
+
+  .callout{background:#f6faf3;border-left:3px solid var(--agency-green);border-radius:0 8px 8px 0;padding:12px 16px;margin:12px 0;font-size:13px;color:#1e382b;line-height:1.6;word-break:break-word}
+
+  footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-top:48px;
+    padding:16px var(--gutter);border-top:1px solid var(--line);background:rgba(249,250,247,.98);color:var(--agency-muted);font:11px var(--mono);letter-spacing:.03em}
+  footer b{color:var(--ink);font-weight:600}
+  footer .dot{width:4px;height:4px;border-radius:50%;background:#b5c7b5;display:inline-block;margin:0 8px 1px}
+  @media(max-width:680px){
+    footer{flex-direction:column;align-items:flex-start;gap:8px;font-size:10.5px}
+  }
+
+  /* ---------- syndicate & lp pool styles ---------- */
+  .syn-switcher-bar{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-bottom:18px;padding:8px 12px;background:#f3f7f0;border-radius:10px;border:1px solid #dce8d8;
+    max-width:100%;
+  }
+  .syn-pills{display:flex;align-items:center;gap:6px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1;min-width:0}
+  .syn-pills::-webkit-scrollbar{display:none}
+  .syn-pill{padding:6px 12px;border-radius:6px;font:12px var(--mono);font-weight:600;border:1px solid transparent;background:transparent;color:var(--agency-muted);cursor:pointer;transition:all .15s;flex-shrink:0}
+  .syn-pill:hover{color:var(--agency-green);background:#ffffff}
+  .syn-pill.active{background:#ffffff;color:var(--agency-green);border-color:#bcdbb7;font-weight:700;box-shadow:0 2px 6px rgba(16,38,29,.04)}
+  .btn-new-syn{padding:6px 12px;border-radius:6px;background:var(--agency-green);color:#ffffff;font:11.5px var(--mono);font-weight:700;border:1px solid var(--agency-green);cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
+  .btn-new-syn:hover{background:var(--green-hover)}
+
+  .syn-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  @media(max-width:768px){
+    .syn-header{flex-direction:column;align-items:stretch}
+    .syn-header>div:last-child{align-items:stretch !important;width:100%}
+    .syn-header .btn{width:100%;text-align:center}
+  }
+  .syn-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;background:#eef7eb;border:1px solid #cce0c6;color:var(--agency-green);font:11.5px var(--mono);font-weight:700}
+  .syn-badge i{width:7px;height:7px;border-radius:50%;background:#2cb45d;display:inline-block;flex-shrink:0}
+
+  .invite-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:#f8faf6;border:1px dashed #7aa388;border-radius:10px;margin:16px 0 22px;max-width:100%}
+  .invite-text{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--agency-muted);flex-wrap:wrap;min-width:0}
+  .invite-text code{word-break:break-all;max-width:100%;font-size:11.5px}
+  .invite-code{font:11.5px var(--mono);font-weight:700;color:var(--agency-green);background:#eaf4e6;padding:3px 8px;border-radius:5px;border:1px solid #c9dec3;white-space:nowrap}
+  .copy-btn{padding:6px 12px;border-radius:6px;border:1px solid #c8dcc3;background:#ffffff;color:var(--agency-green);font:11.5px var(--mono);font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
+  .copy-btn:hover{background:var(--agency-green);color:#ffffff}
+  @media(max-width:640px){
+    .invite-bar{flex-direction:column;align-items:stretch;gap:10px}
+    .copy-btn{width:100%;text-align:center}
+  }
+
+  /* financial overview deck */
+  .finance-deck{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 22px}
+  @media(max-width:960px){.finance-deck{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:540px){.finance-deck{grid-template-columns:1fr}}
+  .finance-card{padding:14px 15px;border:1px solid var(--line);border-radius:12px;background:#ffffff;box-shadow:0 2px 6px rgba(16,38,29,.02)}
+  .finance-card .f-label{font:10px var(--mono);text-transform:uppercase;color:var(--t-dim);letter-spacing:.05em}
+  .finance-card .f-val{font-size:18px;font-weight:750;color:var(--ink);margin:4px 0 2px;letter-spacing:-.02em}
+  .finance-card .f-sub{font-size:11.5px;color:var(--agency-muted)}
+
+  .cur-track{height:9px;border-radius:99px;background:#edf3ea;overflow:hidden;display:flex;margin:8px 0 4px}
+  .cur-ngn{background:#175b3b}
+  .cur-ghs{background:#2cb45d}
+
+  /* hired agent desk card */
+  .agent-box{margin:20px 0 24px;padding:18px 20px;border:1px solid #bcdbb7;border-radius:14px;background:#f5faf2}
+  .agent-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+  .agent-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:#d8f5cb;border:1px solid #bce6b1;font:11px var(--mono);color:#155726;font-weight:700}
+  .agent-badge i{width:6px;height:6px;border-radius:50%;background:#2cb45d;display:inline-block;flex-shrink:0}
+  .agent-badge.off{background:#fdeeed;border-color:#f8c2be;color:#9a2323}
+  .agent-badge.off i{background:#c23636}
+  .agent-rules{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+  @media(max-width:860px){.agent-rules{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:440px){.agent-rules{grid-template-columns:1fr}}
+  .agent-rule-item{padding:9px 11px;background:#ffffff;border:1px solid #dbe6d6;border-radius:8px;font-size:12px}
+  .agent-rule-item strong{display:block;color:var(--agency-green);font-family:var(--mono);font-size:13px;margin-top:2px}
+  @media(max-width:680px){
+    .agent-head{flex-direction:column;align-items:stretch}
+    #btnToggleAgent{width:100%;text-align:center}
+  }
+
+  .syn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 22px}
+  @media(max-width:920px){.syn-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.syn-grid{grid-template-columns:1fr}}
+  .syn-card{padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#fbfdfa;transition:all .2s ease}
+  .syn-card:hover{border-color:#bcdbb7;background:#ffffff;box-shadow:0 4px 14px rgba(16,38,29,.04)}
+  .syn-card .label{font:10.5px var(--mono);color:var(--t-dim);text-transform:uppercase;letter-spacing:.06em}
+  .syn-card .value{font-size:21px;font-weight:750;color:var(--ink);margin:6px 0 2px;letter-spacing:-.02em}
+  .syn-card .sub{font-size:12px;color:var(--agency-muted)}
+  .syn-card.hot{border-color:#bcdbb7;background:#f3f9f0}
+  .syn-card.hot .value{color:var(--agency-green)}
+
+  .epoch-bar-wrapper{margin:18px 0 24px;padding:14px 18px;border:1px solid var(--line);border-radius:12px;background:#fefefe}
+  .epoch-bar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;flex-wrap:wrap;gap:6px}
+  .epoch-track{height:10px;border-radius:99px;background:#eef3eb;overflow:hidden;position:relative}
+  .epoch-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--agency-green),#2cb45d);width:60%;transition:width .4s ease}
+
+  /* waterfall bar */
+  .waterfall-container{margin:22px 0;padding:20px 20px;border:1px solid var(--line);border-radius:14px;background:#fafcf9}
+  .waterfall-bar{height:32px;border-radius:8px;overflow:hidden;display:flex;margin:14px 0 16px;box-shadow:inset 0 1px 3px rgba(0,0,0,.08)}
+  .wf-segment{height:100%;display:flex;align-items:center;justify-content:center;color:#ffffff;font:11px var(--mono);font-weight:700;transition:width .3s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+  .wf-lp{background:#175b3b}
+  .wf-op{background:#417d59}
+  .wf-res{background:#9a6b16}
+
+  .wf-legend{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:760px){.wf-legend{grid-template-columns:1fr}}
+  .wf-legend-item{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#ffffff}
+  .wf-legend-item.lp{border-top:3px solid #175b3b}
+  .wf-legend-item.op{border-top:3px solid #417d59}
+  .wf-legend-item.res{border-top:3px solid #9a6b16}
+  .wf-title{font-size:13.5px;font-weight:700;color:var(--ink);display:flex;justify-content:space-between;align-items:center}
+  .wf-desc{font-size:12px;color:var(--agency-muted);margin-top:4px;line-height:1.45}
+  .wf-val{font:14px var(--mono);font-weight:750;color:var(--agency-green);margin-top:8px}
+
+  .sim-box{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px;padding:16px 18px;border:1px solid #d8e5d3;border-radius:12px;background:#f3f9f0}
+  @media(max-width:760px){.sim-box{grid-template-columns:1fr}}
+  .sim-control{display:flex;flex-direction:column;gap:6px}
+  .sim-control label{font:11.5px var(--mono);font-weight:700;color:var(--agency-green);text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between}
+  .sim-control input[type=range]{accent-color:var(--agency-green);cursor:pointer;height:6px}
+
+  /* equity table */
+  .equity-table{margin:0;width:100%;min-width:620px;border-collapse:collapse}
+  .equity-table th{background:#f6faf3;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 14px}
+  .equity-table td{padding:12px 14px;border-bottom:1px solid var(--line-soft);vertical-align:middle;color:var(--agency-muted);font-size:13.5px}
+  .equity-table tr:hover td{background:#fafcf8}
+  .equity-table tr.user-row td{background:#edf7ea;font-weight:600}
+  .equity-pct-bar{display:flex;align-items:center;gap:8px}
+  .equity-mini-track{width:64px;height:6px;background:#e2ece0;border-radius:99px;overflow:hidden;flex-shrink:0}
+  .equity-mini-fill{height:100%;background:var(--agency-green);border-radius:99px}
+  .badge-role{display:inline-block;padding:2px 7px;border-radius:4px;font:10px var(--mono);background:#eaf2e8;color:var(--agency-green);margin-top:2px;white-space:nowrap}
+
+  /* join / stake simulator */
+  .join-card{margin-top:22px;padding:20px 22px;border:1px solid #bcdbb7;border-radius:16px;background:#ffffff;box-shadow:0 4px 18px rgba(16,38,29,.04)}
+  .join-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:start;margin-top:16px}
+  @media(max-width:820px){
+    .join-card{padding:16px 14px}
+    .join-grid{grid-template-columns:1fr}
+  }
+
+  .form-group{margin-bottom:14px}
+  .form-group label{font:11.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--agency-muted);display:block;margin-bottom:6px;font-weight:600}
+  .form-group input,.form-group select{width:100%;padding:10px 13px;border:1px solid #ccdcc7;border-radius:8px;background:#fafcf9;color:var(--ink);font-size:14px;min-height:42px}
+  .form-group input:focus,.form-group select:focus{outline:none;border-color:var(--agency-green);background:#ffffff;box-shadow:0 0 0 3px rgba(23,91,59,.1)}
+
+  .chip-row{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}
+  .chip-btn{padding:6px 11px;min-height:36px;border:1px solid #c8dcc3;border-radius:6px;background:#f5f9f2;font:11.5px var(--mono);color:var(--agency-green);cursor:pointer;transition:all .15s}
+  .chip-btn:hover{background:var(--agency-green);color:#ffffff;border-color:var(--agency-green)}
+
+  .preview-card{padding:16px 18px;border-radius:12px;background:#f6faf3;border:1px solid #cce0c6}
+  .preview-card h4{font-size:12px;font-weight:700;color:var(--agency-green);text-transform:uppercase;font-family:var(--mono);margin-bottom:12px;letter-spacing:.05em}
+  .preview-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #e1ede0;font-size:13px;flex-wrap:wrap;gap:4px}
+  .preview-row:last-child{border-bottom:none;padding-top:10px}
+  .preview-row .p-val{font:14px var(--mono);font-weight:750;color:var(--ink)}
+  .preview-row .p-val.highlight{color:var(--agency-green);font-size:16px}
+
+  .toast-alert{margin-top:14px;padding:12px 16px;border-radius:8px;background:#e6f5e1;border:1px solid #b7e2af;color:#184a26;font-size:13px;display:none}
+
+  /* settlement modal dialog */
+  .syn-modal{position:fixed;inset:0;background:rgba(16,38,29,.6);backdrop-filter:blur(6px);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+  .syn-modal-inner{background:#ffffff;border:1px solid var(--line);border-radius:16px;max-width:620px;width:100%;max-height:92vh;overflow-y:auto;padding:24px 26px;box-shadow:0 18px 48px rgba(16,38,29,.2);margin:auto}
+  .syn-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--line);padding-bottom:12px}
+  .syn-modal-head h3{margin:0;font-size:18px;color:var(--ink);font-weight:700}
+  .syn-modal-close{background:none;border:none;font-size:24px;color:var(--agency-muted);cursor:pointer;line-height:1;padding:4px}
+  .modal-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .syn-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+
+  @media(max-width:540px){
+    .syn-modal{padding:10px}
+    .syn-modal-inner{padding:16px 14px;border-radius:14px}
+    .modal-form-grid{grid-template-columns:1fr !important}
+    .syn-modal-actions{flex-direction:column-reverse;gap:8px}
+    .syn-modal-actions .btn{width:100%;text-align:center;justify-content:center}
+    input,select{font-size:16px !important}
+    #chatlog{height:52vh;min-height:360px}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="wordmark"><span class="brand-signal"></span>AKSEN<em>labs</em></div>
+  </div>
+  <div class="top-right">
+    <div class="rate-pill"><i></i>1 GHS = <span id="topRate">105.00</span> NGN</div>
+    <button class="btn-reset" onclick="resetDemo()">↺ Reset</button>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="demo" onclick="switchTab('demo')">Live Swap Desk</button>
+    <button class="nav-tab" data-tab="mechanics" onclick="switchTab('mechanics')">Process &amp; Economics</button>
+    <button class="nav-tab" data-tab="architecture" onclick="switchTab('architecture')">Multi-Agent &amp; JEV</button>
+    <button class="nav-tab" data-tab="syndicates" onclick="switchTab('syndicates')">Syndicates &amp; LP Pools 🤝</button>
+  </div>
+</header>
+
+<main>
+  <!-- ================= TAB 1: LIVE SWAP DESK ================= -->
+  <section id="view-demo">
+    <div class="hero">
+      <div class="eyebrow"><span></span>Autonomous OTC FX Desk · West Africa Corridor (NGN ⇄ GHS)</div>
+      <h1>Informal money changers, <em>digitized.</em></h1>
+      <p>A buyer needs Cedis for Naira. Instead of endless WhatsApp DM delays and fake screenshot risks: conversational AI quotes a time-locked rate, treasury routes the collection bank, JEV Decision Engine scores the transfer slip, and staff authorizes the MoMo payout in one click.</p>
+    </div>
+
+    <div class="notice">
+      <i></i>
+      <div><b>Interactive Concept Demo:</b> Test the buyer side on the left (request quote, lock rate, upload simulated transfer slip). On the right, watch the Operator Treasury Desk monitor real-time float, run JEV forensic checks, and authorize instant MoMo settlement.</div>
+    </div>
+
+    <div class="stage-mobile-nav">
+      <button class="sm-btn active" id="btnJumpChat" onclick="jumpToPanel('chatPanel')">💬 Buyer Chat Intake</button>
+      <button class="sm-btn" id="btnJumpDesk" onclick="jumpToPanel('deskPanel')">🏦 Operator Treasury Desk</button>
+    </div>
+
+    <div class="stage">
+      <!-- ============ BUYER WHATSAPP ============ -->
+      <section class="panel" id="chatPanel">
+        <div class="panel-head">
+          <div class="avatar">⚡</div>
+          <div>
+            <h2>Aksen Swap Desk</h2>
+            <div class="sub">WhatsApp OTC bureau &middot; 15m locked rates &middot; instant MoMo</div>
+          </div>
+          <span class="online"><i></i>online</span>
+          <span class="badge" id="edgeAiBadge" style="margin-left:auto;font-size:11px;background:#eef6f0;color:var(--agency-green);border:1px solid #c2e2ce;padding:3px 8px;border-radius:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#1b7340;display:inline-block"></span> CF Edge &middot; OpenRouter AI</span>
+        </div>
+
+        <div id="chatlog"></div>
+
+        <div class="composer">
+          <div class="choice-grid" id="quick"></div>
+          <div class="inputrow" id="inputrow" style="display:flex">
+            <input id="chatinput" placeholder="Type inquiry, amount, or syndicate query..." autocomplete="off" onkeydown="if(event.key==='Enter') sendTyped()">
+            <button onclick="sendTyped()" aria-label="Send">➤</button>
+          </div>
+          <div class="hint-line" id="hintline">AI intake agent &middot; OpenRouter LLM &amp; JEV Forensics &middot; quotes locked 15m</div>
+        </div>
+      </section>
+
+      <!-- ============ OPERATOR TREASURY DESK ============ -->
+      <section class="panel" id="deskPanel">
+        <div class="panel-head">
+          <div class="avatar">🏦</div>
+          <div>
+            <h2>Treasury Desk &amp; Payout Terminal</h2>
+            <div class="sub">operator liquidity controls &amp; human-in-the-loop settlement</div>
+          </div>
+          <span class="online"><i></i>live cockpit</span>
+        </div>
+
+        <!-- Float Balances -->
+        <div class="treasury-strip">
+          <div class="strip-title">
+            <span>Treasury Float Pools</span>
+            <span style="color:var(--agency-green)">Active Liquidity</span>
+          </div>
+          <div class="pool-grid">
+            <div class="pool-card flag-ng">
+              <div class="head"><span>🇳🇬 Nigerian Naira Pool</span><span>GTB + OPay</span></div>
+              <div class="amount" id="ngnPoolText">₦24,850,000</div>
+              <div class="sub">Inflow: +₦0 today &middot; Safe float</div>
+            </div>
+            <div class="pool-card flag-gh">
+              <div class="head"><span>🇬🇭 Ghana Cedis Pool</span><span>MTN MoMo + Ecobank</span></div>
+              <div class="amount" id="ghsPoolText">GH₵ 184,200</div>
+              <div class="sub">Outflow: -GH₵0 today &middot; High liquidity</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rate & Spread Setting -->
+        <div class="rate-manager">
+          <div class="rate-control">
+            <label>Market Base:</label>
+            <input type="text" id="cfgMarket" value="102.50" onchange="updateRates()">
+            <span style="color:var(--t-dim);font-size:12px">NGN/GHS</span>
+          </div>
+          <div class="rate-control">
+            <label>Desk Spread:</label>
+            <input type="text" id="cfgSpread" value="2.5" onchange="updateRates()">
+            <span>%</span>
+          </div>
+          <div class="spread-tag" id="effectiveRateLabel">
+            Customer Rate: 1 GHS = 105.06 NGN
+          </div>
+        </div>
+
+        <div class="desk-body">
+          <div class="metric-grid">
+            <div class="metric hot"><span>Rate Locks</span><strong id="m-locks">0</strong></div>
+            <div class="metric"><span>Awaiting Transfer</span><strong id="m-awaiting">0</strong></div>
+            <div class="metric"><span>JEV Verified</span><strong id="m-verified">0</strong></div>
+            <div class="metric"><span>Settled</span><strong id="m-settled">0</strong></div>
+          </div>
+
+          <div id="deskcards"></div>
+
+          <div class="empty-desk" id="deskEmpty">
+            <b>No active exchange requests yet.</b><br><br>
+            Initiate a swap in the customer chat on the left. Once a quote is locked, the order card lands here, where treasury assigns accounts, JEV validates incoming slips, and staff approves MoMo payout.
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ================= TAB 2: PROCESS & ECONOMICS ================= -->
+  <section id="view-mechanics" class="doc-section" style="display:none">
+    <h2>1. The Physical Process (Without AI)</h2>
+    <p>Informal cross-border OTC FX operators in West Africa move hundreds of millions of dollars annually across WhatsApp groups. Here is the operational loop they execute by hand every day:</p>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Stage</th><th>Manual Action</th><th>Failure Point / Risk</th></tr>
+        <tr><td>1. Quote</td><td>Buyer DMs: "Boss, rate for ₦500k to MoMo?" Operator checks Binance P2P and manual spreadsheet.</td><td>Slow replies (10–30 mins); customer shops elsewhere.</td></tr>
+        <tr><td>2. Rate Lock</td><td>Operator quotes "105. Valid for 15 mins."</td><td>Buyer sends 3 hours later when parallel rate has shifted, causing operator loss.</td></tr>
+        <tr><td>3. Account Dispatch</td><td>Operator picks a bank account to receive Naira.</td><td>Hit daily AML / NIBSS transaction caps; accounts get flagged by CBN.</td></tr>
+        <tr><td>4. Transfer Proof</td><td>Buyer transfers and uploads mobile bank receipt screenshot.</td><td>Canva-edited fake receipts; delayed reversals; zero validation.</td></tr>
+        <tr><td>5. Inbound Check</td><td>Operator opens mobile banking app, refreshes ledger, verifies credit alert.</td><td>Verification fatigue; operators trust screenshots under pressure.</td></tr>
+        <tr><td>6. MoMo Payout</td><td>Operator opens MTN MoMo / Ghana Bank app, types recipient number and PIN.</td><td>Typo in MoMo number leads to irreversible transfer to stranger.</td></tr>
+        <tr><td>7. Reconciliation</td><td>Operator logs the trade in notebook or Excel.</td><td>Unbalanced float; running out of Cedis midway through the day.</td></tr>
+      </table>
+    </div>
+
+    <h2>2. Economics of the NGN ⇄ GHS Corridor</h2>
+    <div class="callout">
+      <strong>The Velocity Model:</strong> An OTC FX bureau does not hold assets to speculate. They capture the bid-ask spread and rotate the float pool as many times as possible per day.
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Daily Volume</th><th>Average Spread</th><th>Gross Daily Margin</th><th>Monthly Profit (26 days)</th></tr>
+        <tr><td>₦2,000,000 (~$1,300)</td><td>2.5%</td><td>₦50,000 (~$32)</td><td>₦1,300,000 (~$840)</td></tr>
+        <tr><td>₦10,000,000 (~$6,500)</td><td>2.4%</td><td>₦240,000 (~$155)</td><td>₦6,240,000 (~$4,050)</td></tr>
+        <tr><td>₦50,000,000 (~$32,500)</td><td>2.0%</td><td>₦1,000,000 (~$650)</td><td>₦26,000,000 (~$16,900)</td></tr>
+      </table>
+    </div>
+
+    <h2>3. The Three Deadly Traps &amp; How Software Fixes Them</h2>
+    <ul>
+      <li><strong>Trap 1: Triangular Fraud (The #1 scam in West Africa P2P)</strong><br>
+        A scammer tricks an innocent third party in Lagos into paying the bureau's GTBank account, while the scammer claims the Cedis on a burner MoMo line in Ghana. <em>Software fix: JEV compares deposit sender name, WhatsApp identity, and destination MoMo KYC. Name mismatches trigger mandatory ID verification.</em>
+      </li>
+      <li><strong>Trap 2: The One-Way River (Float Depletion)</strong><br>
+        On busy import days, 90% of requests are Naira to Cedis, draining the Ghana pool within 4 hours. <em>Software fix: Dynamic Spread Engine automatically widens the rate as pool reserves drop below 25%, incentivizing reverse flows (GHS &rarr; NGN).</em>
+      </li>
+      <li><strong>Trap 3: Bank Account Freezes</strong><br>
+        Nigerian banks flag accounts with hundreds of miscellaneous P2P transfers. <em>Software fix: Multi-Account Treasury Router rotates inflows across pre-approved corporate tier-3 accounts, enforcing strict unique alphanumeric references (no "crypto" or "fx" terms).</em>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ================= TAB 3: MULTI-AGENT & JEV ARCHITECTURE ================= -->
+  <section id="view-architecture" class="doc-section" style="display:none">
+    <h2>Multi-Agent System Architecture</h2>
+    <p>Rather than a single monolithic prompt, the desk is orchestrated across 4 decoupled autonomous agents and OpenRouter's JEV Decisions engine:</p>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Agent</th><th>Role</th><th>Inputs &amp; Outputs</th></tr>
+        <tr><td><strong>1. Intake &amp; Negotiation Agent</strong></td><td>Handles WhatsApp conversational nuances, Pidgin, amount parsing, and locks time-bound quotes.</td><td>Input: Customer DM &rarr; Output: Structured swap quote + 15m timer.</td></tr>
+        <tr><td><strong>2. Treasury &amp; Routing Agent</strong></td><td>Monitors float pools, rotates collection bank accounts, and adjusts spreads dynamically.</td><td>Input: Pool depths &rarr; Output: Destination bank details + reference code.</td></tr>
+        <tr><td><strong>3. Forensic Vision Agent</strong></td><td>Extracts text from deposit slips, verifies NIBSS session ID, detects image manipulation.</td><td>Input: Bank transfer screenshot &rarr; Output: Structured OCR data + metadata.</td></tr>
+        <tr><td><strong>4. JEV Decision Engine (typesafe/jev-1.13)</strong></td><td>Calibrated mathematical probability scoring on fraud, receipt tampering, and risk.</td><td>Input: OCR state + transaction history &rarr; Output: Calibrated confidence scores.</td></tr>
+        <tr><td><strong>5. Settlement Gate (Human-in-the-Loop)</strong></td><td>Provides the operator with a 1-click payout authorization. Software prepares; human executes.</td><td>Input: Approved trade &rarr; Output: Direct MTN MoMo payout API dispatch.</td></tr>
+      </table>
+    </div>
+
+    <h2>How JEV Evaluates Slip Forensics (OpenRouter Decisions API)</h2>
+    <p>In <code>Aksen-Labs/platform/lib/jev.ts</code>, JEV executes calibrated probabilistic evaluations. For this FX desk, the state passed to JEV contains:</p>
+
+    <div class="callout" style="font-family:var(--mono);font-size:12.5px;white-space:pre-wrap">
+state: {
+  receipt_ocr: "GTBank NIBSS Instant Payment. Ref: 100001240928172938. Amount: 500,000 NGN. Sender: Bishop Tewogbade. Status: Successful",
+  claimed_amount: 500000,
+  sender_name: "Bishop Tewogbade",
+  whatsapp_user: "Bishop",
+  destination_momo_name: "Bishop Tewogbade",
+  current_time_utc: "2026-10-01T22:30:00Z"
+}
+
+questions: {
+  receipt_authenticity: {
+    type: "score", // 0.0 to 1.0 calibrated probability
+    instructions: "Evaluate NIBSS reference format, font integrity, layout spacing, and timestamp proximity. Score likelihood the receipt is genuine and unedited."
+  },
+  triangular_fraud: {
+    type: "choice",
+    criteria: {
+      low_risk: "Sender name matches buyer profile and destination MoMo KYC",
+      medium_risk: "Plausible corporate or third-party sponsorship",
+      high_risk: "Disconnected third-party sender with burner recipient account (triangular scam risk)"
+    }
+  }
+}
+    </div>
+
+    <p>If JEV's calibrated score falls below <strong>90%</strong>, the card is locked with a warning tag, preventing automated payout until a senior operator verifies the bank ledger.</p>
+  </section>
+
+  <!-- ================= TAB 4: SYNDICATES & LIQUIDITY POOLS ================= -->
+  <section id="view-syndicates" class="doc-section" style="display:none">
+    <!-- Syndicate Switcher & Creator Bar -->
+    <div class="syn-switcher-bar">
+      <div class="syn-pills" id="synPillsContainer">
+        <!-- Rendered dynamically via JS -->
+      </div>
+      <button class="btn-new-syn" onclick="openCreateSyndicateModal()">+ Create New Syndicate 🚀</button>
+    </div>
+
+    <!-- Syndicate Header -->
+    <div class="syn-header">
+      <div>
+        <div class="eyebrow"><span></span><strong id="syn-corridor-tag" style="font-weight:700">NGN ⇄ GHS CORRIDOR</strong> · Collaborative P2P Float Syndication</div>
+        <h2 style="margin:0;border:none;padding:0;font-size:26px" id="syn-title-name">Lagos-Accra Float Syndicate Alpha <em id="syn-title-cohort">(Cohort #04)</em></h2>
+        <p style="margin-top:6px;max-width:760px" id="syn-title-desc">Solving the #1 operational bottleneck in OTC foreign exchange: <strong>float depth</strong>. Trusted circles, merchants, and diaspora partners pool working capital into a ring-fenced corridor float. Every completed customer swap captures a 2.2% spread, with profits distributed every 30 days through a strict, transparent dividend waterfall.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <span class="syn-badge" id="syn-status-badge"><i></i>Active &middot; Epoch #<span id="badge-epoch-num">04</span> (Day <span id="badge-epoch-day">18</span> / 30)</span>
+        <button class="btn primary" onclick="openEpochSettlementModal()">⚡ Settle Epoch &amp; Pay Dividends</button>
+      </div>
+    </div>
+
+    <!-- Shareable Private Invite Link -->
+    <div class="invite-bar">
+      <div class="invite-text">
+        <span style="font-weight:700;color:var(--ink)">🔗 Private Invite Link:</span>
+        <code id="inviteUrlText">https://aksen.desk/join?code=LAGOS-ACCRA-ALPHA</code>
+        <span class="invite-code" id="inviteCodePill">CODE: LAGOS-ACCRA-ALPHA</span>
+        <span style="color:var(--agency-green);font-weight:700;display:none;margin-left:8px" id="inviteToast">✓ Link copied to clipboard!</span>
+      </div>
+      <button class="copy-btn" onclick="copyInviteLink()">📋 Copy Invite Link</button>
+    </div>
+
+    <!-- Financial Health & Cash Exposure Deck -->
+    <div class="finance-deck">
+      <div class="finance-card">
+        <div class="f-label">Audited Cash Custody</div>
+        <div class="f-val" id="fin-total-custody">₦25,000,000</div>
+        <div class="f-sub">Tier-3 corporate banks &middot; 0 leverage</div>
+      </div>
+      <div class="finance-card">
+        <div class="f-label">Corridor Asset Exposure</div>
+        <div class="f-val"><span id="fin-pct-ngn">56.8%</span> NGN / <span id="fin-pct-ghs">43.2%</span> GHS</div>
+        <div class="cur-track">
+          <div class="cur-ngn" id="fin-bar-ngn" style="width:56.8%"></div>
+          <div class="cur-ghs" id="fin-bar-ghs" style="width:43.2%"></div>
+        </div>
+        <div class="f-sub"><span id="fin-ngn-bal">₦14,200,000</span> (GTB) &middot; <span id="fin-ghs-bal">GH₵ 102,857</span> (MoMo)</div>
+      </div>
+      <div class="finance-card">
+        <div class="f-label">Float Velocity &amp; Turnover</div>
+        <div class="f-val" id="fin-velocity">3.3x / epoch</div>
+        <div class="f-sub">Avg turn: ₦4.58M/day &middot; Healthy runway</div>
+      </div>
+      <div class="finance-card">
+        <div class="f-label">Bad Debt Reserve Vault</div>
+        <div class="f-val" id="fin-reserve-buffer">₦1,439,635</div>
+        <div class="f-sub">100% intact &middot; 0 uncollected reversals</div>
+      </div>
+    </div>
+
+    <!-- Hire Aksen Agent: Autonomous Desk Operator -->
+    <div class="agent-box">
+      <div class="agent-head">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <h3 style="margin:0;font-size:15px;color:var(--ink)">🤖 Autonomous Desk Operator (Aksen Flow Agent)</h3>
+            <span class="agent-badge" id="agentBadge"><i></i>Active &middot; Auto-Pilot Mode</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--agency-muted);margin-top:3px">
+            Your syndicate has delegated daily desk execution to an Aksen Agent. It handles customer intake, locks wholesale rates, scores NIBSS transfer slips via JEV, and auto-settles trades within safe pre-configured bounds.
+          </div>
+        </div>
+        <button class="btn" id="btnToggleAgent" onclick="toggleAgentAutonomy()">Pause Agent ⏸</button>
+      </div>
+
+      <div class="agent-rules">
+        <div class="agent-rule-item">
+          <span>Operating Policy:</span>
+          <strong id="agentPolicyName">Balanced Corridor</strong>
+        </div>
+        <div class="agent-rule-item">
+          <span>Auto-Payout Ceiling:</span>
+          <strong>≤ ₦1,000,000</strong>
+        </div>
+        <div class="agent-rule-item">
+          <span>JEV Forensics Gate:</span>
+          <strong>≥ 95.0% Confidence</strong>
+        </div>
+        <div class="agent-rule-item">
+          <span>Today's Automation:</span>
+          <strong style="color:var(--agency-green)">14 Swaps &middot; ₦238k Margin</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Pool Metrics -->
+    <div class="syn-grid">
+      <div class="syn-card hot">
+        <div class="label">Total Syndicate Capital</div>
+        <div class="value" id="syn-total-capital">₦25,000,000</div>
+        <div class="sub">100% committed float depth (~$16,250)</div>
+      </div>
+      <div class="syn-card">
+        <div class="label">Cumulative Volume</div>
+        <div class="value" id="syn-cum-volume">₦82,450,000</div>
+        <div class="sub" id="syn-sub-turn">Turned pool ~3.3x in 18 days</div>
+      </div>
+      <div class="syn-card hot">
+        <div class="label">Gross Spread Profit Earned</div>
+        <div class="value" id="syn-gross-profit">₦1,896,350</div>
+        <div class="sub">2.30% avg margin captured</div>
+      </div>
+      <div class="syn-card">
+        <div class="label">Net LP Dividend Pool (70%)</div>
+        <div class="value" id="syn-lp-pool">₦1,327,445</div>
+        <div class="sub">Accrued &middot; Payable Day 30</div>
+      </div>
+    </div>
+
+    <!-- Epoch Timeline -->
+    <div class="epoch-bar-wrapper">
+      <div class="epoch-bar-header">
+        <div><strong>Current Epoch Progress:</strong> Day <span id="syn-epoch-day">18</span> of 30 &middot; <span id="syn-days-left">12</span> days until automated dividend disbursement</div>
+        <span style="font:11.5px var(--mono);color:var(--agency-green);font-weight:700" id="syn-epoch-pct">60.0% Complete</span>
+      </div>
+      <div class="epoch-track">
+        <div class="epoch-fill" id="syn-epoch-fill" style="width:60%"></div>
+      </div>
+    </div>
+
+    <!-- Waterfall Breakdown & Simulator -->
+    <h2>1. The Automated 70 / 20 / 10 Profit Waterfall</h2>
+    <p>Revenue from customer bid-ask spreads is programmatically partitioned at each 30-day epoch close. The waterfall protects capital providers while incentivizing desk operators:</p>
+
+    <div class="waterfall-container">
+      <div class="waterfall-bar">
+        <div class="wf-segment wf-lp" id="wf-bar-lp" style="width:70%">70% Liquidity Providers</div>
+        <div class="wf-segment wf-op" id="wf-bar-op" style="width:20%">20% Operator</div>
+        <div class="wf-segment wf-res" id="wf-bar-res" style="width:10%">10% Buffer</div>
+      </div>
+
+      <div class="wf-legend">
+        <div class="wf-legend-item lp">
+          <div class="wf-title"><span>70% LP Distribution</span><span style="font:11px var(--mono);color:var(--agency-green)">PASSIVE RETURN</span></div>
+          <div class="wf-desc">Distributed pro-rata to all capital providers based on equity share. Automatically credited to members' bank or MoMo accounts at epoch close.</div>
+          <div class="wf-val" id="wf-val-lp">₦1,327,445 Accrued</div>
+        </div>
+        <div class="wf-legend-item op">
+          <div class="wf-title"><span>20% Desk Operator</span><span style="font:11px var(--mono);color:var(--agency-green)">MANAGEMENT</span></div>
+          <div class="wf-desc">Compensates operator labor: customer intake, KYC verification, multi-bank ledger reconciliation, and physical bureau overhead.</div>
+          <div class="wf-val" id="wf-val-op">₦379,270 Accrued</div>
+        </div>
+        <div class="wf-legend-item res">
+          <div class="wf-title"><span>10% Reserve Buffer</span><span style="font:11px var(--mono);color:var(--amber)">RISK VAULT</span></div>
+          <div class="wf-desc">Retained earnings buffer shielding against bank maintenance fees, NIBSS reversal delays, or cross-border FX gap slippage.</div>
+          <div class="wf-val" id="wf-val-res">₦189,635 Accrued</div>
+        </div>
+      </div>
+
+      <!-- Live Simulator -->
+      <div class="sim-box">
+        <div class="sim-control">
+          <label><span>Monthly Corridor Volume:</span><span id="sim-vol-label">₦80,000,000</span></label>
+          <input type="range" id="simVolSlider" min="10000000" max="200000000" step="5000000" value="80000000" oninput="runWaterfallSim()">
+          <span style="font-size:11.5px;color:var(--agency-muted)">Simulate volume rotated through the corridor each 30 days</span>
+        </div>
+        <div class="sim-control">
+          <label><span>Average Desk Spread:</span><span id="sim-spread-label">2.3%</span></label>
+          <input type="range" id="simSpreadSlider" min="1.0" max="4.5" step="0.1" value="2.3" oninput="runWaterfallSim()">
+          <span style="font-size:11.5px;color:var(--agency-muted)">Desk capture margin between NGN and GHS rates</span>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;padding:12px 16px;background:#ffffff;border:1px solid #d8e5d3;border-radius:10px;font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:center">
+        <div>
+          <span style="color:var(--agency-muted)">Projected 30-Day Gross Margin:</span> <strong id="sim-proj-gross" style="color:var(--ink)">₦1,840,000</strong> &middot;
+          <span style="color:var(--agency-muted)">Projected LP Dividend Pool:</span> <strong id="sim-proj-lp" style="color:var(--agency-green)">₦1,288,000</strong>
+        </div>
+        <div>
+          <span style="color:var(--agency-muted)">Est. LP Annualized Yield:</span> <strong id="sim-proj-apy" style="color:var(--agency-green);font-family:var(--mono);font-size:15px">~61.8% APY</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Equity Shareholder Table -->
+    <h2>2. Member Equity &amp; Accrued Dividend Ledger</h2>
+    <p>Live cap table for <strong>Lagos-Accra Float Syndicate Alpha</strong>. Whenever an order settles on the Live Swap Desk (Tab 1), spread profits immediately stream into this ledger pro-rata:</p>
+
+    <div class="table-wrap">
+      <table class="equity-table">
+        <thead>
+          <tr>
+            <th>Member / Partner</th>
+            <th>Capital Staked (₦)</th>
+            <th>Equity Share</th>
+            <th>Accrued Dividend (₦)</th>
+            <th>Payout Channel</th>
+            <th>KYC Status</th>
+          </tr>
+        </thead>
+        <tbody id="equity-table-body">
+          <!-- Rendered via JS -->
+        </tbody>
+        <tfoot style="border-top:2px solid var(--agency-green);font-weight:700">
+          <tr>
+            <td style="color:var(--ink)">Total Syndicate Pool</td>
+            <td id="equity-foot-capital" style="font-family:var(--mono);color:var(--ink)">₦25,000,000</td>
+            <td style="font-family:var(--mono);color:var(--agency-green)">100.0%</td>
+            <td id="equity-foot-dividend" style="font-family:var(--mono);color:var(--agency-green)">₦1,327,445</td>
+            <td id="equity-foot-accounts" style="color:var(--agency-muted)">5 Destination Accounts</td>
+            <td><span class="syn-badge"><i></i>Fully Backed</span></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Join / Stake Simulator -->
+    <h2>3. Join Syndicate / Stake Capital Simulator</h2>
+    <p>Test depositing working capital into the pool. The engine automatically recalculates pool dilution, your exact equity slice, and adds the staked Naira directly into the Live Swap Desk treasury float:</p>
+
+    <div class="join-card">
+      <div class="join-grid">
+        <div>
+          <div class="form-group">
+            <label>Your Name / Entity Alias:</label>
+            <input type="text" id="stakeName" value="Tunde Ade (New LP)" placeholder="e.g. Tunde Ade">
+          </div>
+          <div class="form-group">
+            <label>Capital to Stake (₦):</label>
+            <input type="number" id="stakeAmount" value="1500000" min="200000" step="100000" oninput="updateStakePreview()">
+            <div class="chip-row">
+              <button class="chip-btn" type="button" onclick="setStakeAmount(500000)">+₦500,000</button>
+              <button class="chip-btn" type="button" onclick="setStakeAmount(1500000)">+₦1,500,000</button>
+              <button class="chip-btn" type="button" onclick="setStakeAmount(3000000)">+₦3,000,000</button>
+              <button class="chip-btn" type="button" onclick="setStakeAmount(5000000)">+₦5,000,000</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Dividend Payout Destination:</label>
+            <input type="text" id="stakeDest" value="Access Bank · 0729182391 (NGN)" placeholder="Bank Account or Ghana MoMo">
+          </div>
+          <button class="btn primary" style="width:100%;padding:12px;font-size:14px;margin-top:8px" onclick="submitStakeCapital()">
+            + Stake Capital &amp; Join Syndicate Alpha &rarr;
+          </button>
+          <div class="toast-alert" id="stakeToast"></div>
+        </div>
+
+        <div class="preview-card">
+          <h4>📊 Real-Time Post-Money Impact</h4>
+          <div class="preview-row">
+            <span>Current Pool Capital:</span>
+            <span class="p-val" id="prev-current-pool">₦25,000,000</span>
+          </div>
+          <div class="preview-row">
+            <span>New Post-Money Capital:</span>
+            <span class="p-val highlight" id="prev-new-pool">₦26,500,000</span>
+          </div>
+          <div class="preview-row">
+            <span>Your Post-Money Equity:</span>
+            <span class="p-val highlight" id="prev-equity-pct">5.66%</span>
+          </div>
+          <div class="preview-row">
+            <span>Simulated Monthly Dividend:</span>
+            <span class="p-val" id="prev-monthly-div" style="color:var(--agency-green)">~₦72,900 / mo</span>
+          </div>
+          <div class="preview-row">
+            <span>Estimated Annual Return:</span>
+            <span class="p-val" id="prev-apy" style="color:var(--agency-green)">~58.3% APY</span>
+          </div>
+          <div class="preview-row">
+            <span>Treasury Impact:</span>
+            <span style="font-size:12px;color:var(--agency-green)">Funds immediately unlock more swap volume on Tab 1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Historical Epochs Audit Trail -->
+    <h2>4. Historical Epoch Payout Ledger</h2>
+    <p>Immutable record of past closed epochs and automated distributions to liquidity providers:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Epoch</th>
+            <th>Close Date</th>
+            <th>Turned Volume</th>
+            <th>Gross Margin</th>
+            <th>70% LP Dividend</th>
+            <th>20% Operator Fee</th>
+            <th>10% Reserve Buffer</th>
+            <th>Settlement Status</th>
+          </tr>
+        </thead>
+        <tbody id="settlement-history-body">
+          <!-- Rendered via JS -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- Epoch Settlement Modal -->
+<div class="syn-modal" id="epochModal">
+  <div class="syn-modal-inner">
+    <div class="syn-modal-head">
+      <div>
+        <h3>⚡ 30-Day Epoch Settlement Simulation</h3>
+        <div style="font:11.5px var(--mono);color:var(--agency-muted);margin-top:2px">Lagos-Accra Float Syndicate Alpha &middot; Cohort #04</div>
+      </div>
+      <button class="syn-modal-close" onclick="closeEpochModal()">&times;</button>
+    </div>
+    <div id="epochModalContent"></div>
+    <div class="syn-modal-actions">
+      <button class="btn" onclick="closeEpochModal()">Close</button>
+      <button class="btn primary" id="btnConfirmEpoch" onclick="executeEpochSettlement()">✓ Confirm &amp; Dispatch NIBSS/MoMo Batch &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Syndicate Modal -->
+<div class="syn-modal" id="createSynModal">
+  <div class="syn-modal-inner">
+    <div class="syn-modal-head">
+      <div>
+        <h3>🚀 Create New Float Syndicate</h3>
+        <div style="font:11.5px var(--mono);color:var(--agency-muted);margin-top:2px">Private OTC capital pooling &middot; Friends, family &amp; merchant circles</div>
+      </div>
+      <button class="syn-modal-close" onclick="closeCreateSynModal()">&times;</button>
+    </div>
+    
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group" style="margin:0">
+        <label>Syndicate / Group Name:</label>
+        <input type="text" id="newSynName" placeholder="e.g. Alaba Electronics Importers Pool">
+      </div>
+      
+      <div class="modal-form-grid">
+        <div class="form-group" style="margin:0">
+          <label>Target Float Capital (₦):</label>
+          <input type="number" id="newSynTarget" value="15000000" step="1000000">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Trading Corridor:</label>
+          <select id="newSynCorridor">
+            <option value="NGN ⇄ GHS">NGN ⇄ GHS (Naira / Cedis)</option>
+            <option value="NGN ⇄ KES">NGN ⇄ KES (Naira / Shilling)</option>
+            <option value="USD ⇄ NGN">USD ⇄ NGN (Dollar / Naira)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin:0">
+        <label>Autonomous Agent Policy (Safety Bounds):</label>
+        <select id="newSynPolicy">
+          <option value="Balanced (Auto ≤ ₦1,000,000 &amp; JEV ≥ 95%)">Balanced — Auto-settle ≤ ₦1M if JEV ≥ 95% (Recommended)</option>
+          <option value="Conservative (Auto ≤ ₦500,000 &amp; JEV ≥ 98%)">Conservative — Auto-settle ≤ ₦500k if JEV ≥ 98%</option>
+          <option value="High Velocity (Auto ≤ ₦2,500,000 &amp; JEV ≥ 92%)">High Velocity — Fast turns for high-volume merchants</option>
+        </select>
+      </div>
+
+      <div style="border-top:1px solid var(--line);padding-top:14px;margin-top:2px">
+        <div style="font:11px var(--mono);font-weight:700;color:var(--agency-green);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Your Founding Stake (Lead LP)</div>
+        <div class="modal-form-grid">
+          <div class="form-group" style="margin:0">
+            <label>Your Capital Stake (₦):</label>
+            <input type="number" id="newSynCreatorStake" value="3000000" step="500000">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Your Payout Bank / MoMo:</label>
+            <input type="text" id="newSynCreatorDest" value="GTBank · 0192837461 (NGN)" placeholder="Account details">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="syn-modal-actions">
+      <button class="btn" onclick="closeCreateSynModal()">Cancel</button>
+      <button class="btn primary" onclick="submitCreateSyndicate()">✓ Create Syndicate &amp; Generate Link &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span><b>Aksen Labs OTC FX Engine:</b> Multi-Agent P2P Bureau Architecture<span class="dot"></span>Corridors: NGN ⇄ GHS, NGN ⇄ KES, USD ⇄ NGN</span>
+  <span>platform/lib/jev.ts &middot; aksen-labs.workers.dev</span>
+</footer>
+
+<script>
+// ================= STATE =================
+let treasury = {
+  ngnPool: 24850000,
+  ghsPool: 184200,
+  marketBase: 102.50,
+  spreadPct: 2.50
+};
+
+let syndicates = [
+  {
+    id: "alpha-04",
+    name: "Lagos-Accra Float Syndicate Alpha",
+    cohort: "Cohort #04",
+    corridor: "NGN ⇄ GHS",
+    desc: "Solving the #1 operational bottleneck in OTC foreign exchange: float depth. Trusted circles, merchants, and diaspora partners pool working capital into a ring-fenced corridor float. Every completed customer swap captures a 2.2% spread, with profits distributed every 30 days through a strict, transparent dividend waterfall.",
+    epochNumber: 4,
+    epochDay: 18,
+    epochTotalDays: 30,
+    cumulativeVolume: 82450000,
+    cumulativeProfit: 1896350,
+    agentAutonomy: true,
+    agentPolicy: "Balanced Corridor",
+    inviteCode: "LAGOS-ACCRA-ALPHA",
+    waterfall: {
+      lpPct: 70,
+      operatorPct: 20,
+      reservePct: 10
+    },
+    members: [
+      { id: "mem-1", name: "Bishop T.", role: "Lead LP &amp; Desk Originator", capital: 10000000, payoutDest: "GTBank · 0124899120 (NGN)", status: "Verified", isUser: false },
+      { id: "mem-2", name: "Kwame Mensah", role: "Accra Merchant Partner", capital: 6250000, payoutDest: "MTN MoMo · 0244192831 (GHS eq)", status: "Verified", isUser: false },
+      { id: "mem-3", name: "Aisha Bello", role: "Lagos Angel Investor", capital: 5000000, payoutDest: "OPay · 8031920841 (NGN)", status: "Verified", isUser: false },
+      { id: "mem-4", name: "Chidi Eze", role: "Diaspora LP (London)", capital: 2500000, payoutDest: "Zenith Bank · 2048190281 (NGN)", status: "Verified", isUser: false },
+      { id: "mem-5", name: "Reserve Buffer", role: "Retained Earnings Float", capital: 1250000, payoutDest: "Escrow Multi-Sig Vault", status: "System Backed", isUser: false }
+    ],
+    settlementHistory: [
+      { epoch: "Epoch #03", closeDate: "2026-09-12", volume: "₦114,200,000", grossMargin: "₦2,626,600", lpDividend: "₦1,838,620", operatorFee: "₦525,320", reserveBuffer: "₦262,660", status: "Dispatched via NIBSS & MoMo" },
+      { epoch: "Epoch #02", closeDate: "2026-08-13", volume: "₦98,400,000", grossMargin: "₦2,263,200", lpDividend: "₦1,584,240", operatorFee: "₦452,640", reserveBuffer: "₦226,320", status: "Dispatched via NIBSS & MoMo" }
+    ]
+  },
+  {
+    id: "alaba-importers",
+    name: "Alaba Electronics Importers Pool",
+    cohort: "Cohort #01",
+    corridor: "NGN ⇄ GHS",
+    desc: "Private trade float co-op organized by Alaba International electronics importers. Provides same-day Cedis liquidity for container clearance at Tema Port and Accra wholesalers without middleman wire transfer holdups.",
+    epochNumber: 1,
+    epochDay: 8,
+    epochTotalDays: 30,
+    cumulativeVolume: 34500000,
+    cumulativeProfit: 862500,
+    agentAutonomy: true,
+    agentPolicy: "Conservative (Auto ≤ ₦500k & JEV ≥ 98%)",
+    inviteCode: "ALABA-IMPORT-01",
+    waterfall: {
+      lpPct: 70,
+      operatorPct: 20,
+      reservePct: 10
+    },
+    members: [
+      { id: "mem-a1", name: "Chief Emeka (Alaba Leader)", role: "Syndicate Admin", capital: 8000000, payoutDest: "Fidelity Bank · 4019284102", status: "Verified", isUser: false },
+      { id: "mem-a2", name: "Nnamdi K.", role: "Logistics Partner", capital: 4500000, payoutDest: "GTBank · 0184910281", status: "Verified", isUser: false },
+      { id: "mem-a3", name: "Reserve Buffer", role: "Retained Earnings Float", capital: 500000, payoutDest: "Escrow Multi-Sig Vault", status: "System Backed", isUser: false }
+    ],
+    settlementHistory: []
+  }
+];
+
+let activeSyndicateId = "alpha-04";
+var syndicate = syndicates[0];
+function getActiveSyndicate(){
+  return syndicates.find(s => s.id === activeSyndicateId) || syndicates[0];
+}
+
+let activeOrders = [];
+try{
+  activeOrders = JSON.parse(localStorage.getItem("aksen_fx_orders")||"[]");
+}catch(e){ activeOrders = []; }
+
+function saveOrders(){
+  localStorage.setItem("aksen_fx_orders", JSON.stringify(activeOrders));
+}
+
+// Current chat draft
+let draft = {
+  direction: "NGN_TO_GHS",
+  amountIn: 500000,
+  rate: 105.06,
+  amountOut: 4759.18,
+  momoNumber: "",
+  momoName: "",
+  momoNetwork: "MTN Ghana",
+  status: "idle",
+  ref: "FX-" + Math.floor(10000 + Math.random()*90000)
+};
+
+// ================= DOM REFS =================
+const log = document.getElementById("chatlog");
+const quick = document.getElementById("quick");
+const inputrow = document.getElementById("inputrow");
+const chatinput = document.getElementById("chatinput");
+
+function getEffectiveRate(){
+  const base = parseFloat(document.getElementById("cfgMarket").value) || 102.50;
+  const spread = parseFloat(document.getElementById("cfgSpread").value) || 2.5;
+  // Buying GHS with NGN: Rate = Base * (1 + spread%)
+  return (base * (1 + spread / 100)).toFixed(2);
+}
+
+function updateRates(){
+  const eff = getEffectiveRate();
+  document.getElementById("effectiveRateLabel").textContent = "Customer Rate: 1 GHS = " + eff + " NGN";
+  document.getElementById("topRate").textContent = eff;
+}
+
+function switchTab(tabId){
+  document.querySelectorAll(".nav-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tabId));
+  document.getElementById("view-demo").style.display = tabId === "demo" ? "block" : "none";
+  document.getElementById("view-mechanics").style.display = tabId === "mechanics" ? "block" : "none";
+  document.getElementById("view-architecture").style.display = tabId === "architecture" ? "block" : "none";
+  document.getElementById("view-syndicates").style.display = tabId === "syndicates" ? "block" : "none";
+  if(tabId === "syndicates") renderSyndicates();
+}
+
+function jumpToPanel(panelId){
+  const el = document.getElementById(panelId);
+  if(el){
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    const btnChat = document.getElementById("btnJumpChat");
+    const btnDesk = document.getElementById("btnJumpDesk");
+    if(btnChat && btnDesk){
+      if(panelId === "chatPanel"){
+        btnChat.classList.add("active");
+        btnDesk.classList.remove("active");
+      } else {
+        btnDesk.classList.add("active");
+        btnChat.classList.remove("active");
+      }
+    }
+  }
+}
+
+function resetDemo(){
+  localStorage.removeItem("aksen_fx_orders");
+  activeOrders = [];
+  treasury.ngnPool = 24850000;
+  treasury.ghsPool = 184200;
+  syndicate.cumulativeProfit = 1896350;
+  syndicate.cumulativeVolume = 82450000;
+  syndicate.epochDay = 18;
+  syndicate.members = syndicate.members.filter(m => !m.isUser);
+  log.innerHTML = "";
+  renderDesk();
+  renderSyndicates();
+  startChat();
+}
+
+// ================= CHAT HELPERS =================
+function bubble(text, who, isDesk){
+  const m = document.createElement("div");
+  if(who === "me"){
+    m.className = "user-message";
+    m.textContent = text;
+  } else {
+    m.className = "agent-message" + (isDesk ? " desk-message" : "");
+    const av = document.createElement("span");
+    av.textContent = isDesk ? "🏦" : "⚡";
+    const p = document.createElement("p");
+    if(isDesk) p.className = "desk-bubble";
+    p.innerHTML = text;
+    m.appendChild(av);
+    m.appendChild(p);
+  }
+  log.appendChild(m);
+  log.scrollTop = log.scrollHeight;
+}
+
+function botSay(text, cb){
+  const t = document.createElement("div");
+  t.className = "typing";
+  t.textContent = "Aksen FX typing…";
+  log.appendChild(t);
+  log.scrollTop = log.scrollHeight;
+  setTimeout(()=>{
+    if(t.parentNode) log.removeChild(t);
+    bubble(text, "bot", false);
+    if(cb) cb();
+  }, 420);
+}
+
+function deskSay(text, cb){
+  const t = document.createElement("div");
+  t.className = "typing";
+  t.textContent = "Treasury desk confirming…";
+  log.appendChild(t);
+  log.scrollTop = log.scrollHeight;
+  setTimeout(()=>{
+    if(t.parentNode) log.removeChild(t);
+    bubble(text, "bot", true);
+    const cp = document.getElementById("chatPanel");
+    cp.classList.add("pulse");
+    setTimeout(()=>cp.classList.remove("pulse"), 1200);
+    if(cb) cb();
+  }, 480);
+}
+
+function setQuick(options){
+  quick.innerHTML = "";
+  quick.className = "choice-grid" + ((options||[]).length===1 ? " single" : "");
+  (options||[]).forEach(o=>{
+    const b = document.createElement("button");
+    b.className = "choice" + (o.accent ? " accent" : "");
+    b.textContent = o.label;
+    b.onclick = ()=>{ sendCustomer(o.label, o.value); };
+    quick.appendChild(b);
+  });
+}
+
+function sendCustomer(label, value){
+  bubble(label, "me");
+  setQuick([]);
+  handle(value !== undefined ? value : label);
+}
+
+function sendTyped(){
+  const t = chatinput.value.trim();
+  if(!t) return;
+  chatinput.value = "";
+  bubble(t, "me");
+  setQuick([]);
+  handleFree(t);
+}
+
+// ================= FLOW ENGINE =================
+function startChat(){
+  draft = {
+    direction: "NGN_TO_GHS",
+    amountIn: 500000,
+    rate: parseFloat(getEffectiveRate()),
+    amountOut: 0,
+    momoNumber: "0245719646",
+    momoName: "Bishop Tewogbade",
+    momoNetwork: "MTN Ghana",
+    status: "idle",
+    ref: "FX-" + Math.floor(10000 + Math.random()*90000)
+  };
+
+  botSay("Akwaaba & Welcome! I am your Aksen OTC FX desk agent. Swap Naira to Cedis or Cedis to Naira at locked wholesale rates, deposited directly to Ghana Mobile Money or Bank.", function(){
+    botSay("How much are you looking to exchange today?", function(){
+      setQuick([
+        {label:"₦500,000 NGN → GHS 🇬🇭", value:"500000", accent:true},
+        {label:"₦1,500,000 NGN → GHS 🇬🇭", value:"1500000"},
+        {label:"₦5,000,000 NGN → GHS (Wholesale)", value:"5000000"},
+        {label:"GH₵ 2,500 GHS → NGN 🇳🇬", value:"ghs2500"},
+        {label:"Custom Amount ⚡", value:"custom"}
+      ]);
+    });
+  });
+}
+
+function handle(choice){
+  if(typeof choice === "function"){
+    choice();
+    return;
+  }
+  if(choice === "custom"){
+    botSay("Type the amount and currency you wish to send (e.g. 750000 NGN):", function(){
+      chatinput.focus();
+      draft.expectAmount = true;
+    });
+    return;
+  }
+  if(choice === "500000" || choice === "1500000" || choice === "5000000"){
+    prepareQuote(parseFloat(choice), "NGN");
+    return;
+  }
+  if(choice === "ghs2500"){
+    prepareQuote(2500, "GHS");
+    return;
+  }
+  if(choice === "__lockRate"){
+    askDestination();
+    return;
+  }
+  if(choice === "__uploadSlip"){
+    simulateSlipUpload();
+    return;
+  }
+  if(typeof choice === "string"){
+    handleFree(choice);
+    return;
+  }
+}
+
+function handleFree(t){
+  if(draft.expectAmount){
+    const cleanNum = parseFloat(t.replace(/[^0-9.]/g, '')) || 500000;
+    draft.expectAmount = false;
+    prepareQuote(cleanNum, "NGN");
+    return;
+  }
+  if(draft.expectMomo){
+    draft.momoNumber = t;
+    draft.expectMomo = false;
+    askMomoName();
+    return;
+  }
+  if(draft.expectMomoName){
+    draft.momoName = t;
+    draft.expectMomoName = false;
+    dispatchAccountDetails();
+    return;
+  }
+
+  // Quick numerical amount detection
+  const rawNum = parseFloat(t.replace(/[^0-9.]/g, ''));
+  if(!isNaN(rawNum) && rawNum >= 10000 && rawNum <= 50000000 && !/[a-zA-Z]{4,}/.test(t)){
+    prepareQuote(rawNum, "NGN");
+    return;
+  }
+
+  // Live OpenRouter AI Chat
+  askAiAssistant(t);
+}
+
+async function askAiAssistant(msg){
+  const typingId = "typing-" + Date.now();
+  const typingEl = document.createElement("div");
+  typingEl.className = "msg them";
+  typingEl.id = typingId;
+  typingEl.innerHTML = `<span class="sender">⚡ Aksen Edge AI</span><div class="bubble" style="opacity:0.85"><em>Consulting OpenRouter LLM...</em></div>`;
+  log.appendChild(typingEl);
+  scrollBot();
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: msg,
+        context: {
+          corridor: draft.direction,
+          rate: draft.rate,
+          amountIn: draft.amountIn,
+          activeSyndicate: (typeof syndicates !== "undefined" && syndicates[0]) ? syndicates[0].name : "Lagos-Accra Float Syndicate Alpha"
+        }
+      })
+    });
+
+    const el = document.getElementById(typingId);
+    if(el) el.remove();
+
+    if(res.ok){
+      const data = await res.json();
+      if(data.ok && data.reply){
+        botSay(data.reply.text, function(){
+          if(data.reply.extractedQuote && data.reply.extractedQuote.amountIn){
+            prepareQuote(data.reply.extractedQuote.amountIn, "NGN");
+          } else if(data.reply.suggestedPrompts && data.reply.suggestedPrompts.length){
+            setQuick(data.reply.suggestedPrompts.map(function(p){ return { label: p, value: p }; }));
+          }
+        });
+        return;
+      }
+    }
+  } catch(e) {
+    console.warn("API unavailable, falling back to local heuristic", e);
+  }
+
+  const el = document.getElementById(typingId);
+  if(el) el.remove();
+
+  botSay("I received your inquiry: \"" + esc(msg) + "\". Our desk quotes wholesale NGN/GHS rates locked for 15 minutes with instant settlement to MTN MoMo. You can also pool capital in our syndicated LP vaults.", function(){
+    setQuick([
+      {label: "₦1,500,000 NGN → GHS 🇬🇭", value: "1500000", accent: true},
+      {label: "Explore Syndicates 🤝", value: function(){ switchTab('syndicates'); }},
+      {label: "Custom Swap ⚡", value: "custom"}
+    ]);
+  });
+}
+
+function prepareQuote(amount, cur){
+  const effRate = parseFloat(getEffectiveRate());
+  draft.amountIn = amount;
+  draft.rate = effRate;
+  
+  if(cur === "NGN"){
+    draft.direction = "NGN_TO_GHS";
+    draft.amountOut = (amount / effRate).toFixed(2);
+  } else {
+    draft.direction = "GHS_TO_NGN";
+    draft.amountOut = (amount * effRate).toFixed(2);
+  }
+
+  const quoteHtml = `
+    <div class="quote-card">
+      <div class="quote-header">
+        <span class="quote-corridor">🇳🇬 NGN &rarr; 🇬🇭 GHS &middot; OTC Spot</span>
+        <span class="quote-expiry">⏱ 14:59 lock</span>
+      </div>
+      <div class="quote-grid">
+        <div class="quote-item">
+          <label>You Send</label>
+          <strong>₦${amount.toLocaleString()}</strong>
+        </div>
+        <div class="quote-item">
+          <label>You Receive</label>
+          <strong>GH₵ ${parseFloat(draft.amountOut).toLocaleString()}</strong>
+        </div>
+      </div>
+      <div class="quote-footer">
+        <b>Locked Rate:</b> 1 GHS = ${effRate} NGN &middot; Zero transfer fee &middot; Payout via MTN MoMo
+      </div>
+    </div>
+  `;
+
+  botSay("Here is your locked wholesale quote:<br>" + quoteHtml, function(){
+    setQuick([
+      {label:"🔒 Lock Rate & Proceed (" + draft.ref + ")", value:"__lockRate", accent:true},
+      {label:"Change Amount ↺", value:"custom"}
+    ]);
+  });
+}
+
+function askDestination(){
+  botSay("Rate locked for 15 minutes! Which Ghana Mobile Money number should receive the <b>GH₵ " + parseFloat(draft.amountOut).toLocaleString() + "</b>?", function(){
+    setQuick([
+      {label:"Use saved: 0245719646 (Bishop · MTN)", value:"0245719646", accent:true},
+      {label:"Enter another MoMo number", value:"custom_momo"}
+    ]);
+  });
+}
+
+function askMomoName(){
+  botSay("What is the registered account name on this MoMo line?", function(){
+    inputrow.style.display = "flex";
+    chatinput.placeholder = "e.g. Bishop Kwame Tewogbade";
+    chatinput.focus();
+    draft.expectMomoName = true;
+  });
+}
+
+// override handle for momo presets
+const origHandle = handle;
+handle = function(choice){
+  if(choice === "0245719646"){
+    draft.momoNumber = "0245719646";
+    draft.momoName = "Bishop Tewogbade";
+    dispatchAccountDetails();
+    return;
+  }
+  if(choice === "custom_momo"){
+    botSay("Type the 10-digit MoMo number:", function(){
+      inputrow.style.display = "flex";
+      chatinput.placeholder = "024xxxxxxx";
+      chatinput.focus();
+      draft.expectMomo = true;
+    });
+    return;
+  }
+  origHandle(choice);
+};
+
+function dispatchAccountDetails(){
+  // Create order card on the desk!
+  const newOrder = {
+    id: draft.ref,
+    ts: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+    customer: draft.momoName,
+    direction: draft.direction,
+    amountIn: draft.amountIn,
+    amountOut: draft.amountOut,
+    rate: draft.rate,
+    momoNumber: draft.momoNumber,
+    momoNetwork: draft.momoNetwork,
+    status: "pending_deposit",
+    collectionBank: "GTBank Nigeria",
+    collectionAcc: "0123984752",
+    collectionName: "Aksen Liquidity Services Ltd",
+    receiptUploaded: false
+  };
+
+  activeOrders.unshift(newOrder);
+  saveOrders();
+  renderDesk();
+
+  const acctDetails = `
+    <b>Payment Details (Locked for 15 mins):</b><br>
+    Please transfer exactly <b>₦${draft.amountIn.toLocaleString()}</b> to our tier-1 settlement account:<br><br>
+    &bull; <b>Bank:</b> GTBank Nigeria<br>
+    &bull; <b>Account No:</b> <code>0123984752</code><br>
+    &bull; <b>Account Name:</b> Aksen Liquidity Services Ltd<br>
+    &bull; <b>Reference / Narration:</b> <code>${draft.ref}</code><br><br>
+    <small style="color:var(--amber)">⚠️ Important: Use the reference <b>${draft.ref}</b> in your transfer narration. Never write "crypto" or "fx".</small>
+  `;
+
+  botSay(acctDetails, function(){
+    botSay("Once transferred, upload your bank transfer receipt below to initiate instant verification and MoMo payout:", function(){
+      setQuick([
+        {label:"Upload Transfer Receipt 🧾 (" + draft.ref + ")", value:"__uploadSlip", accent:true}
+      ]);
+    });
+  });
+}
+
+function simulateSlipUpload(){
+  const order = activeOrders[0];
+  if(!order) return;
+
+  bubble("Uploaded debit receipt: GTB_Transfer_" + order.id + ".png", "me");
+  
+  const receiptHtml = `
+    <div class="receipt-tile">
+      <b>Receipt Received &middot; Initiating JEV Forensic Check</b>
+      <div class="receipt-meta">
+        <span>NIBSS Ref: 100001240928172938</span>
+        <span>Bank: GTBank Mobile</span>
+        <span>Amount: ₦${order.amountIn.toLocaleString()}</span>
+        <span>Status: Validating via OpenRouter JEV</span>
+      </div>
+    </div>
+  `;
+
+  botSay(receiptHtml + "Receipt forwarded to treasury desk. Multi-Agent vision &amp; JEV decision engine are validating the transaction...", async function(){
+    order.receiptUploaded = true;
+
+    // Call live JEV Decisions API on Cloudflare Worker
+    try {
+      const res = await fetch("/api/jev", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receiptRef: "NIBSS-100001240928" + Math.floor(100000 + Math.random()*900000),
+          amount: order.amountIn,
+          currency: "NGN",
+          senderName: order.customer,
+          recipientAccount: order.collectionAcc,
+          narration: order.id
+        })
+      });
+
+      if(res.ok){
+        const jevData = await res.json();
+        if(jevData.ok && jevData.verdict){
+          order.jevData = jevData.verdict;
+        }
+      }
+    } catch(err) {
+      console.warn("JEV API call failed, using local forensic score", err);
+    }
+
+    order.status = "verified";
+    saveOrders();
+    renderDesk();
+
+    // Pulse desk panel
+    const dp = document.getElementById("deskPanel");
+    if(dp){
+      dp.classList.add("pulse");
+      setTimeout(()=>dp.classList.remove("pulse"), 1400);
+    }
+  });
+}
+
+// ================= DESK ACTIONS =================
+function renderDesk(){
+  const c = { locks:0, awaiting:0, verified:0, settled:0 };
+  activeOrders.forEach(o=>{
+    if(o.status === "pending_deposit" && !o.receiptUploaded) c.awaiting++;
+    else if(o.status === "verified") c.verified++;
+    else if(o.status === "settled") c.settled++;
+    c.locks++;
+  });
+
+  document.getElementById("m-locks").textContent = c.locks;
+  document.getElementById("m-awaiting").textContent = c.awaiting;
+  document.getElementById("m-verified").textContent = c.verified;
+  document.getElementById("m-settled").textContent = c.settled;
+
+  document.getElementById("ngnPoolText").textContent = "₦" + treasury.ngnPool.toLocaleString();
+  document.getElementById("ghsPoolText").textContent = "GH₵ " + treasury.ghsPool.toLocaleString();
+
+  const cards = document.getElementById("deskcards");
+  const empty = document.getElementById("deskEmpty");
+  if(!activeOrders.length){
+    cards.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  cards.innerHTML = activeOrders.map(function(o){
+    let badgeClass = "sb-locked", badgeText = "Rate Locked";
+    let jevSection = "";
+    let actions = "";
+
+    if(o.status === "pending_deposit" && !o.receiptUploaded){
+      badgeClass = "sb-locked";
+      badgeText = "Awaiting Inbound NGN";
+      actions = `<span style="font-size:12px;color:var(--amber)">Awaiting customer transfer receipt in WhatsApp...</span>`;
+    } else if(o.status === "verified"){
+      badgeClass = "sb-verified";
+      badgeText = "JEV Verified · Ready for Payout";
+      const jev = o.jevData || {
+        model: "typesafe/jev-1.13",
+        confidence: 98.4,
+        nibssAuthenticity: 99.1,
+        triangularFraudRisk: 1.2,
+        imageTamperingDetected: false
+      };
+      jevSection = `
+        <div class="jev-box">
+          <div class="jev-top">
+            <span class="jev-badge">⚡ JEV Decisions Engine (${esc(jev.model)})</span>
+            <span class="jev-score">${jev.confidence}% Confidence &middot; ${jev.confidence >= 95 ? "Low Risk" : "Audit Required"}</span>
+          </div>
+          <div class="jev-row">
+            <span>NIBSS Reference Authenticity:</span>
+            <b>${jev.nibssAuthenticity}% Valid &middot; Verified Switch</b>
+          </div>
+          <div class="jev-row">
+            <span>Triangular Fraud Risk:</span>
+            <b>${jev.triangularFraudRisk}% (${jev.triangularFraudRisk < 5 ? "Clear - Sender KYC Matches" : "High Risk"})</b>
+          </div>
+          <div class="jev-row">
+            <span>Image Tampering Forensics:</span>
+            <b>${jev.imageTamperingDetected ? "Tampering Detected" : "No Artifacts Detected"}</b>
+          </div>
+        </div>
+      `;
+      actions = `
+        <div class="desk-actions">
+          <button class="btn primary" onclick="authorizePayout('${o.id}')">✓ Authorize &amp; Dispatch GH₵ ${parseFloat(o.amountOut).toLocaleString()} MoMo Payout &rarr;</button>
+          <button class="btn" onclick="flagRisk('${o.id}')">Flag Discrepancy</button>
+        </div>
+      `;
+    } else if(o.status === "settled"){
+      badgeClass = "sb-settled";
+      badgeText = "Settled &amp; Paid";
+      actions = `<span style="font-size:12px;color:var(--agency-green);font-weight:600">✓ Completed &middot; MoMo Ref: MTN-${o.id}</span>`;
+    }
+
+    return `
+      <div class="fx-card ${o.status}" id="fxcard-${o.id}">
+        <div class="top">
+          <h3>${esc(o.customer)}</h3>
+          <span class="status-badge ${badgeClass}">${badgeText}</span>
+        </div>
+        <div class="oid">${esc(o.ts)} &middot; Ref: <b>${o.id}</b></div>
+
+        <div class="fx-conversion">
+          <div class="fx-leg">
+            <span class="c-label">Inbound NGN</span>
+            <span class="c-val">₦${o.amountIn.toLocaleString()}</span>
+          </div>
+          <span class="fx-arrow">&rarr;</span>
+          <div class="fx-leg">
+            <span class="c-label">Outbound GHS</span>
+            <span class="c-val">GH₵ ${parseFloat(o.amountOut).toLocaleString()}</span>
+          </div>
+          <span style="margin-left:auto;font:11px var(--mono);color:var(--agency-muted)">Rate: 1 GHS = ${o.rate} NGN</span>
+        </div>
+
+        <div class="kv-list">
+          <span class="k">MoMo To</span>
+          <span class="v"><b>${esc(o.momoNumber)}</b> (${esc(o.momoName)} &middot; ${esc(o.momoNetwork)})</span>
+        </div>
+        <div class="kv-list">
+          <span class="k">Inbound To</span>
+          <span class="v">${esc(o.collectionBank)}: <code>${esc(o.collectionAcc)}</code></span>
+        </div>
+
+        ${jevSection}
+        ${actions}
+      </div>
+    `;
+  }).join("");
+}
+
+function authorizePayout(id){
+  const o = activeOrders.find(x => x.id === id);
+  if(!o) return;
+
+  // Deduct from GHS pool, add to NGN pool
+  treasury.ghsPool -= parseFloat(o.amountOut);
+  treasury.ngnPool += parseFloat(o.amountIn);
+  o.status = "settled";
+  saveOrders();
+  renderDesk();
+
+  // Dynamic spread profit routes directly into Syndicate LP pool!
+  const spreadPct = parseFloat(document.getElementById("cfgSpread").value) || 2.5;
+  const spreadProfit = Math.round(parseFloat(o.amountIn) * (spreadPct / 100));
+  syndicate.cumulativeProfit += spreadProfit;
+  syndicate.cumulativeVolume += parseFloat(o.amountIn);
+  renderSyndicates();
+
+  // Send payout confirmation into WhatsApp chat!
+  const momoReceipt = `
+    <span class="desk-tag">Aksen Settlement &middot; MoMo Gateway</span><br>
+    🎉 <b>Transfer Complete! GH₵ ${parseFloat(o.amountOut).toLocaleString()} Paid.</b><br><br>
+    Your Ghana Mobile Money transfer has been successfully settled:<br><br>
+    &bull; <b>Recipient:</b> ${esc(o.momoName)} (${esc(o.momoNumber)})<br>
+    &bull; <b>Network:</b> MTN Mobile Money Ghana<br>
+    &bull; <b>Amount Credited:</b> GH₵ ${parseFloat(o.amountOut).toLocaleString()}<br>
+    &bull; <b>MoMo Transaction ID:</b> <code>MTN-GH-${Math.floor(100000000 + Math.random()*900000000)}</code><br>
+    &bull; <b>Settlement Time:</b> ${new Date().toLocaleTimeString()}<br><br>
+    <i>Thank you for using Aksen OTC FX Desk! Funds should reflect immediately on your MoMo balance.</i>
+  `;
+
+  deskSay(momoReceipt, function(){
+    setQuick([
+      {label:"Start another swap ⚡", value:"custom", accent:true}
+    ]);
+  });
+}
+
+function flagRisk(id){
+  alert("Trade " + id + " flagged for compliance hold. Transaction paused.");
+}
+
+function esc(s){
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ================= SYNDICATE & LP ENGINE =================
+function getTotalSyndicateCapital(){
+  return syndicate.members.reduce((sum, m) => sum + m.capital, 0);
+}
+
+function renderSyndicates(){
+  syndicate = getActiveSyndicate();
+  const totalCap = getTotalSyndicateCapital();
+  const lpPct = syndicate.waterfall.lpPct;
+  const opPct = syndicate.waterfall.operatorPct;
+  const resPct = syndicate.waterfall.reservePct;
+
+  const lpShare = Math.round(syndicate.cumulativeProfit * (lpPct / 100));
+  const opShare = Math.round(syndicate.cumulativeProfit * (opPct / 100));
+  const resShare = Math.round(syndicate.cumulativeProfit * (resPct / 100));
+
+  // 1. Syndicate Switcher Pills
+  const pillsEl = document.getElementById("synPillsContainer");
+  if(pillsEl){
+    pillsEl.innerHTML = syndicates.map(s => `
+      <button class="syn-pill ${s.id === activeSyndicateId ? 'active' : ''}" onclick="switchSyndicate('${s.id}')">
+        ${s.name} ${s.id === activeSyndicateId ? '●' : ''}
+      </button>
+    `).join("");
+  }
+
+  // 2. Syndicate Header & Info
+  const elTitleName = document.getElementById("syn-title-name");
+  if(elTitleName) elTitleName.innerHTML = `${esc(syndicate.name)} <em>(${esc(syndicate.cohort)})</em>`;
+  const elCorridorTag = document.getElementById("syn-corridor-tag");
+  if(elCorridorTag) elCorridorTag.textContent = `${syndicate.corridor || "NGN ⇄ GHS"} CORRIDOR`;
+  const elTitleDesc = document.getElementById("syn-title-desc");
+  if(elTitleDesc && syndicate.desc) elTitleDesc.textContent = syndicate.desc;
+  const elBadgeEpochNum = document.getElementById("badge-epoch-num");
+  if(elBadgeEpochNum) elBadgeEpochNum.textContent = String(syndicate.epochNumber).padStart(2, '0');
+  const elBadgeEpochDay = document.getElementById("badge-epoch-day");
+  if(elBadgeEpochDay) elBadgeEpochDay.textContent = syndicate.epochDay;
+
+  // 3. Invite Link Bar
+  const elInviteUrl = document.getElementById("inviteUrlText");
+  if(elInviteUrl) elInviteUrl.textContent = `https://aksen.desk/join?code=${syndicate.inviteCode}`;
+  const elInvitePill = document.getElementById("inviteCodePill");
+  if(elInvitePill) elInvitePill.textContent = `CODE: ${syndicate.inviteCode}`;
+
+  // 4. Financial Health & Cash Exposure Deck
+  const elFinCustody = document.getElementById("fin-total-custody");
+  if(elFinCustody) elFinCustody.textContent = "₦" + totalCap.toLocaleString();
+  const ngnSharePct = 56.8;
+  const ghsSharePct = 43.2;
+  const ngnBal = Math.round(totalCap * (ngnSharePct / 100));
+  const ghsBal = Math.round((totalCap * (ghsSharePct / 100)) / (parseFloat(treasury.marketBase) || 102.5));
+  const elFinNgn = document.getElementById("fin-pct-ngn");
+  if(elFinNgn) elFinNgn.textContent = ngnSharePct + "%";
+  const elFinGhs = document.getElementById("fin-pct-ghs");
+  if(elFinGhs) elFinGhs.textContent = ghsSharePct + "%";
+  const elFinNgnBal = document.getElementById("fin-ngn-bal");
+  if(elFinNgnBal) elFinNgnBal.textContent = "₦" + ngnBal.toLocaleString();
+  const elFinGhsBal = document.getElementById("fin-ghs-bal");
+  if(elFinGhsBal) elFinGhsBal.textContent = "GH₵ " + ghsBal.toLocaleString();
+  const elFinVelocity = document.getElementById("fin-velocity");
+  if(elFinVelocity){
+    const vel = (syndicate.cumulativeVolume / Math.max(1, totalCap)).toFixed(1);
+    elFinVelocity.textContent = `${vel}x / epoch`;
+  }
+  const elFinReserve = document.getElementById("fin-reserve-buffer");
+  if(elFinReserve) elFinReserve.textContent = "₦" + (resShare + 1250000).toLocaleString();
+
+  // 5. Hire Aksen Agent Box
+  const elAgentBadge = document.getElementById("agentBadge");
+  const elBtnAgent = document.getElementById("btnToggleAgent");
+  const elPolicyName = document.getElementById("agentPolicyName");
+  if(elPolicyName) elPolicyName.textContent = syndicate.agentPolicy || "Balanced Corridor";
+  if(elAgentBadge && elBtnAgent){
+    if(syndicate.agentAutonomy){
+      elAgentBadge.className = "agent-badge";
+      elAgentBadge.innerHTML = "<i></i>Active &middot; Auto-Pilot Mode";
+      elBtnAgent.textContent = "Pause Agent ⏸";
+    } else {
+      elAgentBadge.className = "agent-badge off";
+      elAgentBadge.innerHTML = "<i></i>Paused &middot; Manual Oversight";
+      elBtnAgent.textContent = "Resume Agent ▶";
+    }
+  }
+
+  // 6. Top Metric Cards
+  const elTotalCap = document.getElementById("syn-total-capital");
+  if(elTotalCap) elTotalCap.textContent = "₦" + totalCap.toLocaleString();
+  const elCumVol = document.getElementById("syn-cum-volume");
+  if(elCumVol) elCumVol.textContent = "₦" + syndicate.cumulativeVolume.toLocaleString();
+  const elGross = document.getElementById("syn-gross-profit");
+  if(elGross) elGross.textContent = "₦" + syndicate.cumulativeProfit.toLocaleString();
+  const elLpPool = document.getElementById("syn-lp-pool");
+  if(elLpPool) elLpPool.textContent = "₦" + lpShare.toLocaleString();
+
+  // 7. Epoch Timeline
+  const elDay = document.getElementById("syn-epoch-day");
+  if(elDay) elDay.textContent = syndicate.epochDay;
+  const daysLeft = Math.max(0, syndicate.epochTotalDays - syndicate.epochDay);
+  const elDaysLeft = document.getElementById("syn-days-left");
+  if(elDaysLeft) elDaysLeft.textContent = daysLeft;
+  const progressPct = ((syndicate.epochDay / syndicate.epochTotalDays) * 100).toFixed(1);
+  const elEpochPct = document.getElementById("syn-epoch-pct");
+  if(elEpochPct) elEpochPct.textContent = progressPct + "% Complete";
+  const elEpochFill = document.getElementById("syn-epoch-fill");
+  if(elEpochFill) elEpochFill.style.width = progressPct + "%";
+
+  // 8. Waterfall Accruals
+  const elWfLp = document.getElementById("wf-val-lp");
+  if(elWfLp) elWfLp.textContent = "₦" + lpShare.toLocaleString() + " Accrued";
+  const elWfOp = document.getElementById("wf-val-op");
+  if(elWfOp) elWfOp.textContent = "₦" + opShare.toLocaleString() + " Accrued";
+  const elWfRes = document.getElementById("wf-val-res");
+  if(elWfRes) elWfRes.textContent = "₦" + resShare.toLocaleString() + " Accrued";
+
+  // 9. Equity Table
+  const tbody = document.getElementById("equity-table-body");
+  if(tbody){
+    tbody.innerHTML = syndicate.members.map(m => {
+      const eqSharePct = (m.capital / totalCap) * 100;
+      const accruedDiv = Math.round(lpShare * (eqSharePct / 100));
+      return `
+        <tr class="${m.isUser ? 'user-row' : ''}">
+          <td>
+            <strong>${m.name}</strong> ${m.isUser ? '<span style="font-size:10px;color:var(--agency-green);font-weight:700">★ YOU</span>' : ''}<br>
+            <span class="badge-role">${m.role}</span>
+          </td>
+          <td style="font-family:var(--mono);font-weight:700;color:var(--ink)">₦${m.capital.toLocaleString()}</td>
+          <td>
+            <div class="equity-pct-bar">
+              <span style="font-family:var(--mono);font-weight:700;width:48px">${eqSharePct.toFixed(2)}%</span>
+              <div class="equity-mini-track">
+                <div class="equity-mini-fill" style="width:${Math.min(100, Math.max(4, eqSharePct))}%"></div>
+              </div>
+            </div>
+          </td>
+          <td style="font-family:var(--mono);font-weight:700;color:var(--agency-green)">₦${accruedDiv.toLocaleString()}</td>
+          <td style="font-size:12.5px">${m.payoutDest}</td>
+          <td><span class="syn-badge"><i></i>${m.status}</span></td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  const footCap = document.getElementById("equity-foot-capital");
+  if(footCap) footCap.textContent = "₦" + totalCap.toLocaleString();
+  const footDiv = document.getElementById("equity-foot-dividend");
+  if(footDiv) footDiv.textContent = "₦" + lpShare.toLocaleString();
+  const footAcc = document.getElementById("equity-foot-accounts");
+  if(footAcc) footAcc.textContent = syndicate.members.length + " Destination Accounts";
+
+  // 10. History Table
+  const histBody = document.getElementById("settlement-history-body");
+  if(histBody){
+    if(syndicate.settlementHistory && syndicate.settlementHistory.length > 0){
+      histBody.innerHTML = syndicate.settlementHistory.map(h => `
+        <tr>
+          <td><strong>${h.epoch}</strong></td>
+          <td>${h.closeDate}</td>
+          <td style="font-family:var(--mono)">${h.volume}</td>
+          <td style="font-family:var(--mono)">${h.grossMargin}</td>
+          <td style="font-family:var(--mono);color:var(--agency-green);font-weight:600">${h.lpDividend}</td>
+          <td style="font-family:var(--mono)">${h.operatorFee}</td>
+          <td style="font-family:var(--mono)">${h.reserveBuffer}</td>
+          <td><span class="syn-badge"><i></i>${h.status}</span></td>
+        </tr>
+      `).join("");
+    } else {
+      histBody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--agency-muted)">No closed epochs yet for this cohort. Day 1 underway!</td></tr>`;
+    }
+  }
+
+  runWaterfallSim();
+  updateStakePreview();
+}
+
+function switchSyndicate(id){
+  activeSyndicateId = id;
+  renderSyndicates();
+}
+
+function copyInviteLink(){
+  const curSyn = getActiveSyndicate();
+  const link = `https://aksen.desk/join?code=${curSyn.inviteCode}`;
+  if(navigator && navigator.clipboard){
+    navigator.clipboard.writeText(link).catch(()=>{});
+  }
+  const toast = document.getElementById("inviteToast");
+  if(toast){
+    toast.style.display = "inline-block";
+    setTimeout(()=>{ toast.style.display = "none"; }, 3500);
+  }
+}
+
+function toggleAgentAutonomy(){
+  const curSyn = getActiveSyndicate();
+  curSyn.agentAutonomy = !curSyn.agentAutonomy;
+  renderSyndicates();
+}
+
+function openCreateSyndicateModal(){
+  const m = document.getElementById("createSynModal");
+  if(m) m.style.display = "flex";
+}
+
+function closeCreateSynModal(){
+  const m = document.getElementById("createSynModal");
+  if(m) m.style.display = "none";
+}
+
+function submitCreateSyndicate(){
+  const nameEl = document.getElementById("newSynName");
+  const targetEl = document.getElementById("newSynTarget");
+  const corridorEl = document.getElementById("newSynCorridor");
+  const policyEl = document.getElementById("newSynPolicy");
+  const stakeEl = document.getElementById("newSynCreatorStake");
+  const destEl = document.getElementById("newSynCreatorDest");
+
+  const name = (nameEl.value || "").trim() || "Private OTC Float Co-Op";
+  const target = parseFloat(targetEl.value) || 15000000;
+  const corridor = corridorEl.value || "NGN ⇄ GHS";
+  const policy = policyEl.value || "Balanced Corridor";
+  const stake = parseFloat(stakeEl.value) || 2000000;
+  const dest = (destEl.value || "").trim() || "GTBank Lagos · 0192837461 (NGN)";
+
+  const newId = "syn-" + Date.now();
+  const cleanCode = name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  const inviteCode = (cleanCode || "FLOAT") + "-" + Math.floor(100 + Math.random()*900);
+
+  const newSyn = {
+    id: newId,
+    name: name,
+    cohort: "Cohort #01",
+    corridor: corridor,
+    desc: `Private capital float syndicate created to capture wholesale cross-border FX margins along the ${corridor} corridor. Funds operate with strict 70/20/10 automated payouts.`,
+    epochNumber: 1,
+    epochDay: 1,
+    epochTotalDays: 30,
+    cumulativeVolume: 0,
+    cumulativeProfit: 0,
+    agentAutonomy: true,
+    agentPolicy: policy,
+    inviteCode: inviteCode,
+    waterfall: { lpPct: 70, operatorPct: 20, reservePct: 10 },
+    members: [
+      { id: "mem-" + Date.now(), name: "Founder &amp; Originator", role: "Syndicate Creator", capital: stake, payoutDest: dest, status: "Verified", isUser: true },
+      { id: "res-" + Date.now(), name: "Reserve Buffer", role: "Retained Earnings Float", capital: Math.round(stake * 0.05), payoutDest: "Escrow Multi-Sig Vault", status: "System Backed", isUser: false }
+    ],
+    settlementHistory: []
+  };
+
+  syndicates.push(newSyn);
+  activeSyndicateId = newId;
+
+  // Add founding stake to Live Swap Desk float
+  treasury.ngnPool += stake;
+  renderDesk();
+
+  closeCreateSynModal();
+  renderSyndicates();
+
+  // Reset form inputs
+  nameEl.value = "";
+}
+
+function runWaterfallSim(){
+  const volEl = document.getElementById("simVolSlider");
+  const spreadEl = document.getElementById("simSpreadSlider");
+  if(!volEl || !spreadEl) return;
+
+  const vol = parseFloat(volEl.value) || 80000000;
+  const spread = parseFloat(spreadEl.value) || 2.3;
+  const totalCap = getTotalSyndicateCapital();
+
+  document.getElementById("sim-vol-label").textContent = "₦" + vol.toLocaleString();
+  document.getElementById("sim-spread-label").textContent = spread.toFixed(1) + "%";
+
+  const grossProfit = Math.round(vol * (spread / 100));
+  const lpDist = Math.round(grossProfit * 0.70);
+
+  document.getElementById("sim-proj-gross").textContent = "₦" + grossProfit.toLocaleString();
+  document.getElementById("sim-proj-lp").textContent = "₦" + lpDist.toLocaleString();
+
+  // Monthly return on pool capital * 12
+  const monthlyReturnPct = (lpDist / totalCap) * 100;
+  const apy = (monthlyReturnPct * 12).toFixed(1);
+  document.getElementById("sim-proj-apy").textContent = "~" + apy + "% APY (" + monthlyReturnPct.toFixed(1) + "%/mo)";
+}
+
+function setStakeAmount(amt){
+  const el = document.getElementById("stakeAmount");
+  if(el){
+    el.value = amt;
+    updateStakePreview();
+  }
+}
+
+function updateStakePreview(){
+  const amtEl = document.getElementById("stakeAmount");
+  if(!amtEl) return;
+  const stakeAmt = Math.max(0, parseFloat(amtEl.value) || 0);
+  const currentTotal = getTotalSyndicateCapital();
+  const newTotal = currentTotal + stakeAmt;
+
+  const eqPct = newTotal > 0 ? (stakeAmt / newTotal) * 100 : 0;
+
+  // Monthly simulated LP pool from standard ₦80M turn @ 2.3% spread = ₦1,288,000
+  const simGrossProfit = 80000000 * 0.023;
+  const simLpPool = simGrossProfit * 0.70;
+  const monthlyDiv = Math.round(simLpPool * (eqPct / 100));
+  const apy = stakeAmt > 0 ? ((monthlyDiv * 12 / stakeAmt) * 100).toFixed(1) : "0.0";
+
+  const prevCur = document.getElementById("prev-current-pool");
+  if(prevCur) prevCur.textContent = "₦" + currentTotal.toLocaleString();
+  const prevNew = document.getElementById("prev-new-pool");
+  if(prevNew) prevNew.textContent = "₦" + newTotal.toLocaleString();
+  const prevEq = document.getElementById("prev-equity-pct");
+  if(prevEq) prevEq.textContent = eqPct.toFixed(2) + "%";
+  const prevDiv = document.getElementById("prev-monthly-div");
+  if(prevDiv) prevDiv.textContent = "~₦" + monthlyDiv.toLocaleString() + " / mo";
+  const prevApy = document.getElementById("prev-apy");
+  if(prevApy) prevApy.textContent = "~" + apy + "% APY";
+}
+
+function submitStakeCapital(){
+  const nameEl = document.getElementById("stakeName");
+  const amtEl = document.getElementById("stakeAmount");
+  const destEl = document.getElementById("stakeDest");
+  const toast = document.getElementById("stakeToast");
+
+  const name = (nameEl.value || "").trim() || "Anonymous Partner";
+  const amt = parseFloat(amtEl.value) || 0;
+  const dest = (destEl.value || "").trim() || "GTBank NGN Account";
+
+  if(amt < 100000){
+    alert("Minimum staking capital is ₦100,000.");
+    return;
+  }
+
+  // Add capital to Tab 1 treasury NGN pool!
+  treasury.ngnPool += amt;
+  renderDesk();
+
+  // Add member to syndicate
+  const existing = syndicate.members.find(m => m.isUser);
+  if(existing){
+    existing.capital += amt;
+    existing.name = name;
+    existing.payoutDest = dest;
+  } else {
+    syndicate.members.splice(syndicate.members.length - 1, 0, {
+      id: "mem-" + Date.now(),
+      name: name,
+      role: "Syndicate Equity LP",
+      capital: amt,
+      payoutDest: dest,
+      status: "Verified",
+      isUser: true
+    });
+  }
+
+  renderSyndicates();
+
+  if(toast){
+    toast.style.display = "block";
+    toast.innerHTML = `🎉 <b>Welcome to ${esc(syndicate.name)}!</b> Staked ₦${amt.toLocaleString()} successfully.<br>Desk float pool increased to ₦${treasury.ngnPool.toLocaleString()}.`;
+    setTimeout(() => { toast.style.display = "none"; }, 6000);
+  }
+}
+
+function openEpochSettlementModal(){
+  const totalCap = getTotalSyndicateCapital();
+  const lpShare = Math.round(syndicate.cumulativeProfit * 0.70);
+  const opShare = Math.round(syndicate.cumulativeProfit * 0.20);
+  const resShare = Math.round(syndicate.cumulativeProfit * 0.10);
+
+  const modal = document.getElementById("epochModal");
+  const content = document.getElementById("epochModalContent");
+  const btn = document.getElementById("btnConfirmEpoch");
+  if(!modal || !content) return;
+
+  btn.style.display = "inline-block";
+
+  const memberPayoutRows = syndicate.members.map(m => {
+    const eqSharePct = (m.capital / totalCap) * 100;
+    const div = Math.round(lpShare * (eqSharePct / 100));
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #edf3ea;font-size:13px">
+        <div>
+          <b>${m.name}</b> <span style="font-size:11px;color:var(--agency-muted)">(${eqSharePct.toFixed(1)}% share)</span><br>
+          <span style="font-size:11.5px;color:var(--agency-muted)">${m.payoutDest}</span>
+        </div>
+        <div style="text-align:right">
+          <span style="font-family:var(--mono);font-weight:700;color:var(--agency-green);font-size:14px">₦${div.toLocaleString()}</span><br>
+          <span style="font-size:10.5px;color:var(--t-dim)">Queued for NIBSS</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  content.innerHTML = `
+    <div style="padding:14px 16px;background:#f3f9f0;border-radius:10px;margin-bottom:16px;border:1px solid #cce0c6">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <span>Epoch Volume Turned:</span><strong>₦${syndicate.cumulativeVolume.toLocaleString()}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <span>Gross Spread Profit:</span><strong style="color:var(--agency-green)">₦${syndicate.cumulativeProfit.toLocaleString()}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;border-top:1px solid #d4e4cf;padding-top:6px">
+        <span>Net LP Distribution (70%):</span><strong style="color:var(--agency-green);font-family:var(--mono)">₦${lpShare.toLocaleString()}</strong>
+      </div>
+    </div>
+
+    <h4 style="font-size:12.5px;font-family:var(--mono);color:var(--agency-green);text-transform:uppercase;margin:12px 0 8px">Batch Automated Member Payouts</h4>
+    <div style="max-height:240px;overflow-y:auto;padding-right:6px">
+      ${memberPayoutRows}
+    </div>
+
+    <div style="margin-top:16px;padding:12px 14px;background:#fdfcf9;border:1px solid #ece4d4;border-radius:8px;font-size:12px;color:#614d23">
+      <strong>Desk Ops &amp; Reserve Allocations:</strong><br>
+      &bull; Operator Management (20%): <b>₦${opShare.toLocaleString()}</b> &rarr; Bureau Operating Account<br>
+      &bull; Bad Debt Buffer (10%): <b>₦${resShare.toLocaleString()}</b> &rarr; Escrow Slippage Vault
+    </div>
+  `;
+
+  modal.style.display = "flex";
+}
+
+function closeEpochModal(){
+  const modal = document.getElementById("epochModal");
+  if(modal) modal.style.display = "none";
+}
+
+function executeEpochSettlement(){
+  const totalCap = getTotalSyndicateCapital();
+  const lpShare = Math.round(syndicate.cumulativeProfit * 0.70);
+  const opShare = Math.round(syndicate.cumulativeProfit * 0.20);
+  const resShare = Math.round(syndicate.cumulativeProfit * 0.10);
+
+  // Archive to history
+  syndicate.settlementHistory.unshift({
+    epoch: `Epoch #0${syndicate.epochNumber}`,
+    closeDate: new Date().toISOString().split("T")[0],
+    volume: "₦" + syndicate.cumulativeVolume.toLocaleString(),
+    grossMargin: "₦" + syndicate.cumulativeProfit.toLocaleString(),
+    lpDividend: "₦" + lpShare.toLocaleString(),
+    operatorFee: "₦" + opShare.toLocaleString(),
+    reserveBuffer: "₦" + resShare.toLocaleString(),
+    status: "Dispatched via NIBSS & MoMo"
+  });
+
+  // Reset for next epoch
+  syndicate.epochNumber++;
+  syndicate.epochDay = 1;
+  syndicate.cumulativeVolume = 0;
+  syndicate.cumulativeProfit = 0;
+
+  renderSyndicates();
+
+  const content = document.getElementById("epochModalContent");
+  const btn = document.getElementById("btnConfirmEpoch");
+  if(btn) btn.style.display = "none";
+
+  content.innerHTML = `
+    <div style="text-align:center;padding:24px 10px">
+      <div style="width:52px;height:52px;border-radius:50%;background:#e5f7e1;color:var(--agency-green);display:inline-grid;place-items:center;font-size:26px;margin-bottom:14px">✓</div>
+      <h3 style="color:var(--agency-green);margin-bottom:6px">Batch Payouts Dispatched!</h3>
+      <p style="font-size:13.5px;color:var(--agency-muted);max-width:440px;margin:0 auto 16px">
+        ₦${lpShare.toLocaleString()} in dividends has been settled pro-rata across all members via automated NIBSS batch and MTN MoMo B2C APIs.
+      </p>
+      <div style="font:11.5px var(--mono);padding:10px 14px;background:#f5f8f3;border-radius:8px;border:1px solid #dbe6d6;display:inline-block">
+        Epoch #0${syndicate.epochNumber} is now Active &middot; Day 1 of 30
+      </div>
+    </div>
+  `;
+}
+
+// ================= BOOT =================
+updateRates();
+renderDesk();
+renderSyndicates();
+startChat();
+</script>
+</body>
+</html>

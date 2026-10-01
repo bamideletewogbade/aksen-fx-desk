@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>TNell Order Desk · Aksen Labs concept demo</title>
+<style>
+  :root{
+    /* Aksen Labs light theme tokens (agency.css, admin-light.css, globals.css) */
+    --agency-paper:#f9faf7;
+    --paper:#f4f7f2;
+    --surface:#ffffff;
+    --surface-subtle:#f5f8f3;
+    --agency-ink:#10261d;
+    --ink:#10261d;
+    --t-body:#24392e;
+    --agency-green:#175b3b;
+    --green-hover:#12472e;
+    --agency-lime:#c2f576;
+    --agency-muted:#53635a;
+    --t-dim:#718278;
+    --line:#e2ebde;
+    --line-soft:#edf3ea;
+    --amber:#9a6b16;
+    --amber-soft:#fef7eb;
+    --gutter:clamp(18px,3.6vw,80px);
+    --sans:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--agency-paper);color:var(--t-body);font:15px/1.6 var(--sans);padding-bottom:76px;overflow-wrap:break-word}
+  a{color:var(--agency-green);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button,input{font:inherit}
+  ::selection{background:var(--agency-lime);color:#10261d}
+
+  /* ---------- top bar ---------- */
+  .topbar{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:1fr auto;align-items:center;height:66px;
+    padding:0 var(--gutter);border-bottom:1px solid var(--line);background:rgba(249,250,247,.94);backdrop-filter:blur(16px)}
+  .wordmark{display:inline-flex;align-items:center;gap:9px;font-size:16px;font-weight:760;letter-spacing:.11em;color:var(--ink)}
+  .wordmark em{color:var(--agency-muted);font-style:normal;font-weight:500}
+  .brand-signal{width:10px;height:10px;border-radius:2px;background:var(--agency-green);transform:rotate(45deg)}
+  .top-right{display:flex;align-items:center;gap:12px}
+  .top-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid #c7dbc0;border-radius:999px;
+    padding:7px 14px;color:var(--agency-green);background:#ffffff;font:12px var(--mono);letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+  .reset-btn{border:1px solid #cddcc5;border-radius:6px;padding:6px 11px;background:#ffffff;color:var(--agency-muted);font:11.5px var(--mono);cursor:pointer;transition:all .15s ease}
+  .reset-btn:hover{color:var(--agency-green);border-color:var(--agency-green);background:#f2f7ed}
+
+  main{padding:0 var(--gutter)}
+
+  /* ---------- hero ---------- */
+  .hero{padding:42px 0 26px;max-width:1100px}
+  .eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:18px;color:var(--agency-green);font:700 13px var(--mono);letter-spacing:.13em;text-transform:uppercase}
+  .eyebrow>span{width:28px;height:1px;background:currentColor}
+  h1{margin:0;font-size:clamp(32px,4.5vw,60px);line-height:1.02;letter-spacing:-.05em;font-weight:640;color:var(--ink)}
+  h1 em{color:var(--agency-green);font-family:Georgia,"Times New Roman",serif;font-style:normal;font-weight:400}
+  .hero p{max-width:680px;margin-top:16px;color:var(--agency-muted);font-size:15.5px;line-height:1.65}
+
+  .notice{display:grid;grid-template-columns:14px 1fr;gap:12px;align-items:start;max-width:1100px;margin:22px 0 30px;
+    padding:15px 18px;border-left:3px solid var(--agency-green);background:#edf5ea;border-radius:0 10px 10px 0;font-size:13px;color:#1e382b;line-height:1.6}
+  .notice i{width:6px;height:6px;margin-top:8px;border-radius:50%;background:var(--agency-green)}
+  .notice b{color:var(--ink)}
+
+  /* ---------- split stage ---------- */
+  .stage{display:grid;grid-template-columns:minmax(0,.96fr) minmax(0,1.04fr);gap:18px;align-items:start}
+  @media(max-width:1040px){.stage{grid-template-columns:1fr}}
+
+  .panel{border:1px solid var(--line);border-radius:18px;background:#ffffff;box-shadow:0 12px 34px rgba(16,38,29,.05);overflow:hidden;transition:border-color .3s ease}
+  .panel.pulse{border-color:var(--agency-green);box-shadow:0 0 0 3px rgba(23,91,59,.15)}
+  .panel-head{display:grid;grid-template-columns:37px 1fr auto;gap:11px;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line);background:#f6faf3}
+  .panel-head h2{margin:0;font-size:15px;letter-spacing:-.02em;color:var(--ink);font-weight:650}
+  .panel-head .sub{margin-top:2px;color:var(--agency-muted);font-size:12px}
+  .avatar{display:grid;place-items:center;width:36px;height:36px;border:1px solid #c8dcc2;border-radius:10px;color:var(--agency-green);background:#e6f3e3;font-weight:700}
+  .online{display:flex;align-items:center;gap:6px;color:#55725f;font:11px var(--mono);text-transform:uppercase;letter-spacing:.08em}
+  .online i{width:6px;height:6px;border-radius:99px;background:#2cb45d}
+
+  /* ---------- chat ---------- */
+  #chatlog{height:min(60vh,580px);min-height:400px;overflow-y:auto;padding:20px 18px;display:flex;flex-direction:column;background:#fafcf8;scroll-behavior:smooth}
+  .agent-message{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;max-width:88%;margin-bottom:16px}
+  .agent-message>span{display:grid;place-items:center;width:27px;height:27px;border-radius:8px;color:var(--agency-green);background:#eaf3e5;border:1px solid #d2e4ce;font:11px var(--mono);font-weight:600}
+  .agent-message p{margin:0;padding:12px 15px;border:1px solid var(--line);border-radius:3px 13px 13px 13px;color:var(--ink);background:#ffffff;box-shadow:0 2px 6px rgba(16,38,29,.03);font-size:13.5px;line-height:1.55;white-space:pre-wrap}
+  
+  /* staff quote card in chat */
+  .agent-message.staff-message>span{background:var(--agency-green);color:#ffffff;border-color:var(--agency-green)}
+  .staff-bubble{border-left:3px solid var(--agency-green)!important;background:#f7faf5!important}
+  .staff-tag{display:inline-block;padding:2px 7px;border-radius:4px;background:var(--agency-green);color:#ffffff;font:10px var(--mono);font-weight:700;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+  .quote-breakdown{margin:8px 0;padding:10px 12px;border:1px dashed #bcd5b8;border-radius:8px;background:#ffffff;font-size:13px}
+  .quote-breakdown b{color:var(--agency-green)}
+
+  .user-message{width:fit-content;max-width:82%;margin:0 0 16px auto;padding:11px 15px;border-radius:13px 3px 13px 13px;color:#10261d;background:#e1f4cb;border:1px solid #cbe4b0;box-shadow:0 2px 6px rgba(16,38,29,.03);font-size:13.5px;font-weight:600;white-space:pre-wrap}
+  .typing{margin:0 0 16px 38px;color:var(--agency-muted);font:12px var(--mono)}
+  .phototile{margin-top:8px;padding:14px;border:1px dashed #b5cebc;border-radius:8px;text-align:center;color:var(--agency-muted);background:#f1f7ee;font:12px var(--mono)}
+
+  /* ---------- product carousel in chat ---------- */
+  .carousel-wrap{margin:8px 0 16px;background:#ffffff;border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 2px 10px rgba(16,38,29,.04)}
+  .carousel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;gap:8px;flex-wrap:wrap}
+  .carousel-title{font-size:12.5px;font-weight:700;color:var(--ink);letter-spacing:.02em;text-transform:uppercase}
+  .carousel-filters{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px}
+  .c-pill{padding:4px 10px;border-radius:999px;border:1px solid #d4e0cf;background:#f7faf5;color:var(--agency-muted);font:10.5px var(--mono);cursor:pointer;white-space:nowrap;transition:all .14s ease}
+  .c-pill:hover{border-color:var(--agency-green);color:var(--agency-green)}
+  .c-pill.active{background:var(--agency-green);border-color:var(--agency-green);color:#ffffff;font-weight:700}
+  
+  .carousel-track{display:flex;gap:11px;overflow-x:auto;scroll-snap-type:x mandatory;padding:3px 2px 8px;scrollbar-width:thin}
+  .carousel-track::-webkit-scrollbar{height:5px}
+  .carousel-track::-webkit-scrollbar-thumb{background:#c8dcc2;border-radius:4px}
+  
+  .c-card{flex:0 0 230px;scroll-snap-align:start;border:1px solid var(--line);border-radius:12px;background:#fcfdfb;padding:12px;display:flex;flex-direction:column;gap:8px;transition:all .16s ease}
+  .c-card:hover{border-color:var(--agency-green);transform:translateY(-2px);box-shadow:0 6px 16px rgba(16,38,29,.06)}
+  .c-art{height:105px;background:#f0f5ee;border-radius:8px;display:grid;place-items:center;overflow:hidden;border:1px solid #e1ecde}
+  .c-badge{font:9.5px var(--mono);font-weight:700;text-transform:uppercase;color:var(--agency-green);letter-spacing:.05em}
+  .c-name{font-size:13px;font-weight:700;color:var(--ink);line-height:1.25}
+  .c-desc{font-size:11.5px;color:var(--agency-muted);line-height:1.4}
+  .c-btn{margin-top:auto;padding:8px 10px;border:1px solid var(--agency-green);border-radius:6px;background:#ffffff;color:var(--agency-green);font-size:12px;font-weight:650;cursor:pointer;text-align:center;transition:all .15s ease}
+  .c-btn:hover{background:var(--agency-green);color:#ffffff}
+
+  /* ---------- composer ---------- */
+  .composer{border-top:1px solid var(--line);background:#f6faf3;padding:14px 16px}
+  .choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+  .choice-grid.single{grid-template-columns:1fr}
+  .choice{display:flex;align-items:center;gap:10px;min-height:48px;padding:10px 13px;border:1px solid #d4e0cf;border-radius:8px;
+    color:var(--ink);background:#ffffff;font-size:13.5px;line-height:1.35;cursor:pointer;text-align:left;box-shadow:0 1px 3px rgba(16,38,29,.02);transition:border-color .16s ease,background .16s ease,transform .12s ease}
+  .choice:hover{border-color:var(--agency-green);background:#f0f7ec;color:var(--agency-green);transform:translateY(-1px)}
+  .choice.accent{background:#f1f8ee;border-color:#b4d6ae;color:var(--agency-green);font-weight:650}
+  .inputrow{display:flex;gap:9px}
+  .inputrow input{flex:1;min-width:0;padding:11px 15px;border:1px solid #cddbc7;border-radius:8px;color:var(--ink);background:#ffffff;font-size:14px;outline:none}
+  .inputrow input:focus{border-color:var(--agency-green);box-shadow:0 0 0 3px rgba(23,91,59,.1)}
+  .inputrow button{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:8px;color:#ffffff;background:var(--agency-green);font-weight:700;font-size:16px;cursor:pointer;transition:background .16s ease}
+  .inputrow button:hover{background:var(--green-hover)}
+  .jump-row{padding-top:10px;text-align:center}
+  .jump-row button{border:0;border-radius:6px;padding:10px 16px;color:#ffffff;background:var(--agency-green);font-size:13px;font-weight:700;cursor:pointer;transition:background .16s ease}
+  .jump-row button:hover{background:var(--green-hover)}
+  .hint-line{margin-top:9px;color:var(--t-dim);font:11px var(--mono);letter-spacing:.04em}
+
+  /* ---------- desk (admin panel patterns) ---------- */
+  .desk-flow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:14px 18px;border-bottom:1px solid var(--line-soft);background:#ffffff;color:var(--agency-muted);font:11px var(--mono);letter-spacing:.06em}
+  .desk-flow span{padding:6px 9px;border:1px solid var(--line);border-radius:5px;background:#f7faf5;color:var(--ink)}
+  .desk-flow b{color:var(--agency-green);font-weight:600}
+  .desk-body{padding:18px;background:#ffffff}
+  .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+  @media(max-width:560px){.metric-grid{grid-template-columns:repeat(2,1fr)}}
+  .metric{min-height:94px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fbfdfa}
+  .metric>span{display:flex;align-items:center;gap:7px;color:var(--agency-muted);font-size:12px}
+  .metric>strong{display:block;margin:10px 0 0;color:var(--ink);font-size:25px;letter-spacing:-.04em}
+  .metric.hot{border-color:#bcdbb7;background:#f3f9f0}
+  .metric.hot>strong{color:var(--agency-green)}
+
+  #deskcards{display:grid;gap:13px;margin-top:14px}
+  .ocard{padding:17px;border:1px solid var(--line);border-radius:12px;background:#ffffff;box-shadow:0 2px 8px rgba(16,38,29,.03);transition:all .2s ease}
+  .ocard.needs{border-left:3px solid var(--agency-green)}
+  .ocard.quoted{border-left:3px solid #d49526}
+  .ocard.deposit_pending{border-left:3px solid #2cb45d;background:#fafdf8}
+  .ocard.confirmed{border-left:3px solid var(--agency-green)}
+  .ocard.delivered{border-left:3px solid #94a59a}
+  .ocard.land{animation:land .6s ease}
+  @keyframes land{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .ocard .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .ocard h3{margin:0;font-size:15px;color:var(--ink);font-weight:650;letter-spacing:-.01em}
+  .ocard .oid{color:var(--t-dim);font:11px var(--mono)}
+  .stpill{padding:4px 9px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
+  .st-needs{color:var(--agency-green);background:#eaf5e5;border:1px solid #c2dec0}
+  .st-quoted{color:var(--amber);background:#fdf6ea;border:1px solid #f2dbb3}
+  .st-deposit_pending{color:#155726;background:#d8f5cb;border:1px solid #bce6b1}
+  .st-confirmed{color:#ffffff;background:var(--agency-green)}
+  .st-delivered{color:#53635a;background:#eef2eb}
+  .kv{display:grid;grid-template-columns:86px 1fr;gap:9px;margin-top:9px;font-size:13px;color:var(--agency-muted)}
+  .kv .k{color:var(--t-dim);font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.08em;padding-top:2px}
+  .kv .v b{color:var(--ink)}
+  
+  .momo-banner{margin-top:11px;padding:9px 12px;border:1px solid #bde4b5;background:#ecf8e8;border-radius:6px;color:#184c2a;font-size:12.5px}
+  .momo-banner b{color:var(--agency-green)}
+
+  .clockline{margin-top:11px;padding:10px 12px;border-left:2px solid var(--agency-green);background:#edf6ea;color:#1c3d2b;font-size:12.5px;border-radius:0 6px 6px 0}
+  .clockline b{color:var(--agency-green)}
+  .pricebox{display:flex;gap:9px;align-items:center;margin-top:13px;flex-wrap:wrap}
+  .pricebox input{width:140px;padding:9px 12px;border:1px dashed #7aa388;border-radius:8px;color:var(--agency-green);background:#ffffff;font-size:15px;font-weight:650;outline:none}
+  .pricebox input:focus{border-color:var(--agency-green);box-shadow:0 0 0 3px rgba(23,91,59,.1)}
+  .pricebox .hint{color:var(--t-dim);font:11px var(--mono)}
+  .obtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+  .btn{padding:9px 13px;border:1px solid #cddcc5;border-radius:6px;color:var(--agency-green);background:#ffffff;font-size:12.5px;cursor:pointer;transition:background .16s ease,border-color .16s ease}
+  .btn:hover{border-color:var(--agency-green);background:#f2f7ed}
+  .btn.primary{border:1px solid var(--agency-green);background:var(--agency-green);color:#ffffff;font-weight:700}
+  .btn.primary:hover{background:var(--green-hover);border-color:var(--green-hover);color:#ffffff}
+  .desk-empty{margin-top:14px;padding:34px 22px;border:1px dashed #c0d3bd;border-radius:12px;text-align:center;background:#f9fbf8;color:var(--agency-muted);font-size:13.5px}
+  .desk-empty b{color:var(--ink)}
+
+  /* ---------- footer ---------- */
+  footer{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;
+    padding:12px var(--gutter);border-top:1px solid var(--line);background:rgba(249,250,247,.94);backdrop-filter:blur(14px);color:var(--agency-muted);font:11.5px var(--mono);letter-spacing:.03em}
+  footer b{color:var(--ink);font-weight:600}
+  footer .dot{width:4px;height:4px;border-radius:50%;background:#b5c7b5;display:inline-block;margin:0 8px 1px}
+
+  @media(max-width:680px){
+    .hero{padding-top:34px}
+    #chatlog{height:52vh}
+    .choice-grid{grid-template-columns:1fr}
+    .agent-message{max-width:95%}
+    footer{position:static;border-top:1px solid var(--line)}
+    body{padding-bottom:20px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wordmark"><span class="brand-signal"></span>AKSEN<em>labs</em></div>
+  <div class="top-right">
+    <button class="reset-btn" onclick="resetDemo()">↺ Reset demo</button>
+    <span class="top-badge">Concept demo</span>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="eyebrow"><span></span>WhatsApp Order Desk · built for TNell Wall Frames</div>
+    <h1>Every WhatsApp order, <em>one desk.</em></h1>
+    <p>The DM comes in, the assistant provides visual suggestions and prepares a structured order card. A person at TNell sets the price from the brochure, sends the quote straight back to the buyer, and verifies the 50% deposit before the 72-hour clock runs.</p>
+  </section>
+
+  <div class="notice">
+    <i></i>
+    <div><b>Interactive Concept Demo (Bidirectional):</b> Chat as a buyer on the left or set prices and confirm deposits on the staff desk on the right. Both surfaces communicate in real time. Built by Aksen Labs for TNell Wall Frames (tnellframes.com &amp; @tnellwallframes).</div>
+  </div>
+
+  <div class="stage">
+
+    <!-- ============ CUSTOMER · WHATSAPP ============ -->
+    <section class="panel" id="chatPanel">
+      <div class="panel-head">
+        <div class="avatar">T</div>
+        <div>
+          <h2>TNell Wall Frames</h2>
+          <div class="sub">concept assistant · a person takes over before any quote</div>
+        </div>
+        <span class="online"><i></i>online</span>
+      </div>
+
+      <div id="chatlog"></div>
+
+      <div class="composer">
+        <div class="choice-grid" id="quick"></div>
+        <div class="inputrow" id="inputrow" style="display:none">
+          <input id="chatinput" placeholder="Type here..." autocomplete="off">
+          <button onclick="sendTyped()" aria-label="Send">➤</button>
+        </div>
+        <div class="jump-row" id="doneRow" style="display:none">
+          <button onclick="gotoDesk()">See the order card on the desk &rarr;</button>
+        </div>
+        <div class="hint-line" id="hintline">Demo &middot; scripted flow demonstrating human-in-the-loop quoting</div>
+      </div>
+    </section>
+
+    <!-- ============ DESK · TNELL STAFF ============ -->
+    <section class="panel" id="deskPanel">
+      <div class="panel-head">
+        <div class="avatar">≡</div>
+        <div>
+          <h2>Order desk · TNell staff</h2>
+          <div class="sub">every card below lands live from customer WhatsApp chats</div>
+        </div>
+        <span class="online"><i></i>live view</span>
+      </div>
+
+      <div class="desk-flow">
+        <span>DM in</span><b>&rarr;</b>
+        <span>order card</span><b>&rarr;</b>
+        <span>you set the price</span><b>&rarr;</b>
+        <span>buyer approves</span><b>&rarr;</b>
+        <span>deposit</span><b>&rarr;</b>
+        <span>72h clock</span>
+      </div>
+
+      <div class="desk-body">
+        <div class="metric-grid">
+          <div class="metric hot"><span>Needs price</span><strong id="m-needs">0</strong></div>
+          <div class="metric"><span>Quote sent</span><strong id="m-quoted">0</strong></div>
+          <div class="metric"><span>Deposit confirmed</span><strong id="m-confirmed">0</strong></div>
+          <div class="metric"><span>Delivered</span><strong id="m-delivered">0</strong></div>
+        </div>
+
+        <div id="deskcards"></div>
+
+        <div class="desk-empty" id="deskEmpty">
+          <b>No active orders on desk yet.</b><br><br>
+          Pick a frame or browse suggestions in the chat on the left. The order card lands here, where staff sets the price from the brochure and dispatches it straight back into WhatsApp.
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <span><b>Sources:</b> tnellframes.com (Sakumono Estate · wooden frames, glossy or matt · free measuring visit · 72-hour delivery · prices by brochure)<span class="dot"></span>@tnellwallframes</span>
+  <span>Aksen Labs · aksen-labs.bishoptewogbade.workers.dev</span>
+</footer>
+
+<script>
+// ================= product catalog =================
+const STYLES = [
+  {
+    id: "g3",
+    cat: "gallery",
+    title: "3-Piece Sofa Gallery",
+    tag: "Popular · Living Rooms",
+    sizes: "Three 12\" × 16\" frames",
+    finish: "Glossy or Matt wood",
+    desc: "Symmetrical horizontal trio, ideal over living room sofas or headboards.",
+    want: "Wall gallery set",
+    count: "1-3",
+    svg: `<svg viewBox="0 0 160 90" width="100%" height="100%"><rect width="160" height="90" fill="#f4f7f2"/><g filter="drop-shadow(0 2px 4px rgba(16,38,29,0.12))"><rect x="15" y="16" width="38" height="58" rx="2" fill="#2d2218" stroke="#175b3b" stroke-width="1.5"/><rect x="19" y="20" width="30" height="50" fill="#fafcf9"/><rect x="23" y="24" width="22" height="42" fill="#dce6d8"/><circle cx="34" cy="40" r="6" fill="#175b3b" opacity="0.6"/><path d="M25 60 C28 50 38 52 43 60 Z" fill="#175b3b" opacity="0.7"/><rect x="61" y="16" width="38" height="58" rx="2" fill="#2d2218" stroke="#175b3b" stroke-width="1.5"/><rect x="65" y="20" width="30" height="50" fill="#fafcf9"/><rect x="69" y="24" width="22" height="42" fill="#dce6d8"/><circle cx="80" cy="38" r="7" fill="#c2f576" stroke="#175b3b"/><path d="M71 62 C76 48 84 50 89 62 Z" fill="#175b3b" opacity="0.8"/><rect x="107" y="16" width="38" height="58" rx="2" fill="#2d2218" stroke="#175b3b" stroke-width="1.5"/><rect x="111" y="20" width="30" height="50" fill="#fafcf9"/><rect x="115" y="24" width="22" height="42" fill="#dce6d8"/><circle cx="126" cy="40" r="6" fill="#175b3b" opacity="0.6"/><path d="M117 60 C120 50 130 52 135 60 Z" fill="#175b3b" opacity="0.7"/></g></svg>`
+  },
+  {
+    id: "g6",
+    cat: "gallery",
+    title: "6-Piece Family Grid",
+    tag: "Family & Hallways",
+    sizes: "Six 10\" × 10\" square frames",
+    finish: "Solid black or warm oak",
+    desc: "Balanced 3×2 grid layout. Perfect for family memories & gallery corridors.",
+    want: "Wall gallery set",
+    count: "4-6",
+    svg: `<svg viewBox="0 0 160 90" width="100%" height="100%"><rect width="160" height="90" fill="#f4f7f2"/><g filter="drop-shadow(0 2px 3px rgba(16,38,29,0.12))"><rect x="25" y="12" width="30" height="30" rx="1.5" fill="#38291b" stroke="#175b3b" stroke-width="1.2"/><rect x="28" y="15" width="24" height="24" fill="#fafcf9"/><rect x="31" y="18" width="18" height="18" fill="#e5eedf"/><circle cx="40" cy="27" r="4" fill="#175b3b" opacity="0.7"/><rect x="65" y="12" width="30" height="30" rx="1.5" fill="#38291b" stroke="#175b3b" stroke-width="1.2"/><rect x="68" y="15" width="24" height="24" fill="#fafcf9"/><rect x="71" y="18" width="18" height="18" fill="#e5eedf"/><circle cx="80" cy="27" r="4" fill="#175b3b" opacity="0.7"/><rect x="105" y="12" width="30" height="30" rx="1.5" fill="#38291b" stroke="#175b3b" stroke-width="1.2"/><rect x="108" y="15" width="24" height="24" fill="#fafcf9"/><rect x="111" y="18" width="18" height="18" fill="#e5eedf"/><circle cx="120" cy="27" r="4" fill="#175b3b" opacity="0.7"/><rect x="25" y="48" width="30" height="30" rx="1.5" fill="#38291b" stroke="#175b3b" stroke-width="1.2"/><rect x="28" y="51" width="24" height="24" fill="#fafcf9"/><rect x="31" y="54" width="18" height="18" fill="#e5eedf"/><circle cx="40" cy="63" r="4" fill="#175b3b" opacity="0.7"/><rect x="65" y="48" width="30" height="30" rx="1.5" fill="#38291b" stroke="#175b3b" stroke-width="1.2"/><rect x="68" y="51" width="24" height="24" fill="#fafcf9"/><rect x="71" y="54" width="18" height="18" fill="#e5eedf"/><circle cx="80" cy="63" r="4" fill="#175b3b" opacity="0.7"/><rect x="105" y="48" width="30" height="30" rx="1.5" fill="#38291b" stroke="#175b3b" stroke-width="1.2"/><rect x="108" y="51" width="24" height="24" fill="#fafcf9"/><rect x="111" y="54" width="18" height="18" fill="#e5eedf"/><circle cx="120" cy="63" r="4" fill="#175b3b" opacity="0.7"/></g></svg>`
+  },
+  {
+    id: "s1",
+    cat: "single",
+    title: "Executive 20×24 Portrait",
+    tag: "Statement Piece",
+    sizes: "Single 20\" × 24\" frame",
+    finish: "Deep wood moulding + glass",
+    desc: "Grand standalone frame with 2-inch off-white archival mat board.",
+    want: "Single frames",
+    count: "1-3",
+    svg: `<svg viewBox="0 0 160 90" width="100%" height="100%"><rect width="160" height="90" fill="#f4f7f2"/><g filter="drop-shadow(0 3px 6px rgba(16,38,29,0.15))"><rect x="52" y="10" width="56" height="70" rx="2" fill="#1f1812" stroke="#175b3b" stroke-width="2"/><rect x="58" y="16" width="44" height="58" fill="#fafcf9"/><rect x="64" y="22" width="32" height="46" fill="#e2ecdfe0"/><circle cx="80" cy="38" r="9" fill="#175b3b" opacity="0.75"/><path d="M68 64 C72 50 88 50 92 64 Z" fill="#175b3b" opacity="0.9"/></g></svg>`
+  },
+  {
+    id: "fl1",
+    cat: "float",
+    title: "Modern Float Canvas",
+    tag: "Museum Style",
+    sizes: "24\" × 36\" canvas with float gap",
+    finish: "Blonde oak or walnut shadowbox",
+    desc: "Stretched art canvas suspended with a 10mm gap inside an outer wooden frame.",
+    want: "Canvas / float frame",
+    count: "1-3",
+    svg: `<svg viewBox="0 0 160 90" width="100%" height="100%"><rect width="160" height="90" fill="#f4f7f2"/><g filter="drop-shadow(0 3px 6px rgba(16,38,29,0.14))"><rect x="42" y="12" width="76" height="66" rx="2" fill="#8c6a43" stroke="#175b3b" stroke-width="1.5"/><rect x="47" y="17" width="66" height="56" fill="#141a16"/><rect x="50" y="20" width="60" height="50" fill="#dbe8d7"/><path d="M52 68 Q 65 30, 80 50 T 108 40 L 108 68 Z" fill="#175b3b" opacity="0.7"/><circle cx="95" cy="32" r="6" fill="#c2f576" stroke="#175b3b"/></g></svg>`
+  },
+  {
+    id: "g2",
+    cat: "gallery",
+    title: "Diptych Pair (2-Piece)",
+    tag: "Bedrooms & Dining",
+    sizes: "Two 16\" × 20\" frames",
+    finish: "Matt natural wood",
+    desc: "Twin paired frames for vertical spaces, bedside walls or dining areas.",
+    want: "Wall gallery set",
+    count: "1-3",
+    svg: `<svg viewBox="0 0 160 90" width="100%" height="100%"><rect width="160" height="90" fill="#f4f7f2"/><g filter="drop-shadow(0 2px 4px rgba(16,38,29,0.12))"><rect x="35" y="14" width="40" height="62" rx="2" fill="#2d2218" stroke="#175b3b" stroke-width="1.5"/><rect x="39" y="18" width="32" height="54" fill="#fafcf9"/><rect x="43" y="22" width="24" height="46" fill="#dce6d8"/><circle cx="55" cy="38" r="6" fill="#175b3b" opacity="0.7"/><path d="M45 64 C48 52 60 52 65 64 Z" fill="#175b3b" opacity="0.8"/><rect x="85" y="14" width="40" height="62" rx="2" fill="#2d2218" stroke="#175b3b" stroke-width="1.5"/><rect x="89" y="18" width="32" height="54" fill="#fafcf9"/><rect x="93" y="22" width="24" height="46" fill="#dce6d8"/><circle cx="105" cy="38" r="6" fill="#175b3b" opacity="0.7"/><path d="M95 64 C98 52 110 52 115 64 Z" fill="#175b3b" opacity="0.8"/></g></svg>`
+  }
+];
+
+// ================= state =================
+let orders = [];
+try{ orders = JSON.parse(localStorage.getItem("tnell_demo_orders")||"[]"); }catch(e){ orders = []; }
+function saveOrders(){ localStorage.setItem("tnell_demo_orders", JSON.stringify(orders)); }
+
+const S_LABEL = {
+  needs: "Needs price",
+  quoted: "Quote sent",
+  deposit_pending: "Deposit reported · Verify",
+  confirmed: "Deposit confirmed",
+  delivered: "Delivered"
+};
+let landId = null;
+
+// ================= chat elements =================
+const log = document.getElementById("chatlog");
+const quick = document.getElementById("quick");
+const inputrow = document.getElementById("inputrow");
+const doneRow = document.getElementById("doneRow");
+const chatinput = document.getElementById("chatinput");
+
+const COUNT_OPTS = [
+  {label:"1 to 3 frames", value:"1-3"},
+  {label:"4 to 6 frames", value:"4-6"},
+  {label:"7 or more frames", value:"7+"},
+  {label:"Not sure", value:"?"}
+];
+const FINISH_OPTS = [
+  {label:"Glossy", value:"Glossy"},
+  {label:"Matt", value:"Matt"},
+  {label:"Whichever you advise", value:"Advise me"}
+];
+const VISIT_OPTS = [
+  {label:"Yes, book free measuring visit", value:"Yes, book a measuring visit"},
+  {label:"No, I'll send wall measurements", value:"No, I'll send measurements"}
+];
+
+let draft = null;
+
+function resetDemo(){
+  localStorage.removeItem("tnell_demo_orders");
+  orders = [];
+  log.innerHTML = "";
+  renderDesk();
+  start();
+}
+
+function bubble(text, who, isStaff){
+  const m = document.createElement("div");
+  if(who === "me"){
+    m.className = "user-message";
+    m.textContent = text;
+  } else {
+    m.className = "agent-message" + (isStaff ? " staff-message" : "");
+    const av = document.createElement("span");
+    av.textContent = isStaff ? "★" : "T";
+    const p = document.createElement("p");
+    if(isStaff) p.className = "staff-bubble";
+    p.innerHTML = text;
+    m.appendChild(av);
+    m.appendChild(p);
+  }
+  log.appendChild(m);
+  log.scrollTop = log.scrollHeight;
+}
+
+function botSay(text, cb){
+  const t = document.createElement("div");
+  t.className = "typing";
+  t.textContent = "typing…";
+  log.appendChild(t);
+  log.scrollTop = log.scrollHeight;
+  setTimeout(()=>{
+    if(t.parentNode) log.removeChild(t);
+    bubble(text, "bot", false);
+    if(cb) cb();
+  }, 450);
+}
+
+function staffSay(text, cb){
+  const t = document.createElement("div");
+  t.className = "typing";
+  t.textContent = "TNell desk responding…";
+  log.appendChild(t);
+  log.scrollTop = log.scrollHeight;
+  setTimeout(()=>{
+    if(t.parentNode) log.removeChild(t);
+    bubble(text, "bot", true);
+    // highlight chat panel
+    const cp = document.getElementById("chatPanel");
+    cp.classList.add("pulse");
+    setTimeout(()=>cp.classList.remove("pulse"), 1200);
+    if(cb) cb();
+  }, 500);
+}
+
+function setQuick(options){
+  quick.innerHTML = "";
+  quick.className = "choice-grid" + ((options||[]).length===1 ? " single" : "");
+  (options||[]).forEach(o=>{
+    const b = document.createElement("button");
+    b.className = "choice" + (o.accent ? " accent" : "");
+    b.textContent = o.label;
+    b.onclick = ()=>{ sendCustomer(o.label, o.value); };
+    quick.appendChild(b);
+  });
+}
+
+function sendCustomer(label, value){
+  bubble(label, "me");
+  setQuick([]);
+  handle(value !== undefined ? value : label);
+}
+
+function sendTyped(){
+  const t = chatinput.value.trim();
+  if(!t) return;
+  chatinput.value = "";
+  bubble(t, "me");
+  setQuick([]);
+  handleFree(t);
+}
+
+// ================= carousel builder =================
+function showCarousel(activeCategory = "all"){
+  const wrap = document.createElement("div");
+  wrap.className = "carousel-wrap";
+
+  const categories = [
+    {id:"all", label:"All (5)"},
+    {id:"gallery", label:"Gallery Sets (3)"},
+    {id:"single", label:"Single Frames (1)"},
+    {id:"float", label:"Float Canvas (1)"}
+  ];
+
+  let headerHtml = `<div class="carousel-head">
+    <span class="carousel-title">Popular Wall Styles · Accra</span>
+    <div class="carousel-filters">` +
+    categories.map(c => `<button class="c-pill ${c.id===activeCategory ? 'active' : ''}" onclick="reFilterCarousel('${c.id}', this)">${c.label}</button>`).join("") +
+    `</div></div>`;
+
+  const filtered = activeCategory === "all" ? STYLES : STYLES.filter(s => s.cat === activeCategory);
+
+  let trackHtml = `<div class="carousel-track" id="cTrack">` +
+    filtered.map(s => `
+      <div class="c-card">
+        <div class="c-art">${s.svg}</div>
+        <span class="c-badge">${s.tag}</span>
+        <div class="c-name">${s.title}</div>
+        <div class="c-desc">${s.sizes} · ${s.desc}</div>
+        <button class="c-btn" onclick="selectStyle('${s.id}')">Select this style &rarr;</button>
+      </div>
+    `).join("") +
+    `</div>`;
+
+  wrap.innerHTML = headerHtml + trackHtml;
+  log.appendChild(wrap);
+  log.scrollTop = log.scrollHeight;
+}
+
+function reFilterCarousel(cat, btn){
+  const wrap = btn.closest(".carousel-wrap");
+  if(!wrap) return;
+  wrap.querySelectorAll(".c-pill").forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  const track = wrap.querySelector(".carousel-track");
+  const filtered = cat === "all" ? STYLES : STYLES.filter(s => s.cat === cat);
+  track.innerHTML = filtered.map(s => `
+    <div class="c-card">
+      <div class="c-art">${s.svg}</div>
+      <span class="c-badge">${s.tag}</span>
+      <div class="c-name">${s.title}</div>
+      <div class="c-desc">${s.sizes} · ${s.desc}</div>
+      <button class="c-btn" onclick="selectStyle('${s.id}')">Select this style &rarr;</button>
+    </div>
+  `).join("");
+}
+
+function selectStyle(id){
+  const s = STYLES.find(x => x.id === id);
+  if(!s) return;
+  bubble("I'd like to go with the " + s.title + " (" + s.sizes + ")", "me");
+  draft.want = s.want + " (" + s.title + ")";
+  draft.count = s.count;
+  botSay("Excellent choice. Our frames are solid wood, and the print finish comes in glossy or matt. Which do you prefer?", function(){
+    setQuick(FINISH_OPTS);
+  });
+}
+
+// ================= steps =================
+function start(){
+  draft = { name:"", want:"", count:"", finish:"", visit:"", area:"", photos:0 };
+  botSay("Akwaaba! Thanks for messaging TNell Wall Frames. I help prepare your order details so the team can quickly quote and schedule production.", function(){
+    botSay("What are you looking to frame? You can pick an option or browse our popular layouts below:", function(){
+      setQuick([
+        {label:"Browse frame styles & suggestions 🖼️", value:"browse", accent:true},
+        {label:"A wall gallery set", value:"gallery"},
+        {label:"Single frames", value:"single"},
+        {label:"A canvas / float frame", value:"float"},
+        {label:"Not sure yet", value:"unsure"}
+      ]);
+    });
+  });
+}
+
+function handle(choice){
+  if(choice === "browse" || choice === "unsure"){
+    botSay("Here are our top frame configurations across Accra homes. Filter by type or tap any style to start with it:", function(){
+      showCarousel("all");
+    });
+    return;
+  }
+  if(choice==="gallery" || choice==="single" || choice==="float"){
+    draft.want = {gallery:"Wall gallery set", single:"Single frames", float:"Canvas / float frame"}[choice];
+    botSay("Good choice. How many frames are we thinking?", function(){
+      setQuick(COUNT_OPTS);
+    });
+    return;
+  }
+  if(["1-3","4-6","7+","?"].includes(choice)){
+    draft.count = choice;
+    botSay("Noted. Our frames are wood, and the print comes glossy or matt. Which finish do you prefer?", function(){
+      setQuick(FINISH_OPTS);
+    });
+    return;
+  }
+  if(["Glossy","Matt","Advise me"].includes(choice)){
+    draft.finish = choice;
+    botSay("We offer a free measuring visit around Accra (Sakumono, Spintex, East Legon, etc.) before production so the layout fits your wall exactly. Would you like us to come measure?", function(){
+      setQuick(VISIT_OPTS);
+    });
+    return;
+  }
+  if(choice==="Yes, book a measuring visit" || choice==="No, I'll send measurements"){
+    draft.visit = choice;
+    botSay("Perfect. Send the photos to be framed right here in the chat.", function(){
+      setQuick([{label:"Attach a photo 📷", value:"__photo"}]);
+    });
+    return;
+  }
+  if(choice==="__photo"){
+    draft.photos += 1;
+    const m = document.createElement("div");
+    m.className = "user-message";
+    m.innerHTML = 'photo ' + draft.photos + '<div class="phototile">📷 photo_' + draft.photos + '.jpg (preview uploaded)</div>';
+    log.appendChild(m);
+    log.scrollTop = log.scrollHeight;
+    setQuick([{label:"Attach another photo", value:"__photo"},{label:"That's all the photos", value:"__photodone"}]);
+    return;
+  }
+  if(choice==="__photodone"){
+    botSay("Got them. Last step: which area in Accra should delivery go to? (e.g. Sakumono, Spintex, East Legon, Cantonments)", function(){
+      inputrow.style.display = "flex";
+      chatinput.focus();
+      draft.expectArea = true;
+    });
+    return;
+  }
+  if(draft.expectArea){
+    draft.area = choice;
+    draft.expectArea = false;
+    askName();
+    return;
+  }
+  if(choice === "__payDeposit"){
+    customerPayDeposit();
+    return;
+  }
+  if(choice === "__adjustOrder"){
+    bubble("Could we check the price for 16×20 frames instead?", "me");
+    botSay("Noted! Your size request has been flagged for Wilfred at the desk to re-price.", function(){
+      const activeOrder = orders[0];
+      if(activeOrder){
+        activeOrder.status = "needs";
+        activeOrder.price = "";
+        saveOrders();
+        renderDesk();
+      }
+    });
+    return;
+  }
+  handleFree(choice);
+}
+
+function handleFree(t){
+  if(draft.expectName){
+    draft.name = t;
+    draft.expectName = false;
+    finishChat();
+    return;
+  }
+  if(draft.expectArea){
+    draft.area = t;
+    draft.expectArea = false;
+    askName();
+    return;
+  }
+  botSay("Pick one of the options below and I'll keep your order moving. If it's something special, the team will see it on your card.");
+  reAsk();
+}
+
+function reAsk(){
+  if(!draft.want){ start(); return; }
+  if(!draft.count){ botSay("How many frames are we thinking?", function(){ setQuick(COUNT_OPTS); }); return; }
+  if(!draft.finish){ botSay("Glossy or matt print?", function(){ setQuick(FINISH_OPTS); }); return; }
+  if(!draft.visit){ botSay("Want the free measuring visit before production?", function(){ setQuick(VISIT_OPTS); }); return; }
+  if(draft.photos===0){ botSay("Send the photos to be framed right here in the chat.", function(){ setQuick([{label:"Attach a photo", value:"__photo"}]); }); return; }
+  if(!draft.area){
+    botSay("Which area in Accra should delivery go to? (e.g. Sakumono, Spintex, East Legon)", function(){
+      inputrow.style.display = "flex";
+      chatinput.focus();
+      draft.expectArea = true;
+    });
+  }
+}
+
+function askName(){
+  botSay("Thank you! What name should this order be placed under?", function(){
+    draft.expectName = true;
+  });
+}
+
+function finishChat(){
+  inputrow.style.display = "none";
+  const items = draft.count==="1-3" ? "1 to 3 frames" : draft.count==="4-6" ? "4 to 6 frames" : draft.count==="7+" ? "7+ frames" : "frame count to confirm";
+  const summary =
+    "<b>Order Card Prepared:</b><br>" +
+    "&bull; <b>Customer:</b> " + esc(draft.name) + "<br>" +
+    "&bull; <b>Item:</b> " + esc(draft.want) + "<br>" +
+    "&bull; <b>Frames:</b> " + esc(items) + "<br>" +
+    "&bull; <b>Finish:</b> " + esc(draft.finish) + "<br>" +
+    "&bull; <b>Measuring Visit:</b> " + esc(draft.visit) + "<br>" +
+    "&bull; <b>Photos Uploaded:</b> " + draft.photos + "<br>" +
+    "&bull; <b>Delivery Area:</b> " + esc(draft.area) + "<br><br>" +
+    "<i>Handed over to the TNell Order Desk. Staff is pulling the price from the private brochure and will message you right back here with your quote.</i>";
+  
+  botSay(summary, function(){
+    const order = {
+      id: "OC-" + String(Date.now()).slice(-6),
+      ts: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+      name: draft.name || "WhatsApp Customer",
+      want: draft.want,
+      count: items,
+      finish: draft.finish,
+      visit: draft.visit,
+      photos: draft.photos,
+      area: draft.area || "Accra",
+      price: "",
+      status: "needs",
+      clockStart: null
+    };
+    orders.unshift(order);
+    landId = order.id;
+    saveOrders();
+    renderDesk();
+    doneRow.style.display = "block";
+    setQuick([]);
+  });
+}
+
+// ================= desk =================
+function gotoDesk(){
+  document.getElementById("deskPanel").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function renderDesk(){
+  const c = { needs:0, quoted:0, confirmed:0, delivered:0 };
+  orders.forEach(o=>{
+    if(o.status === "needs") c.needs++;
+    else if(o.status === "quoted" || o.status === "deposit_pending") c.quoted++;
+    else if(o.status === "confirmed") c.confirmed++;
+    else if(o.status === "delivered") c.delivered++;
+  });
+  document.getElementById("m-needs").textContent = c.needs;
+  document.getElementById("m-quoted").textContent = c.quoted;
+  document.getElementById("m-confirmed").textContent = c.confirmed;
+  document.getElementById("m-delivered").textContent = c.delivered;
+
+  const cards = document.getElementById("deskcards");
+  const empty = document.getElementById("deskEmpty");
+  if(!orders.length){
+    cards.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+  cards.innerHTML = orders.map(function(o){
+    const st = S_LABEL[o.status] || o.status;
+    const cls = "ocard " + o.status + (o.id===landId ? " land" : "");
+    let clock = "";
+    if(o.status==="confirmed" && o.clockStart){
+      const hrs = ((Date.now() - o.clockStart)/3600000);
+      clock = '<div class="clockline"><b>72h clock started</b> ' + hrs.toFixed(1) + 'h ago · due ' + new Date(o.clockStart + 72*3600000).toLocaleString([], {weekday:'short', hour:'2-digit', minute:'2-digit'}) + '</div>';
+    }
+    let actions = "";
+    if(o.status==="needs"){
+      actions = '<div class="pricebox"><input type="text" id="price-'+o.id+'" placeholder="GH₵ Price (e.g. 480)" inputmode="decimal"><span class="hint">from brochure &middot; human-set</span></div>' +
+        '<div class="obtns"><button class="btn primary" onclick="sendQuote(\''+o.id+'\')">Send quote to buyer &rarr;</button></div>';
+    } else if(o.status==="quoted"){
+      actions = '<div class="obtns"><span class="hint" style="color:var(--amber)">Awaiting buyer approval in WhatsApp...</span></div>';
+    } else if(o.status==="deposit_pending"){
+      actions = '<div class="momo-banner"><b>Buyer reported MoMo payment:</b> 50% deposit received. Verify and start production clock:</div>' +
+        '<div class="obtns"><button class="btn primary" onclick="confirmDeposit(\''+o.id+'\')">✓ Verify & confirm deposit (Start 72h Clock)</button></div>';
+    } else if(o.status==="confirmed"){
+      if(!o.clockStart){ o.clockStart = Date.now(); saveOrders(); }
+      actions = '<div class="obtns"><button class="btn" onclick="setStatus(\''+o.id+'\',\'delivered\')">Mark delivered &amp; installed</button></div>';
+    }
+    return '<div class="'+cls+'" id="deskcard-'+o.id+'">' +
+      '<div class="top"><h3>'+esc(o.name)+'</h3><span class="stpill st-'+o.status+'">'+st+'</span></div>' +
+      '<div class="oid" style="margin-top:3px">'+esc(o.ts)+' · '+o.id+'</div>' +
+      '<div class="kv"><span class="k">Order</span><span class="v">'+esc(o.want)+' · '+esc(o.count)+' · '+esc(o.finish)+'</span></div>' +
+      '<div class="kv"><span class="k">Visit</span><span class="v">'+esc(o.visit)+'</span></div>' +
+      '<div class="kv"><span class="k">Photos</span><span class="v">'+o.photos+' photo(s)</span></div>' +
+      '<div class="kv"><span class="k">Area</span><span class="v">'+esc(o.area)+'</span></div>' +
+      (o.price ? '<div class="kv"><span class="k">Price</span><span class="v"><b>GH₵ '+esc(o.price)+'</b> (50% deposit: GH₵ '+calcDeposit(o.price)+')</span></div>' : '') +
+      clock +
+      actions +
+      '</div>';
+  }).join("");
+  landId = null;
+}
+
+function calcDeposit(val){
+  const num = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+  return isNaN(num) ? "0" : (num * 0.5).toFixed(0);
+}
+
+function sendQuote(id){
+  const o = orders.find(x=>x.id===id);
+  if(!o) return;
+  const el = document.getElementById("price-"+id);
+  const v = el ? el.value.trim() : "";
+  if(!v){ el.focus(); return; }
+  o.price = v;
+  o.status = "quoted";
+  saveOrders();
+  renderDesk();
+
+  // BIDIRECTIONAL LOOP: DISPATCH QUOTE INTO THE WHATSAPP CHAT!
+  const deposit = calcDeposit(v);
+  const staffMsg = `<span class="staff-tag">TNell Team &middot; Wilfred (Desk)</span><br>` +
+    `Hello ${esc(o.name)}! I've reviewed your order card (<b>${o.id}</b>):<br><br>` +
+    `&bull; <b>Selection:</b> ${esc(o.want)} (${esc(o.count)}, ${esc(o.finish)})<br>` +
+    `&bull; <b>Visit &amp; Install:</b> Free measuring visit booked for ${esc(o.area)}<br><br>` +
+    `<div class="quote-breakdown">` +
+    `Total Price: <b>GH₵ ${esc(v)}</b><br>` +
+    `50% Deposit to Start Production: <b>GH₵ ${deposit}</b><br>` +
+    `<small style="color:var(--agency-muted)">Balance of GH₵ ${deposit} due upon delivery &amp; wall mounting.</small>` +
+    `</div>` +
+    `Our 72-hour delivery clock starts as soon as the deposit is confirmed. Would you like to proceed?`;
+
+  staffSay(staffMsg, function(){
+    setQuick([
+      {label:"✅ Approve & Pay GH₵ " + deposit + " Deposit (MoMo)", value:"__payDeposit", accent:true},
+      {label:"💬 Change size or ask a question", value:"__adjustOrder"}
+    ]);
+  });
+}
+
+function customerPayDeposit(){
+  const activeOrder = orders[0];
+  if(!activeOrder) return;
+  const deposit = calcDeposit(activeOrder.price);
+  
+  bubble(`Approved! I've sent the 50% deposit of GH₵ ${deposit} via MTN MoMo to TNell Frames (0245719646).\nReference: ${activeOrder.id}`, "me");
+  
+  botSay("Thank you! Your payment reference has been transmitted to the TNell desk. Wilfred is verifying the MoMo alert now...", function(){
+    activeOrder.status = "deposit_pending";
+    saveOrders();
+    renderDesk();
+    
+    // Highlight desk card to show incoming payment
+    const dc = document.getElementById("deskcard-" + activeOrder.id);
+    if(dc){
+      dc.style.boxShadow = "0 0 0 3px rgba(44,180,93,0.3)";
+      setTimeout(()=>dc.style.boxShadow = "", 1500);
+    }
+  });
+}
+
+function confirmDeposit(id){
+  const o = orders.find(x=>x.id===id);
+  if(!o) return;
+  o.status = "confirmed";
+  o.clockStart = Date.now();
+  saveOrders();
+  renderDesk();
+
+  // Send production confirmation back into customer chat
+  const confMsg = `<span class="staff-tag">TNell Team &middot; Wilfred</span><br>` +
+    `🎉 <b>Deposit confirmed, thank you ${esc(o.name)}!</b><br><br>` +
+    `Your order (<b>${o.id}</b>) is officially scheduled in production. The 72-hour delivery clock is running!<br>` +
+    `&bull; <b>Production &amp; Inspection:</b> Active<br>` +
+    `&bull; <b>Free Measuring Visit:</b> Our team will contact you to coordinate arrival at ${esc(o.area)}.<br><br>` +
+    `We will notify you here as soon as the frames are on the way.`;
+  
+  staffSay(confMsg);
+}
+
+function setStatus(id, st){
+  const o = orders.find(x=>x.id===id);
+  if(!o) return;
+  o.status = st;
+  if(st==="confirmed" && !o.clockStart) o.clockStart = Date.now();
+  saveOrders();
+  renderDesk();
+
+  if(st === "delivered"){
+    staffSay(`<span class="staff-tag">TNell Team &middot; Delivery</span><br>📦 <b>Order Delivered &amp; Installed!</b><br>Thank you for framing your home with TNell Wall Frames. Enjoy your new wall art!`);
+  }
+}
+
+function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+// ================= boot =================
+renderDesk();
+start();
+</script>
+</body>
+</html>
