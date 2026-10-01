@@ -68,7 +68,7 @@ export default {
 
     try {
       // 1. Health check endpoint
-      if (url.pathname === '/api/health' && request.method === 'GET') {
+      if (url.pathname === '/api/health' && (request.method === 'GET' || request.method === 'HEAD')) {
         return jsonResponse(
           {
             ok: true,
@@ -86,7 +86,7 @@ export default {
       }
 
       // 2. Live Corridor Rates endpoint
-      if (url.pathname === '/api/rates' && request.method === 'GET') {
+      if (url.pathname === '/api/rates' && (request.method === 'GET' || request.method === 'HEAD')) {
         return jsonResponse(
           {
             ok: true,
