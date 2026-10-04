@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+:root {
+  --agency-paper: #f9faf7;
+  --agency-ink: #10261d;
+  --agency-green: #175b3b;
+  --agency-green-hover: #0f4329;
+  --agency-lime: #c2f576;
+  --agency-lime-muted: #e7fbc9;
+  --agency-muted: #53635a;
+  --agency-subtle: #798d81;
+  --agency-border: #e3ece1;
+  --agency-card: #ffffff;
+  --agency-dark-surface: #0a1711;
+  --agency-dark-card: #12221b;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --color-paper: var(--agency-paper);
+  --color-ink: var(--agency-ink);
+  --color-agency-green: var(--agency-green);
+  --color-agency-lime: var(--agency-lime);
+  --color-agency-muted: var(--agency-muted);
+  --color-agency-border: var(--agency-border);
+}
+
+body {
+  background-color: var(--agency-paper);
+  color: var(--agency-ink);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar for clean editorial look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd8c8;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9fb59a;
+}
+
+/* Subtle breathing & glowing micro-animations */
+@keyframes breathing-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(194, 245, 118, 0.2);
+    border-color: rgba(23, 91, 59, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(194, 245, 118, 0.45);
+    border-color: rgba(23, 91, 59, 0.8);
+  }
+}
+
+@keyframes gentle-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-breathing {
+  animation: breathing-glow 4s ease-in-out infinite;
+}
+
+.animate-gentle-pulse {
+  animation: gentle-pulse 2.5s ease-in-out infinite;
+}
+
+/* Infinite Marquee Ticker */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 38s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Operator Desk Seamless Docked Rail (Linear / Stripe Architecture) */
+.operator-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100dvh;
+  transition: grid-template-columns 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+:root[data-rail='collapsed'] .operator-shell {
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+
+/* Hover-preview expansion while keeping layout side-by-side with no overlap */
+:root[data-rail='collapsed'][data-rail-hover='true'] .operator-shell {
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+
+.operator-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  width: 100%;
+  background: #10261d;
+  color: #edf5ef;
+  border-right: 1px solid #1c382b;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 10px;
+  z-index: 30;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition: padding 0.2s ease;
+}
+
+:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar {
+  padding-inline: 8px;
+}
+
+/* Header layout in collapsed rail mode: center toggle button where 'A' was */
+:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar .admin-rail-head {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100%;
+}
+
+/* Rail label hiding in collapsed mode */
+:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar .rail-label {
+  display: none !important;
+}
+
+/* Icon centering in collapsed mode */
+:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar a,
+:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar button {
+  justify-content: center !important;
+  padding-inline: 0 !important;
+}
+
+:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar .rail-center {
+  justify-content: center !important;
+}
+
+@media (max-width: 1024px) {
+  .operator-shell {
+    display: block;
+  }
+  .operator-sidebar {
+    display: none;
+  }
+}
