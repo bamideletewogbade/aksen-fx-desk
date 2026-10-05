@@ -79,7 +79,7 @@ export function AiReportGenerator({ isOpen, onClose }: AiReportGeneratorProps) {
             <div>
               <h3 className="text-base font-bold text-[#10261d] flex items-center gap-2">
                 <span>Aksen Desk Copilot &middot; Executive Intelligence</span>
-                <span className="rounded-full bg-[#ebf5e7] px-2 py-0.5 text-[9.5px] font-mono font-bold text-[#175b3b]">
+                <span className="rounded-full bg-[#ebf5e7] px-2 py-0.5 text-[0.5938rem] font-mono font-bold text-[#175b3b]">
                   AUTONOMOUS AGENT
                 </span>
               </h3>
@@ -209,7 +209,7 @@ export function AiReportGenerator({ isOpen, onClose }: AiReportGeneratorProps) {
           {/* Telemetry and Action Buttons */}
           <div className="flex items-center justify-between text-xs text-[#53635a]">
             {meta ? (
-              <div className="flex items-center gap-2 text-[10.5px] font-mono">
+              <div className="flex items-center gap-2 text-[0.6563rem] font-mono">
                 <span className="text-[#175b3b] font-semibold">Model: {meta.model}</span>
                 <span>&bull;</span>
                 <span>{meta.time}</span>
@@ -217,7 +217,7 @@ export function AiReportGenerator({ isOpen, onClose }: AiReportGeneratorProps) {
                 <span>{meta.durationMs}ms</span>
               </div>
             ) : (
-              <span className="text-[10.5px] font-mono text-[#798d81]">Autonomous OTC Sentinel Copilot</span>
+              <span className="text-[0.6563rem] font-mono text-[#798d81]">Autonomous OTC Sentinel Copilot</span>
             )}
 
             {report && (

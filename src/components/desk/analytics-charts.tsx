@@ -46,8 +46,8 @@ export function AnalyticsCharts() {
         {/* Total Inflow (Naira Collected) */}
         <div className="rounded-2xl border border-[#e3ece1] bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-xs text-[#53635a]">
-            <span className="font-mono uppercase tracking-wider text-[11px]">Total Cash Inflow</span>
-            <span className="flex items-center text-[#175b3b] font-bold text-[10px]">
+            <span className="font-mono uppercase tracking-wider text-[0.6875rem]">Total Cash Inflow</span>
+            <span className="flex items-center text-[#175b3b] font-bold text-[0.625rem]">
               <ArrowDownLeft size={12} className="mr-0.5" /> NGN Received
             </span>
           </div>
@@ -56,7 +56,7 @@ export function AnalyticsCharts() {
               ₦{(totalNgnCleared).toFixed(1)}M
             </span>
           </div>
-          <span className="text-[11px] text-[#53635a] block">
+          <span className="text-[0.6875rem] text-[#53635a] block">
             Across Nigerian collection accounts
           </span>
         </div>
@@ -64,8 +64,8 @@ export function AnalyticsCharts() {
         {/* Total Outflow (Cedis Disbursed) */}
         <div className="rounded-2xl border border-[#e3ece1] bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-xs text-[#53635a]">
-            <span className="font-mono uppercase tracking-wider text-[11px]">Total Cash Outflow</span>
-            <span className="flex items-center text-[#175b3b] font-bold text-[10px]">
+            <span className="font-mono uppercase tracking-wider text-[0.6875rem]">Total Cash Outflow</span>
+            <span className="flex items-center text-[#175b3b] font-bold text-[0.625rem]">
               <ArrowUpRight size={12} className="mr-0.5" /> GHS Sent
             </span>
           </div>
@@ -74,7 +74,7 @@ export function AnalyticsCharts() {
               GH₵ {(totalGhsDisbursed).toFixed(2)}M
             </span>
           </div>
-          <span className="text-[11px] text-[#53635a] block">
+          <span className="text-[0.6875rem] text-[#53635a] block">
             Disbursed via MTN &amp; Telecel MoMo
           </span>
         </div>
@@ -82,8 +82,8 @@ export function AnalyticsCharts() {
         {/* Total Completed Orders */}
         <div className="rounded-2xl border border-[#e3ece1] bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-xs text-[#53635a]">
-            <span className="font-mono uppercase tracking-wider text-[11px]">Monthly Order Run</span>
-            <span className="rounded-full bg-[#ebf2e9] px-2 py-0.5 text-[10px] font-mono text-[#175b3b] font-bold">
+            <span className="font-mono uppercase tracking-wider text-[0.6875rem]">Monthly Order Run</span>
+            <span className="rounded-full bg-[#ebf2e9] px-2 py-0.5 text-[0.625rem] font-mono text-[#175b3b] font-bold">
               100% CLEAR
             </span>
           </div>
@@ -92,7 +92,7 @@ export function AnalyticsCharts() {
               {totalOrders.toLocaleString()} Orders
             </span>
           </div>
-          <span className="text-[11px] text-[#53635a] block">
+          <span className="text-[0.6875rem] text-[#53635a] block">
             Average: 3.4 mins settlement SLA
           </span>
         </div>
@@ -100,8 +100,8 @@ export function AnalyticsCharts() {
         {/* Gross Spread Captured */}
         <div className="rounded-2xl border border-[#e3ece1] bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-xs text-[#53635a]">
-            <span className="font-mono uppercase tracking-wider text-[11px]">Gross Spread Margin</span>
-            <span className="text-[10px] font-mono text-[#175b3b] font-bold">
+            <span className="font-mono uppercase tracking-wider text-[0.6875rem]">Gross Spread Margin</span>
+            <span className="text-[0.625rem] font-mono text-[#175b3b] font-bold">
               +2.5% AVG
             </span>
           </div>
@@ -110,7 +110,7 @@ export function AnalyticsCharts() {
               ₦{(totalSpread).toFixed(1)}M
             </span>
           </div>
-          <span className="text-[11px] text-[#53635a] block">
+          <span className="text-[0.6875rem] text-[#53635a] block">
             Net captured desk arbitrage
           </span>
         </div>
@@ -123,7 +123,7 @@ export function AnalyticsCharts() {
           <div>
             <h3 className="text-base font-bold text-[#10261d] flex items-center gap-2">
               <span>Monthly Volume &amp; Cash Flow Trends</span>
-              <span className="rounded-full bg-[#ebf5e7] px-2.5 py-0.5 text-[10px] font-mono font-bold text-[#175b3b]">
+              <span className="rounded-full bg-[#ebf5e7] px-2.5 py-0.5 text-[0.625rem] font-mono font-bold text-[#175b3b]">
                 HISTORICAL AUDIT
               </span>
             </h3>
@@ -201,7 +201,7 @@ export function AnalyticsCharts() {
                     </div>
 
                     <span
-                      className={`text-[11px] font-mono transition-colors ${
+                      className={`text-[0.6875rem] font-mono transition-colors ${
                         isSelected ? 'font-bold text-[#10261d]' : 'text-[#798d81] group-hover:text-[#10261d]'
                       }`}
                     >
@@ -229,7 +229,7 @@ export function AnalyticsCharts() {
                     title={`${point.month}: ${point.orders} completed tickets`}
                   />
                   <span
-                    className={`text-[11px] font-mono transition-colors ${
+                    className={`text-[0.6875rem] font-mono transition-colors ${
                       isSelected ? 'font-bold text-[#10261d]' : 'text-[#798d81] group-hover:text-[#10261d]'
                     }`}
                   >
@@ -263,7 +263,7 @@ export function AnalyticsCharts() {
             </div>
 
             {/* Selected Month Detail Strip */}
-            <div className="p-2.5 rounded-2xl bg-[#f9faf7] border border-[#e3ece1] flex items-center gap-3 font-mono text-[11px]">
+            <div className="p-2.5 rounded-2xl bg-[#f9faf7] border border-[#e3ece1] flex items-center gap-3 font-mono text-[0.6875rem]">
               <span className="text-[#10261d] font-bold">{selectedPoint.month}:</span>
               <span>
                 Orders: <strong className="text-[#10261d]">{selectedPoint.orders}</strong>

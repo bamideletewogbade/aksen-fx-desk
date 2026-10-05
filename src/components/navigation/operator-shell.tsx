@@ -51,13 +51,13 @@ export function OperatorShell({ children, session }: OperatorShellProps) {
       <div className="lg:hidden sticky top-0 z-40 bg-[#10261d] text-white border-b border-[#1c382b] px-4 py-3 flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-xs font-bold block leading-tight">AKSEN OTC DESK</span>
-          <span className="text-[9.5px] font-mono text-[#c2f576]">OPERATOR CONSOLE</span>
+          <span className="text-[0.5938rem] font-mono text-[#c2f576]">OPERATOR CONSOLE</span>
         </div>
 
         <div className="flex items-center gap-2">
           {session && (
             <div className="flex items-center gap-1.5 rounded-full border border-[#274a38] bg-[#0c1f17] px-2.5 py-1 text-xs">
-              <span className="text-[10px] text-white font-bold">{session.name.split(' ')[0]}</span>
+              <span className="text-[0.625rem] text-white font-bold">{session.userName.split(' ')[0]}</span>
             </div>
           )}
 
@@ -110,7 +110,7 @@ export function OperatorShell({ children, session }: OperatorShellProps) {
           </Link>
 
           <div className="pt-2 border-t border-[#1c382b] space-y-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#7da08c] font-bold px-3 block">
+            <span className="text-[0.625rem] font-mono uppercase tracking-wider text-[#7da08c] font-bold px-3 block">
               Settings
             </span>
             <Link

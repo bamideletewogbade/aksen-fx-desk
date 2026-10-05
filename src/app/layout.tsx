@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -13,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AKSEN OTC · West Africa Bureau Operating System",
-  description: "Automated 15-minute rate locks, GEV receipt forensics, and rotated bank rails for Nigeria NGN ⇄ Ghana GHS informal currency desks.",
+  title: "Aksen OTC",
+  description: "Desk software for licensed currency operators: customer quote links, payment checks against your statement, two-person payout approval and daily reconciliation.",
 };
 
 export default function RootLayout({
@@ -29,7 +30,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
-        {children}
+        <ClerkProvider>
+          {children}
+        </ClerkProvider>
       </body>
     </html>
   );

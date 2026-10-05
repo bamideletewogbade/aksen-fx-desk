@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { chatComplete, ChatMessage } from '@/lib/openrouter';
-import { sql } from '@/lib/db';
 import { TradeTicket } from '@/types/desk';
 
 interface ChatTurn {
@@ -104,15 +103,11 @@ export async function POST(req: Request) {
       state.ticketId = ticketId;
       state.stage = 'PAYMENT_SUBMITTED';
 
-      reply = `⚡ *Bank Credit Alert Detected & Verified!*
-• Ref / Narration: *${ticketId}*
-• Remitter: *${state.customerName}*
-• Amount: *₦${state.amountIn.toLocaleString()} NGN*
-• GEV System 1 Forensic Score: *99.8% Authentic* (0.2% risk prior)
-• NIBSS Session confirmed on ${state.collectionBank.name}.
-
-🎉 *Status: SAFE TO DISBURSE*
-Your *GH₵ ${state.amountOut.toLocaleString()}* payout to *${state.momoRecipient.network} (${state.momoRecipient.phoneNumber} - ${state.momoRecipient.registeredName})* has been queued on the Operator Desk and is authorized for instant disbursal!`;
+      // Simulator only. A receipt or message is never treated as payment: the desk
+      // confirms funds against its own statement in the trade room.
+      reply = `🧾 *Thanks, your receipt for ${ticketId} was received.*
+The desk will check its account for ₦${state.amountIn.toLocaleString()} with reference *${ticketId}*.
+Your *GH₵ ${state.amountOut.toLocaleString()}* payout to *${state.momoRecipient.network} ${state.momoRecipient.phoneNumber}* is sent once the money shows in their account. You will get the payout reference here.`;
 
       // Build complete trade ticket
       createdTicket = {
@@ -137,16 +132,16 @@ Your *GH₵ ${state.amountOut.toLocaleString()}* payout to *${state.momoRecipien
           registeredName: state.momoRecipient.registeredName,
           resolvedStatus: 'RESOLVED_MATCH',
         },
-        status: 'SAFE_TO_DISBURSE',
+        status: 'AWAITING_PAYMENT',
         remitterName: state.customerName,
         gevSystem1: {
-          pixelNoiseVariance: 0.03,
-          typographyDeviation: 0.1,
-          identityScore: 99.8,
-          nibssAuthenticity: 100,
-          probabilityFraud: 0.002,
-          verdict: 'PASS_FAST_PATH',
-          flags: ['WhatsApp Simulator Verified Inbound', '3-Way KYC 100% Match', 'NIBSS Session Confirmed'],
+          pixelNoiseVariance: 0,
+          typographyDeviation: 0,
+          identityScore: 0,
+          nibssAuthenticity: 0,
+          probabilityFraud: 0,
+          verdict: 'ANOMALY_ESCALATE',
+          flags: ['Simulator: receipt received, funds not confirmed'],
         },
         whatsappTranscript: [
           ...messages.map((m) => ({
@@ -162,33 +157,7 @@ Your *GH₵ ${state.amountOut.toLocaleString()}* payout to *${state.momoRecipien
         ],
       };
 
-      // Persist to Neon Postgres
-      if (process.env.DATABASE_URL) {
-        try {
-          await sql`
-            INSERT INTO otc_trade_tickets (
-              id, customer_name, whatsapp_phone, direction, amount_in, amount_out, rate,
-              collection_bank_name, collection_account_number, collection_narration,
-              momo_network, momo_phone, momo_name, status, remitter_name,
-              gev_probability_fraud, gev_verdict, gev_flags, whatsapp_transcript
-            )
-            VALUES (
-              ${createdTicket.id}, ${createdTicket.customerName}, ${createdTicket.whatsappPhone}, ${createdTicket.direction},
-              ${createdTicket.amountIn}, ${createdTicket.amountOut}, ${createdTicket.rate},
-              ${createdTicket.collectionBank.name}, ${createdTicket.collectionBank.accountNumber}, ${createdTicket.id},
-              ${createdTicket.momoRecipient.network}, ${createdTicket.momoRecipient.phoneNumber}, ${createdTicket.momoRecipient.registeredName},
-              'SAFE_TO_DISBURSE', ${createdTicket.remitterName},
-              0.002, 'PASS_FAST_PATH',
-              ${JSON.stringify(createdTicket.gevSystem1.flags)}::jsonb,
-              ${JSON.stringify(createdTicket.whatsappTranscript)}::jsonb
-            )
-            ON CONFLICT (id) DO UPDATE SET status = 'SAFE_TO_DISBURSE';
-          `;
-        } catch (dbErr) {
-          console.error('Failed to persist simulated ticket to Neon:', dbErr);
-        }
-      }
-
+      // Simulator: nothing is written to the database.
       return NextResponse.json({
         reply,
         updatedTradeState: state,
@@ -239,7 +208,7 @@ Account: *${state.collectionBank.accountNumber}*
 Account Name: *${state.collectionBank.accountName}*
 Narration: *${ticketId}*
 
-⚠️ *Mandatory:* Use *${ticketId}* as your bank transfer remark so GEV Sentinel verifies your payment automatically. Send your payment receipt here once transferred!`;
+⚠️ *Mandatory:* Use *${ticketId}* as your bank transfer remark so the desk can match your payment. Send your receipt here once transferred.`;
 
       // Register ticket in Neon Postgres as AWAITING_PAYMENT
       createdTicket = {
@@ -289,31 +258,6 @@ Narration: *${ticketId}*
       ],
     };
 
-    if (process.env.DATABASE_URL) {
-      try {
-        await sql`
-          INSERT INTO otc_trade_tickets (
-            id, customer_name, whatsapp_phone, direction, amount_in, amount_out, rate,
-            collection_bank_name, collection_account_number, collection_narration,
-            momo_network, momo_phone, momo_name, status, remitter_name,
-            gev_probability_fraud, gev_verdict, gev_flags, whatsapp_transcript
-          )
-          VALUES (
-            ${createdTicket.id}, ${createdTicket.customerName}, ${createdTicket.whatsappPhone}, ${createdTicket.direction},
-            ${createdTicket.amountIn}, ${createdTicket.amountOut}, ${createdTicket.rate},
-            ${createdTicket.collectionBank.name}, ${createdTicket.collectionBank.accountNumber}, ${createdTicket.id},
-            ${createdTicket.momoRecipient.network}, ${createdTicket.momoRecipient.phoneNumber}, ${createdTicket.momoRecipient.registeredName},
-            'AWAITING_PAYMENT', ${createdTicket.remitterName},
-            0.01, 'PASS_FAST_PATH',
-            ${JSON.stringify(createdTicket.gevSystem1.flags)}::jsonb,
-            ${JSON.stringify(createdTicket.whatsappTranscript)}::jsonb
-          )
-          ON CONFLICT (id) DO NOTHING;
-        `;
-      } catch (dbErr) {
-        console.error('Failed to persist awaiting ticket to Neon:', dbErr);
-      }
-    }
   }
 
   // Stage 3: User provides amount or specifies volume
@@ -328,7 +272,7 @@ Narration: *${ticketId}*
     state.amountOut = parseFloat((parsedAmount / state.rate).toFixed(2));
     state.stage = 'QUOTE_OFFERED';
 
-    reply = `✅ *Indicative 15-Minute Rate Lock:*
+    reply = `✅ *Indicative quote (simulator):*
 • You Send: *₦${state.amountIn.toLocaleString()} NGN*
 • Corridor: *${state.corridor === 'NGN_TO_GHS' ? 'Nigeria Bank ➔ Ghana MoMo' : 'Ghana MoMo ➔ Nigeria Bank'}*
 • Rate: *1 GHS = ${state.rate} NGN*
@@ -350,7 +294,7 @@ Please send the recipient's *Ghana Mobile Money Number and Name* (e.g. *MTN 0245
     reply = `👋 *Welcome to Aksen OTC Bureau Desk!*
 Official West Africa Currency Corridor (Lagos Allen ⇄ Accra Circle).
 
-Today's Rate: *1 GHS = ${state.rate} NGN* (Zero commission fee).
+Today's Rate: *1 GHS = ${state.rate} NGN* (simulated rate).
 
 Are you swapping *Naira to Ghana Cedis (NGN ➔ GHS)* or *Cedis to Naira (GHS ➔ NGN)*, and how much volume would you like to move today?`;
   }

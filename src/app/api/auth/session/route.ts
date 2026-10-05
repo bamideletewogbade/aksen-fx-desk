@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { SESSION_COOKIE, decodeSession, DEFAULT_DEMO_OPERATOR } from '@/lib/auth';
+import { getCtx } from '@/server/http';
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE)?.value;
-  const session = decodeSession(sessionCookie);
-
-  return NextResponse.json({
-    authenticated: Boolean(session),
-    session: session || null,
-  });
+  const ctx = await getCtx();
+  if (!ctx) return NextResponse.json({ session: null }, { status: 401 });
+  const { sessionId: _sessionId, ...session } = ctx;
+  return NextResponse.json({ session }, { headers: { 'Cache-Control': 'no-store' } });
 }

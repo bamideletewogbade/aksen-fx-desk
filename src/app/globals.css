@@ -1,18 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --agency-paper: #f9faf7;
+  --agency-paper: #f6f8f4;
   --agency-ink: #10261d;
   --agency-green: #175b3b;
   --agency-green-hover: #0f4329;
   --agency-lime: #c2f576;
   --agency-lime-muted: #e7fbc9;
-  --agency-muted: #53635a;
-  --agency-subtle: #798d81;
-  --agency-border: #e3ece1;
+  --agency-muted: #4d5f55;
+  --agency-subtle: #6f8378;
+  --agency-border: #dfe8dc;
   --agency-card: #ffffff;
   --agency-dark-surface: #0a1711;
   --agency-dark-card: #12221b;
+  --agency-amber: #a35a00;
+  --agency-amber-bg: #fff4e0;
+  --agency-red: #b42318;
+  --agency-red-bg: #fdecea;
+  --agency-blue: #1d4f91;
+  --agency-blue-bg: #e9f0fb;
 }
 
 @theme inline {
@@ -20,10 +26,36 @@
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --color-paper: var(--agency-paper);
   --color-ink: var(--agency-ink);
+  --color-brand: var(--agency-green);
+  --color-brand-deep: var(--agency-green-hover);
+  --color-lime: var(--agency-lime);
+  --color-lime-soft: var(--agency-lime-muted);
+  --color-muted: var(--agency-muted);
+  --color-subtle: var(--agency-subtle);
+  --color-line: var(--agency-border);
+  --color-card: var(--agency-card);
+  --color-night: var(--agency-dark-surface);
+  --color-amber: var(--agency-amber);
+  --color-amber-bg: var(--agency-amber-bg);
+  --color-risk: var(--agency-red);
+  --color-risk-bg: var(--agency-red-bg);
+  --color-info: var(--agency-blue);
+  --color-info-bg: var(--agency-blue-bg);
+  /* legacy names used by the public site */
   --color-agency-green: var(--agency-green);
   --color-agency-lime: var(--agency-lime);
   --color-agency-muted: var(--agency-muted);
   --color-agency-border: var(--agency-border);
+}
+
+/*
+ * Desktop scale. Sizing is rem-based, so raising the root size scales the
+ * whole interface together (the same look as browser zoom at 110%).
+ * Media-query breakpoints use the browser default, so layouts still switch
+ * at the same screen widths. Phones and tablets stay at 100%.
+ */
+@media (min-width: 1200px) {
+  html { font-size: 110%; }
 }
 
 body {
@@ -33,139 +65,91 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbar for clean editorial look */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd8c8;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #9fb59a;
+.tabular { font-variant-numeric: tabular-nums; }
+
+:focus-visible {
+  outline: 2px solid var(--agency-green);
+  outline-offset: 2px;
 }
 
-/* Subtle breathing & glowing micro-animations */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd8c8; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #9fb59a; }
+
 @keyframes breathing-glow {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(194, 245, 118, 0.2);
-    border-color: rgba(23, 91, 59, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(194, 245, 118, 0.45);
-    border-color: rgba(23, 91, 59, 0.8);
-  }
+  0%, 100% { box-shadow: 0 0 15px rgba(194, 245, 118, 0.2); border-color: rgba(23, 91, 59, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(194, 245, 118, 0.45); border-color: rgba(23, 91, 59, 0.8); }
+}
+@keyframes gentle-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
+
+.animate-breathing { animation: breathing-glow 4s ease-in-out infinite; }
+.animate-gentle-pulse { animation: gentle-pulse 2.5s ease-in-out infinite; }
+.animate-rise { animation: rise 0.18s ease-out both; }
+.animate-marquee { display: flex; width: max-content; animation: marquee 38s linear infinite; }
+
+/* Slow drifting pebbles behind marketing sections */
+@keyframes drift-a { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(24px, -18px) rotate(14deg); } }
+@keyframes drift-b { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(-20px, 22px) rotate(-12deg); } }
+@keyframes drift-c { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(14px, 16px) scale(1.06); } }
+.pebble { position: absolute; border-radius: 58% 42% 53% 47% / 46% 56% 44% 54%; pointer-events: none; will-change: transform; }
+.drift-a { animation: drift-a 22s ease-in-out infinite; }
+.drift-b { animation: drift-b 27s ease-in-out infinite; }
+.drift-c { animation: drift-c 31s ease-in-out infinite; }
+
+/* Hero colour wash: one slow turn of soft lime and blue light */
+@keyframes wash-turn { to { transform: rotate(360deg); } }
+.hero-wash {
+  background:
+    radial-gradient(40% 35% at 70% 25%, rgba(194, 245, 118, 0.45), transparent 70%),
+    radial-gradient(35% 30% at 25% 75%, rgba(74, 127, 193, 0.14), transparent 70%),
+    radial-gradient(30% 30% at 80% 80%, rgba(23, 91, 59, 0.10), transparent 70%);
+  will-change: transform;
+  animation: wash-turn 80s linear infinite;
 }
 
-@keyframes gentle-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+@keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-3px); opacity: 1; } }
+.typing-dot { animation: typing 1.1s ease-in-out infinite; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+.animate-pop { animation: pop-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes flow { from { background-position: 0 0; } to { background-position: 40px 0; } }
+.flow-line { background-image: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 12px); animation: flow 1.6s linear infinite; }
+.animate-marquee:hover { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
 
-.animate-breathing {
-  animation: breathing-glow 4s ease-in-out infinite;
-}
-
-.animate-gentle-pulse {
-  animation: gentle-pulse 2.5s ease-in-out infinite;
-}
-
-/* Infinite Marquee Ticker */
-@keyframes marquee {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-marquee {
-  display: flex;
-  width: max-content;
-  animation: marquee 38s linear infinite;
-}
-
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
-
-/* Operator Desk Seamless Docked Rail (Linear / Stripe Architecture) */
-.operator-shell {
+/* ---------- Operator app frame ---------- */
+.app-frame {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 14.5rem minmax(0, 1fr);
   min-height: 100dvh;
-  transition: grid-template-columns 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
-
-:root[data-rail='collapsed'] .operator-shell {
-  grid-template-columns: 64px minmax(0, 1fr);
-}
-
-/* Hover-preview expansion while keeping layout side-by-side with no overlap */
-:root[data-rail='collapsed'][data-rail-hover='true'] .operator-shell {
-  grid-template-columns: 240px minmax(0, 1fr);
-}
-
-.operator-sidebar {
+.app-rail {
   position: sticky;
   top: 0;
   height: 100dvh;
-  width: 100%;
   background: #10261d;
   color: #edf5ef;
   border-right: 1px solid #1c382b;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 16px 10px;
-  z-index: 30;
-  overflow-x: hidden;
   overflow-y: auto;
-  transition: padding 0.2s ease;
 }
-
-:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar {
-  padding-inline: 8px;
-}
-
-/* Header layout in collapsed rail mode: center toggle button where 'A' was */
-:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar .admin-rail-head {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  width: 100%;
-}
-
-/* Rail label hiding in collapsed mode */
-:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar .rail-label {
-  display: none !important;
-}
-
-/* Icon centering in collapsed mode */
-:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar a,
-:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar button {
-  justify-content: center !important;
-  padding-inline: 0 !important;
-}
-
-:root[data-rail='collapsed']:not([data-rail-hover='true']) .operator-sidebar .rail-center {
-  justify-content: center !important;
-}
-
 @media (max-width: 1024px) {
-  .operator-shell {
-    display: block;
-  }
-  .operator-sidebar {
-    display: none;
-  }
+  .app-frame { display: block; }
+  .app-rail { display: none; }
+}
+
+/* Legacy operator shell (WhatsApp console) */
+.operator-shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100dvh; }
+@media (max-width: 1024px) { .operator-shell { display: block; } }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .print-card { box-shadow: none !important; border-color: #ccc !important; }
 }

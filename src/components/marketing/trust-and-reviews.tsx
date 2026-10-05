@@ -122,29 +122,29 @@ export function TrustAndReviews() {
         {/* Live Trust Metrics Ribbon */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="rounded-2xl border border-[#e3ece1] bg-[#f9faf7] p-5 space-y-1">
-            <span className="text-[11px] font-mono uppercase text-[#798d81] block">Total Settled</span>
+            <span className="text-[0.6875rem] font-mono uppercase text-[#798d81] block">Total Settled</span>
             <div className="text-2xl sm:text-3xl font-bold font-mono text-[#10261d]">₦184,520,000</div>
-            <span className="text-[11px] text-[#175b3b] font-medium flex items-center gap-1">
+            <span className="text-[0.6875rem] text-[#175b3b] font-medium flex items-center gap-1">
               <CheckCircle2 size={12} /> 100% Delivered
             </span>
           </div>
 
           <div className="rounded-2xl border border-[#e3ece1] bg-[#f9faf7] p-5 space-y-1">
-            <span className="text-[11px] font-mono uppercase text-[#798d81] block">Median Settlement</span>
+            <span className="text-[0.6875rem] font-mono uppercase text-[#798d81] block">Median Settlement</span>
             <div className="text-2xl sm:text-3xl font-bold font-mono text-[#175b3b]">44 Seconds</div>
-            <span className="text-[11px] text-[#53635a]">Instant MoMo &amp; Bank Delivery</span>
+            <span className="text-[0.6875rem] text-[#53635a]">Instant MoMo &amp; Bank Delivery</span>
           </div>
 
           <div className="rounded-2xl border border-[#e3ece1] bg-[#f9faf7] p-5 space-y-1">
-            <span className="text-[11px] font-mono uppercase text-[#798d81] block">Dispute Rate</span>
+            <span className="text-[0.6875rem] font-mono uppercase text-[#798d81] block">Dispute Rate</span>
             <div className="text-2xl sm:text-3xl font-bold font-mono text-[#10261d]">0.00%</div>
-            <span className="text-[11px] text-[#175b3b] font-medium">Zero chargebacks to date</span>
+            <span className="text-[0.6875rem] text-[#175b3b] font-medium">Zero chargebacks to date</span>
           </div>
 
           <div className="rounded-2xl border border-[#e3ece1] bg-[#f9faf7] p-5 space-y-1">
-            <span className="text-[11px] font-mono uppercase text-[#798d81] block">Bank Account Freezes</span>
+            <span className="text-[0.6875rem] font-mono uppercase text-[#798d81] block">Bank Account Freezes</span>
             <div className="text-2xl sm:text-3xl font-bold font-mono text-[#10261d]">0 PND Flags</div>
-            <span className="text-[11px] text-[#175b3b] font-medium">Verified Counterparty Accounts</span>
+            <span className="text-[0.6875rem] text-[#175b3b] font-medium">Verified Counterparty Accounts</span>
           </div>
         </div>
 
@@ -163,7 +163,7 @@ export function TrustAndReviews() {
                       <Star key={i} size={14} fill="currentColor" />
                     ))}
                   </div>
-                  <span className="text-[11px] font-mono bg-white border border-[#e3ece1] px-2 py-0.5 rounded-full text-[#175b3b] font-bold">
+                  <span className="text-[0.6875rem] font-mono bg-white border border-[#e3ece1] px-2 py-0.5 rounded-full text-[#175b3b] font-bold">
                     {vouch.settledSpeed}
                   </span>
                 </div>
@@ -180,15 +180,15 @@ export function TrustAndReviews() {
                     <strong className="text-xs font-bold text-[#10261d] block">
                       {vouch.author}
                     </strong>
-                    <span className="text-[11px] text-[#798d81] block">{vouch.role}</span>
+                    <span className="text-[0.6875rem] text-[#798d81] block">{vouch.role}</span>
                   </div>
-                  <div className="text-right text-[11px] font-mono">
+                  <div className="text-right text-[0.6875rem] font-mono">
                     <span className="text-[#175b3b] font-bold block">{vouch.location}</span>
                     <span className="text-[#798d81]">{vouch.tradeCount} trades</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#175b3b] bg-[#ebf2e9] px-2.5 py-1 rounded-xl">
+                <div className="flex items-center gap-1.5 text-[0.6563rem] font-mono text-[#175b3b] bg-[#ebf2e9] px-2.5 py-1 rounded-xl">
                   <ShieldCheck size={12} />
                   <span dangerouslySetInnerHTML={{ __html: vouch.verifiedRef }} />
                 </div>

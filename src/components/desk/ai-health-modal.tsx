@@ -59,11 +59,11 @@ export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-white">AI Agent Intelligence &amp; Health</h3>
-                <span className="rounded-full bg-[#175b3b] px-2 py-0.5 text-[9px] font-mono font-bold text-[#c2f576]">
+                <span className="rounded-full bg-[#175b3b] px-2 py-0.5 text-[0.5625rem] font-mono font-bold text-[#c2f576]">
                   OPENROUTER
                 </span>
               </div>
-              <p className="text-[11px] text-[#a3b8ac]">Multi-Model Routing &middot; Zero Autonomous Payout Risk</p>
+              <p className="text-[0.6875rem] text-[#a3b8ac]">Multi-Model Routing &middot; Zero Autonomous Payout Risk</p>
             </div>
           </div>
 
@@ -85,7 +85,7 @@ export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
                 <strong className="text-xs font-bold text-[#10261d] block">
                   Agent Health: 100% Operational
                 </strong>
-                <span className="text-[11px] text-[#175b3b]">
+                <span className="text-[0.6875rem] text-[#175b3b]">
                   OpenRouter Multi-Model Mesh active with auto-fallback
                 </span>
               </div>
@@ -97,7 +97,7 @@ export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
 
           {/* Model Routing Stack */}
           <div className="rounded-2xl border border-[#e3ece1] bg-[#f9faf7] p-4 space-y-3">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#798d81] block">
+            <span className="text-[0.625rem] font-mono font-bold uppercase tracking-wider text-[#798d81] block">
               Configured Model Hierarchy
             </span>
 
@@ -108,15 +108,15 @@ export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
                   <span className="h-2 w-2 rounded-full bg-[#175b3b]" />
                   <strong className="text-[#10261d] font-mono">{healthData.primaryModel}</strong>
                 </div>
-                <span className="rounded-full bg-[#ebf5e7] text-[#175b3b] px-2 py-0.5 text-[9px] font-mono font-bold">
+                <span className="rounded-full bg-[#ebf5e7] text-[#175b3b] px-2 py-0.5 text-[0.5625rem] font-mono font-bold">
                   PRIMARY REASONER
                 </span>
               </div>
 
               {/* Fallbacks */}
               <div className="p-2.5 rounded-xl bg-white/70 border border-[#e3ece1] text-xs space-y-1.5">
-                <span className="text-[10px] text-[#53635a] font-medium block">Automatic Fallback Array:</span>
-                <div className="flex flex-wrap gap-1.5 font-mono text-[10px]">
+                <span className="text-[0.625rem] text-[#53635a] font-medium block">Automatic Fallback Array:</span>
+                <div className="flex flex-wrap gap-1.5 font-mono text-[0.625rem]">
                   {healthData.fallbackModels.map((m: string) => (
                     <span key={m} className="bg-[#f0f4ee] px-2 py-0.5 rounded border border-[#e3ece1] text-[#10261d]">
                       {m}
@@ -130,21 +130,21 @@ export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
           {/* System 1 Math vs System 2 Traffic Ratio */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-3.5 rounded-2xl border border-[#e3ece1] bg-white space-y-1">
-              <span className="text-[10px] text-[#53635a] block">System 1 Fast-Path Math</span>
+              <span className="text-[0.625rem] text-[#53635a] block">System 1 Fast-Path Math</span>
               <strong className="text-base font-mono font-bold text-[#10261d]">
                 {healthData.system1FastPathRate}
               </strong>
-              <p className="text-[10px] text-[#798d81] leading-tight">
+              <p className="text-[0.625rem] text-[#798d81] leading-tight">
                 Resolved by Bayesian math in &lt;50ms ($0 LLM cost)
               </p>
             </div>
 
             <div className="p-3.5 rounded-2xl border border-[#e3ece1] bg-white space-y-1">
-              <span className="text-[10px] text-[#53635a] block">System 2 Deep Reasoning</span>
+              <span className="text-[0.625rem] text-[#53635a] block">System 2 Deep Reasoning</span>
               <strong className="text-base font-mono font-bold text-[#175b3b]">
                 {healthData.system2EscalationRate}
               </strong>
-              <p className="text-[10px] text-[#798d81] leading-tight">
+              <p className="text-[0.625rem] text-[#798d81] leading-tight">
                 Escalated to OpenRouter only when anomaly is flagged
               </p>
             </div>
@@ -153,11 +153,11 @@ export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
           {/* Shift Consumption Telemetry */}
           <div className="rounded-2xl border border-[#e3ece1] bg-white p-4 flex items-center justify-between text-xs">
             <div>
-              <span className="text-[10px] text-[#53635a] block uppercase font-mono">Shift Token Usage</span>
+              <span className="text-[0.625rem] text-[#53635a] block uppercase font-mono">Shift Token Usage</span>
               <strong className="font-mono text-sm text-[#10261d]">{healthData.tokensUsedToday.toLocaleString()} tokens</strong>
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-[#53635a] block uppercase font-mono">Est. Incurred Cost</span>
+              <span className="text-[0.625rem] text-[#53635a] block uppercase font-mono">Est. Incurred Cost</span>
               <strong className="font-mono text-sm text-[#175b3b]">${healthData.costTodayUsd} USD</strong>
             </div>
           </div>
@@ -170,7 +170,7 @@ export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
                 Manual Disbursal Sovereign Rule
               </strong>
             </div>
-            <p className="text-[11px] text-[#10261d] leading-relaxed">
+            <p className="text-[0.6875rem] text-[#10261d] leading-relaxed">
               <strong>Autonomous AI payout capability is strictly DISABLED.</strong> The AI agent quotes, binds 15-minute locks, routes bank accounts, and inspects receipts—but <strong>only the human operator executes the final MoMo or bank transfer</strong>. Zero risk of runaway automated payouts.
             </p>
           </div>
@@ -178,7 +178,7 @@ export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
 
         {/* Footer */}
         <div className="border-t border-[#e3ece1] bg-[#f9faf7] px-6 py-3.5 flex items-center justify-between">
-          <span className="text-[11px] text-[#798d81] font-mono">
+          <span className="text-[0.6875rem] text-[#798d81] font-mono">
             Powered by OpenRouter Engine
           </span>
           <button

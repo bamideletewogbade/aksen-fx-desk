@@ -26,10 +26,10 @@ export function TreasuryRibbon({
       {/* Rate & Margin */}
       <div className="rounded-2xl border border-[#e3ece1] bg-white p-4 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-[#53635a]">
-          <span className="font-mono uppercase tracking-wider text-[11px]">Desk Rate</span>
+          <span className="font-mono uppercase tracking-wider text-[0.6875rem]">Desk Rate</span>
           <button
             onClick={onEditRateClick}
-            className="flex items-center gap-1 text-[11px] font-medium text-[#175b3b] hover:underline cursor-pointer"
+            className="flex items-center gap-1 text-[0.6875rem] font-medium text-[#175b3b] hover:underline cursor-pointer"
           >
             <SlidersHorizontal size={11} />
             <span>Adjust Spread</span>
@@ -38,7 +38,7 @@ export function TreasuryRibbon({
         <div className="my-1.5 flex items-baseline gap-2">
           <span className="text-2xl font-bold font-mono text-[#10261d]">1 GHS = {rate} NGN</span>
         </div>
-        <div className="text-[11px] text-[#53635a] flex items-center justify-between">
+        <div className="text-[0.6875rem] text-[#53635a] flex items-center justify-between">
           <span>Base: ₦102.50</span>
           <span className="font-mono font-medium text-[#175b3b]">Desk Spread: +2.5%</span>
         </div>
@@ -47,8 +47,8 @@ export function TreasuryRibbon({
       {/* Nigerian Naira Float */}
       <div className="rounded-2xl border border-[#e3ece1] bg-white p-4 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-[#53635a]">
-          <span className="font-mono uppercase tracking-wider text-[11px]">🇳🇬 Nigerian Bank Float</span>
-          <span className="rounded-full bg-[#ebf2e9] px-2 py-0.5 text-[10px] font-medium text-[#175b3b]">
+          <span className="font-mono uppercase tracking-wider text-[0.6875rem]">🇳🇬 Nigerian Bank Float</span>
+          <span className="rounded-full bg-[#ebf2e9] px-2 py-0.5 text-[0.625rem] font-medium text-[#175b3b]">
             Auto-Rotated
           </span>
         </div>
@@ -57,7 +57,7 @@ export function TreasuryRibbon({
             ₦{(ngnTotal / 1000000).toFixed(2)}M
           </span>
         </div>
-        <div className="text-[11px] text-[#53635a] flex items-center justify-between">
+        <div className="text-[0.6875rem] text-[#53635a] flex items-center justify-between">
           <span>Active: GTBank + OPay</span>
           <span className="text-[#175b3b] font-medium">Safe from Caps</span>
         </div>
@@ -66,8 +66,8 @@ export function TreasuryRibbon({
       {/* Ghana Cedis MoMo Float */}
       <div className="rounded-2xl border border-[#e3ece1] bg-white p-4 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-[#53635a]">
-          <span className="font-mono uppercase tracking-wider text-[11px]">🇬🇭 Ghana MoMo Float</span>
-          <span className="text-[10px] font-mono text-[#53635a]">{ghsCapacity}% Health</span>
+          <span className="font-mono uppercase tracking-wider text-[0.6875rem]">🇬🇭 Ghana MoMo Float</span>
+          <span className="text-[0.625rem] font-mono text-[#53635a]">{ghsCapacity}% Health</span>
         </div>
         <div className="my-1.5 flex items-baseline justify-between">
           <span className="text-2xl font-bold font-mono text-[#10261d]">
@@ -88,8 +88,8 @@ export function TreasuryRibbon({
       {/* Action Pipeline */}
       <div className="rounded-2xl border border-[#e3ece1] bg-white p-4 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-[#53635a]">
-          <span className="font-mono uppercase tracking-wider text-[11px]">Desk Pipeline</span>
-          <span className="flex items-center gap-1 text-[11px] font-medium text-[#175b3b]">
+          <span className="font-mono uppercase tracking-wider text-[0.6875rem]">Desk Pipeline</span>
+          <span className="flex items-center gap-1 text-[0.6875rem] font-medium text-[#175b3b]">
             <ShieldCheck size={12} />
             <span>GEV Active</span>
           </span>
@@ -106,7 +106,7 @@ export function TreasuryRibbon({
             </div>
           )}
         </div>
-        <div className="text-[11px] text-[#53635a]">
+        <div className="text-[0.6875rem] text-[#53635a]">
           {flaggedCount > 0 ? (
             <span className="text-[#dc2626] font-medium flex items-center gap-1">
               <AlertTriangle size={11} /> 1 Suspicious trade detected

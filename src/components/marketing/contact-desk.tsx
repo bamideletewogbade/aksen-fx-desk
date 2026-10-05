@@ -254,7 +254,7 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
             <div className="space-y-1.5 flex-1">
               <div className="flex items-center gap-2">
                 <strong className="text-sm font-bold text-white">Live WhatsApp Desk</strong>
-                <span className="rounded-full bg-[#175b3b] px-2 py-0.5 text-[9px] font-mono font-bold text-[#c2f576]">
+                <span className="rounded-full bg-[#175b3b] px-2 py-0.5 text-[0.5625rem] font-mono font-bold text-[#c2f576]">
                   INSTANT
                 </span>
               </div>
@@ -276,36 +276,36 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
                   <Sparkles size={14} className="text-[#175b3b]" />
                   <span>LIVE TICKET IN PROGRESS</span>
                 </div>
-                <span className="rounded-full bg-[#175b3b] text-[#c2f576] px-2 py-0.5 text-[9px] font-mono font-bold">
+                <span className="rounded-full bg-[#175b3b] text-[#c2f576] px-2 py-0.5 text-[0.5625rem] font-mono font-bold">
                   {tradeState.isComplete ? 'READY' : 'EXTRACTING'}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                 <div className="bg-white/80 p-2.5 rounded-xl border border-[#e3ece1]">
-                  <span className="text-[10px] text-[#798d81] block">VOLUME</span>
-                  <strong className="text-[#10261d] text-[11px] truncate block">
+                  <span className="text-[0.625rem] text-[#798d81] block">VOLUME</span>
+                  <strong className="text-[#10261d] text-[0.6875rem] truncate block">
                     {tradeState.amount || 'Pending input'}
                   </strong>
                 </div>
 
                 <div className="bg-white/80 p-2.5 rounded-xl border border-[#e3ece1]">
-                  <span className="text-[10px] text-[#798d81] block">CORRIDOR</span>
-                  <strong className="text-[#10261d] text-[11px] truncate block">
+                  <span className="text-[0.625rem] text-[#798d81] block">CORRIDOR</span>
+                  <strong className="text-[#10261d] text-[0.6875rem] truncate block">
                     {tradeState.corridor} ({tradeState.settlementMethod})
                   </strong>
                 </div>
 
                 <div className="bg-white/80 p-2.5 rounded-xl border border-[#e3ece1]">
-                  <span className="text-[10px] text-[#798d81] block">COUNTERPARTY</span>
-                  <strong className="text-[#10261d] text-[11px] truncate block">
+                  <span className="text-[0.625rem] text-[#798d81] block">COUNTERPARTY</span>
+                  <strong className="text-[#10261d] text-[0.6875rem] truncate block">
                     {tradeState.counterpartyName || 'In discussion'}
                   </strong>
                 </div>
 
                 <div className="bg-white/80 p-2.5 rounded-xl border border-[#e3ece1]">
-                  <span className="text-[10px] text-[#798d81] block">WHATSAPP</span>
-                  <strong className="text-[#10261d] text-[11px] truncate block">
+                  <span className="text-[0.625rem] text-[#798d81] block">WHATSAPP</span>
+                  <strong className="text-[#10261d] text-[0.6875rem] truncate block">
                     {tradeState.whatsappPhone || 'Awaiting phone'}
                   </strong>
                 </div>
@@ -358,7 +358,7 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
         </div>
 
         {/* Right Column: Conversational Natural Language Intake (7 Cols) */}
-        <div className="lg:col-span-7 rounded-3xl border border-[#e3ece1] bg-white shadow-sm overflow-hidden flex flex-col min-h-[540px]">
+        <div className="lg:col-span-7 rounded-3xl border border-[#e3ece1] bg-white shadow-sm overflow-hidden flex flex-col min-h-[33.75rem]">
           {/* Concierge Chat Header */}
           <div className="p-4 sm:px-6 border-b border-[#e3ece1] bg-[#f9faf7] flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -371,11 +371,11 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
               <div>
                 <h3 className="text-xs sm:text-sm font-bold text-[#10261d] flex items-center gap-1.5">
                   <span>Aksen Desk Concierge</span>
-                  <span className="rounded-full bg-[#ebf5e7] px-2 py-0.5 text-[9.5px] font-mono text-[#175b3b] font-bold">
+                  <span className="rounded-full bg-[#ebf5e7] px-2 py-0.5 text-[0.5938rem] font-mono text-[#175b3b] font-bold">
                     NATURAL LANGUAGE
                   </span>
                 </h3>
-                <span className="text-[10.5px] text-[#53635a] block">
+                <span className="text-[0.6563rem] text-[#53635a] block">
                   Desk Target: {DISPLAY_DESK_WHATSAPP_NUMBER} &middot; 24/7 Liquidity
                 </span>
               </div>
@@ -383,7 +383,7 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
 
             <button
               onClick={handleReset}
-              className="flex items-center gap-1 rounded-full border border-[#e3ece1] bg-white px-2.5 py-1 text-[11px] font-medium text-[#53635a] hover:text-[#10261d] hover:bg-[#ebf2e9] transition-all cursor-pointer"
+              className="flex items-center gap-1 rounded-full border border-[#e3ece1] bg-white px-2.5 py-1 text-[0.6875rem] font-medium text-[#53635a] hover:text-[#10261d] hover:bg-[#ebf2e9] transition-all cursor-pointer"
               title="Reset Conversation"
             >
               <RotateCcw size={11} />
@@ -392,14 +392,14 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
           </div>
 
           {/* Conversation Messages Stream */}
-          <div className="flex-1 p-4 sm:p-6 space-y-3.5 overflow-y-auto max-h-[360px] bg-[radial-gradient(#e7ece5_1px,transparent_1px)] [background-size:16px_16px]">
+          <div className="flex-1 p-4 sm:p-6 space-y-3.5 overflow-y-auto max-h-[22.5rem] bg-[radial-gradient(#e7ece5_1px,transparent_1px)] [background-size:16px_16px]">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-200`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3 sm:p-3.5 text-xs sm:text-[13px] leading-relaxed shadow-2xs ${
+                  className={`max-w-[85%] rounded-2xl p-3 sm:p-3.5 text-xs sm:text-[0.8125rem] leading-relaxed shadow-2xs ${
                     m.sender === 'user'
                       ? 'bg-[#175b3b] text-white rounded-tr-xs'
                       : 'bg-white text-[#10261d] border border-[#e3ece1] rounded-tl-xs'
@@ -408,7 +408,7 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
                   <p>{m.text}</p>
                   {m.time && (
                     <span
-                      className={`block text-[9.5px] font-mono mt-1 text-right ${
+                      className={`block text-[0.5938rem] font-mono mt-1 text-right ${
                         m.sender === 'user' ? 'text-[#c2f576]/80' : 'text-[#798d81]'
                       }`}
                     >
@@ -425,7 +425,7 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
                   <span className="w-1.5 h-1.5 rounded-full bg-[#175b3b] animate-bounce" />
                   <span className="w-1.5 h-1.5 rounded-full bg-[#175b3b] animate-bounce [animation-delay:0.2s]" />
                   <span className="w-1.5 h-1.5 rounded-full bg-[#175b3b] animate-bounce [animation-delay:0.4s]" />
-                  <span className="text-[10px] font-mono text-[#798d81] ml-1">Desk officer reviewing...</span>
+                  <span className="text-[0.625rem] font-mono text-[#798d81] ml-1">Desk officer reviewing...</span>
                 </div>
               </div>
             )}
@@ -435,7 +435,7 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
 
           {/* Quick Suggestions Strip */}
           <div className="px-4 py-2 border-t border-[#e3ece1] bg-[#fbfdfa] overflow-x-auto flex items-center gap-1.5 no-scrollbar">
-            <span className="text-[10px] font-mono text-[#798d81] font-bold uppercase whitespace-nowrap mr-1">
+            <span className="text-[0.625rem] font-mono text-[#798d81] font-bold uppercase whitespace-nowrap mr-1">
               Suggestions:
             </span>
             {QUICK_SUGGESTIONS.map((sug) => (
@@ -444,7 +444,7 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
                 type="button"
                 disabled={isDeskTyping}
                 onClick={() => handleSendMessage(sug)}
-                className="whitespace-nowrap px-2.5 py-1 rounded-full border border-[#e3ece1] bg-white hover:bg-[#ebf5e7] hover:border-[#175b3b] text-[11px] font-medium text-[#10261d] transition-all cursor-pointer disabled:opacity-50"
+                className="whitespace-nowrap px-2.5 py-1 rounded-full border border-[#e3ece1] bg-white hover:bg-[#ebf5e7] hover:border-[#175b3b] text-[0.6875rem] font-medium text-[#10261d] transition-all cursor-pointer disabled:opacity-50"
               >
                 {sug}
               </button>
@@ -480,7 +480,7 @@ _Initiated via Aksen OTC Conversational Concierge. Please confirm quote / settle
             </form>
 
             {/* Direct WhatsApp Action Footnote */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11px] text-[#53635a]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[0.6875rem] text-[#53635a]">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#25d366]" />
                 <span>

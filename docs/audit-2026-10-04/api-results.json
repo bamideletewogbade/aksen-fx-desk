@@ -1,0 +1,305 @@
+{
+  "date": "2026-10-04",
+  "environment": "Isolated source copy; no database, AI credentials or WhatsApp credentials",
+  "checks": 36,
+  "passed": 15,
+  "failed": 21,
+  "results": [
+    {
+      "name": "Route renders /",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Route renders /login",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Route renders /desk",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Route renders /settings",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Route renders /whatsapp",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Route renders /history",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Route renders /treasury",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Route renders /analytics",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Route renders /syndicates",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Ticket API requires authentication",
+      "verdict": "FAIL",
+      "observed": {
+        "status": 200,
+        "source": "mock",
+        "count": 4
+      }
+    },
+    {
+      "name": "Unknown account cannot authenticate",
+      "verdict": "FAIL",
+      "observed": {
+        "status": 200,
+        "authenticated": true,
+        "httpOnly": false
+      }
+    },
+    {
+      "name": "Unsigned session cannot authenticate",
+      "verdict": "FAIL",
+      "observed": {
+        "status": 200,
+        "authenticated": true
+      }
+    },
+    {
+      "name": "Signup establishes a persisted identity (manual validation needed)",
+      "verdict": "FAIL",
+      "observed": {
+        "status": 200,
+        "message": "Account created and session activated.",
+        "note": "Source only constructs a cookie; no identity persistence."
+      }
+    },
+    {
+      "name": "Login rejects malformed email",
+      "verdict": "PASS",
+      "observed": {}
+    },
+    {
+      "name": "Login rejects short password",
+      "verdict": "PASS",
+      "observed": {}
+    },
+    {
+      "name": "Status API rejects unauthenticated invalid transitions",
+      "verdict": "FAIL",
+      "observed": {
+        "status": "NOT_A_REAL_STATUS",
+        "success": true,
+        "ticketId": "AUDIT-NONEXISTENT"
+      }
+    },
+    {
+      "name": "Parse comma amount",
+      "verdict": "FAIL",
+      "observed": {
+        "actual": 1500000,
+        "expected": 2500000,
+        "stage": "GREETING"
+      }
+    },
+    {
+      "name": "Parse million shorthand",
+      "verdict": "PASS",
+      "observed": {
+        "actual": 2500000,
+        "expected": 2500000,
+        "stage": "QUOTE_OFFERED"
+      }
+    },
+    {
+      "name": "Parse small GHS amount",
+      "verdict": "FAIL",
+      "observed": {
+        "actual": 1500000,
+        "expected": 100,
+        "stage": "GREETING"
+      }
+    },
+    {
+      "name": "Reverse corridor computes NGN by multiplying",
+      "verdict": "FAIL",
+      "observed": {
+        "amountOut": 237.96,
+        "expected": 2626500,
+        "reply": "✅ *Indicative 15-Minute Rate Lock:*\n• You Send: *₦25,000 NGN*\n• Corridor: *Ghana MoMo ➔ Nigeria Bank*\n• Rate: *1 GHS = 105.06 NGN*\n• Recipient Receives: *GH₵ 237.96 GHS*\n\nPlease send the recipient's *Ghana Mobile Money Number and Name* (e.g. *MTN 0245719646 Kofi Mensah*) so we can assign your collection bank account."
+      }
+    },
+    {
+      "name": "Unverified text must not authorize: I have paid",
+      "verdict": "FAIL",
+      "observed": {
+        "status": "SAFE_TO_DISBURSE",
+        "verdict": "PASS_FAST_PATH"
+      }
+    },
+    {
+      "name": "Unverified text must not authorize: How do I upload a receipt?",
+      "verdict": "FAIL",
+      "observed": {
+        "status": "SAFE_TO_DISBURSE",
+        "verdict": "PASS_FAST_PATH"
+      }
+    },
+    {
+      "name": "Unverified text must not authorize: I have not transferred any money",
+      "verdict": "FAIL",
+      "observed": {
+        "status": "SAFE_TO_DISBURSE",
+        "verdict": "PASS_FAST_PATH"
+      }
+    },
+    {
+      "name": "Quote to payment workflow persists a reloadable ticket",
+      "verdict": "FAIL",
+      "observed": {
+        "stages": [
+          "QUOTE_OFFERED",
+          "LOCKED_AWAITING_PAYMENT",
+          "PAYMENT_SUBMITTED"
+        ],
+        "expiresAt": "15 mins",
+        "paymentStatus": "SAFE_TO_DISBURSE",
+        "persisted": false
+      }
+    },
+    {
+      "name": "Webhook rejects missing signature",
+      "verdict": "FAIL",
+      "observed": {
+        "status": 200,
+        "ticketId": "AKS-18907",
+        "amountIn": 1500000
+      }
+    },
+    {
+      "name": "Webhook deduplicates message IDs",
+      "verdict": "FAIL",
+      "observed": {
+        "first": "AKS-18907",
+        "second": "AKS-36205"
+      }
+    },
+    {
+      "name": "Webhook verification accepts configured token and rejects wrong token",
+      "verdict": "PASS",
+      "observed": {
+        "good": 200,
+        "bad": 403
+      }
+    },
+    {
+      "name": "Settings authorization accounts",
+      "verdict": "FAIL",
+      "observed": {
+        "get": 200,
+        "post": 200,
+        "put": 200,
+        "delete": 200
+      }
+    },
+    {
+      "name": "Settings creation persists accounts",
+      "verdict": "FAIL",
+      "observed": {
+        "createSuccess": true,
+        "persisted": false
+      }
+    },
+    {
+      "name": "Settings authorization wallets",
+      "verdict": "FAIL",
+      "observed": {
+        "get": 200,
+        "post": 200,
+        "put": 200,
+        "delete": 200
+      }
+    },
+    {
+      "name": "Settings creation persists wallets",
+      "verdict": "FAIL",
+      "observed": {
+        "createSuccess": true,
+        "persisted": false
+      }
+    },
+    {
+      "name": "Concierge retains bureau setup intent",
+      "verdict": "FAIL",
+      "observed": {
+        "first": "bureau_setup",
+        "second": "quote",
+        "model": "heuristic_fallback"
+      }
+    },
+    {
+      "name": "Concierge persistence acknowledged honestly",
+      "verdict": "FAIL",
+      "observed": {
+        "status": 200,
+        "success": true,
+        "note": "No database configured"
+      }
+    },
+    {
+      "name": "Health distinguishes simulation",
+      "verdict": "PASS",
+      "observed": {
+        "status": "SIMULATION_MODE",
+        "tokensUsedToday": 4120,
+        "costTodayUsd": 0.038
+      }
+    },
+    {
+      "name": "Operational report avoids unsupported performance claims",
+      "verdict": "FAIL",
+      "observed": {
+        "status": 200,
+        "model": "heuristic_brief_synthesizer",
+        "report": "### 📊 Daily Settlement & Margin Digest\n\n- **Total Naira Collected:** ₦34,500,000\n- **Cedis Disbursed:** GH₵ 328,383 via instant MoMo\n- **Gross Margin Captured:** ~₦862,500 (avg 2.5% corridor spread)\n- **Turnaround SLA:** 3.4 minutes average lock-to-disbursal\n- **Fraud Sentinel:** 1 triangular impersonation flagged and blocked (100% capital preserved)."
+      }
+    },
+    {
+      "name": "Logout expires cookie",
+      "verdict": "PASS",
+      "observed": {
+        "status": 200,
+        "expires": true
+      }
+    }
+  ]
+}

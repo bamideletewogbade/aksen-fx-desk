@@ -49,7 +49,7 @@ export function TradeTable({ tickets, onSelectTicket }: TradeTableProps) {
           >
             <span>Needs Action</span>
             {countAction > 0 && (
-              <span className="rounded-full bg-[#175b3b] text-white px-1.5 py-0.2 text-[10px] font-mono">
+              <span className="rounded-full bg-[#175b3b] text-white px-1.5 py-0.2 text-[0.625rem] font-mono">
                 {countAction}
               </span>
             )}
@@ -116,7 +116,7 @@ export function TradeTable({ tickets, onSelectTicket }: TradeTableProps) {
               }`}
             >
               {/* Left Column: Customer & Ticket Meta */}
-              <div className="flex items-start gap-4 min-w-[280px]">
+              <div className="flex items-start gap-4 min-w-[17.5rem]">
                 <div
                   className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
                     isSafe
@@ -147,7 +147,7 @@ export function TradeTable({ tickets, onSelectTicket }: TradeTableProps) {
                     <span>{ticket.createdAt}</span>
                   </div>
 
-                  <div className="text-[11px] text-[#798d81]">
+                  <div className="text-[0.6875rem] text-[#798d81]">
                     Via {ticket.collectionBank.name} ({ticket.collectionBank.accountNumber})
                   </div>
                 </div>
@@ -156,30 +156,30 @@ export function TradeTable({ tickets, onSelectTicket }: TradeTableProps) {
               {/* Middle Column: Exchange Corridor & Amounts */}
               <div className="flex items-center gap-6 md:px-4">
                 <div>
-                  <span className="text-[11px] text-[#53635a] block">Inbound Inflow</span>
+                  <span className="text-[0.6875rem] text-[#53635a] block">Inbound Inflow</span>
                   <span className="font-mono text-base font-bold text-[#10261d]">
                     ₦{ticket.amountIn.toLocaleString()}
                   </span>
                 </div>
 
                 <div className="text-[#798d81] flex flex-col items-center">
-                  <span className="text-[10px] font-mono">@{ticket.rate}</span>
+                  <span className="text-[0.625rem] font-mono">@{ticket.rate}</span>
                   <ArrowRight size={14} />
                 </div>
 
                 <div>
-                  <span className="text-[11px] text-[#53635a] block">Outbound MoMo</span>
+                  <span className="text-[0.6875rem] text-[#53635a] block">Outbound MoMo</span>
                   <span className="font-mono text-base font-bold text-[#175b3b]">
                     GH₵ {ticket.amountOut.toLocaleString()}
                   </span>
-                  <span className="text-[11px] text-[#53635a] block">
+                  <span className="text-[0.6875rem] text-[#53635a] block">
                     {ticket.momoRecipient.network} ({ticket.momoRecipient.phoneNumber})
                   </span>
                 </div>
               </div>
 
               {/* Right Column: GEV Verdict & Click Action */}
-              <div className="flex items-center justify-between md:justify-end gap-4 min-w-[240px]">
+              <div className="flex items-center justify-between md:justify-end gap-4 min-w-[15rem]">
                 <div>
                   {isSafe && (
                     <div className="flex flex-col items-end">
@@ -187,7 +187,7 @@ export function TradeTable({ tickets, onSelectTicket }: TradeTableProps) {
                         <ShieldCheck size={13} />
                         <span>Fast-Path Cleared</span>
                       </span>
-                      <span className="text-[10px] font-mono text-[#53635a] mt-0.5">
+                      <span className="text-[0.625rem] font-mono text-[#53635a] mt-0.5">
                         P(Fraud) = {(ticket.gevSystem1.probabilityFraud * 100).toFixed(1)}% &middot; Ready
                       </span>
                     </div>
@@ -199,7 +199,7 @@ export function TradeTable({ tickets, onSelectTicket }: TradeTableProps) {
                         <AlertTriangle size={13} />
                         <span>Triangular Fraud Alert</span>
                       </span>
-                      <span className="text-[10px] font-mono text-red-600 font-semibold mt-0.5">
+                      <span className="text-[0.625rem] font-mono text-red-600 font-semibold mt-0.5">
                         Remitter &ne; MoMo line
                       </span>
                     </div>
@@ -220,7 +220,7 @@ export function TradeTable({ tickets, onSelectTicket }: TradeTableProps) {
                         <Clock size={13} />
                         <span>Awaiting Bank Credit</span>
                       </span>
-                      <span className="text-[10px] font-mono text-[#53635a] mt-0.5">
+                      <span className="text-[0.625rem] font-mono text-[#53635a] mt-0.5">
                         15m Rate Lock Active
                       </span>
                     </div>

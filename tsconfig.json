@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2020",
     "lib": [
       "dom",
       "dom.iterable",
@@ -29,12 +29,14 @@
     }
   },
   "include": [
-    "next-env.d.ts",
+    "**/*.mts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
+    ".audit/review-next/types/**/*.ts",
+    ".next-claude/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    ".next/types/**/*.ts",
+    "next-env.d.ts"
   ],
   "exclude": [
     "node_modules"

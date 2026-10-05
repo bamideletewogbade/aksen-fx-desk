@@ -15,10 +15,14 @@
 
 # next.js
 /.next/
+/.next-*/
 /out/
 
 # production
 /build
+
+# local database and dev secret (PGlite)
+/.data/
 
 # misc
 .DS_Store
@@ -48,3 +52,12 @@ next-env.d.ts
 # cloudflare
 .wrangler
 .cloudflare
+/cloudflare-app
+/.open-next/
+.dev.vars*
+
+# local review/audit scratch copies (full app copies, local databases)
+/.audit/
+
+# local agent settings
+.claude/settings.local.json

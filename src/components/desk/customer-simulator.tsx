@@ -155,7 +155,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-3xl bg-[#efeae2] shadow-2xl border border-[#d1d7db] flex flex-col h-[90vh] max-h-[780px] overflow-hidden text-left">
+      <div className="relative w-full max-w-lg rounded-3xl bg-[#efeae2] shadow-2xl border border-[#d1d7db] flex flex-col h-[90vh] max-h-[48.75rem] overflow-hidden text-left">
         {/* WhatsApp Mobile Top Header */}
         <div className="bg-[#075e54] text-white px-3 sm:px-4 py-2.5 flex items-center justify-between shadow-sm flex-shrink-0 z-10">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -164,7 +164,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
               <div className="h-10 w-10 rounded-full bg-[#128c7e] text-[#c2f576] flex items-center justify-center font-bold text-sm shadow-xs border border-white/20">
                 A
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#25d366] border-2 border-[#075e54] flex items-center justify-center text-[8px] text-white font-bold">
+              <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#25d366] border-2 border-[#075e54] flex items-center justify-center text-[0.5rem] text-white font-bold">
                 ✓
               </span>
             </div>
@@ -175,7 +175,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
                   Aksen OTC Desk &middot; Official
                 </span>
               </div>
-              <span className="text-[11px] text-[#c2f576] block leading-tight font-medium">
+              <span className="text-[0.6875rem] text-[#c2f576] block leading-tight font-medium">
                 {isTyping ? 'typing...' : 'online &bull; WhatsApp Business'}
               </span>
             </div>
@@ -186,7 +186,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
             <button
               type="button"
               onClick={handleReset}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold transition-all cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-[0.6875rem] font-semibold transition-all cursor-pointer"
               title="Reset to blank state"
             >
               <RotateCcw size={12} />
@@ -205,13 +205,13 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
         </div>
 
         {/* Live Status Banner */}
-        <div className="bg-[#e7f7e3] border-b border-[#cde8c7] px-3 py-1.5 flex items-center justify-between text-[11px] text-[#1c4728] font-mono flex-shrink-0">
+        <div className="bg-[#e7f7e3] border-b border-[#cde8c7] px-3 py-1.5 flex items-center justify-between text-[0.6875rem] text-[#1c4728] font-mono flex-shrink-0">
           <div className="flex items-center gap-1.5 truncate">
             <Sparkles size={12} className="text-[#175b3b] flex-shrink-0" />
             <span className="truncate">Live AI Agent Intake &middot; 1 GHS = 105.06 NGN</span>
           </div>
           {latestTicket && (
-            <span className="bg-[#175b3b] text-white px-1.5 py-0.5 rounded text-[10px] font-bold">
+            <span className="bg-[#175b3b] text-white px-1.5 py-0.5 rounded text-[0.625rem] font-bold">
               {latestTicket.id} QUEUED
             </span>
           )}
@@ -229,7 +229,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
           {/* Encryption Notice */}
           <div className="flex justify-center my-1">
             <div className="bg-[#ffeecd] border border-[#f5dfb8] rounded-xl px-3 py-1.5 max-w-xs text-center shadow-2xs">
-              <span className="text-[10px] text-[#5c4a1e] leading-snug flex items-center justify-center gap-1 font-sans">
+              <span className="text-[0.625rem] text-[#5c4a1e] leading-snug flex items-center justify-center gap-1 font-sans">
                 <Lock size={10} className="text-[#a17e29] flex-shrink-0" />
                 <span>Messages are end-to-end encrypted with Aksen Sentinel &amp; GEV System 1.</span>
               </span>
@@ -272,9 +272,9 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
                       <div className="h-8 w-8 rounded-lg bg-[#175b3b] text-white flex items-center justify-center flex-shrink-0 font-bold text-xs">
                         NIP
                       </div>
-                      <div className="text-[11px] leading-tight truncate">
+                      <div className="text-[0.6875rem] leading-tight truncate">
                         <strong className="block text-[#10261d]">gtbank_transfer_slip.png</strong>
-                        <span className="text-[10px] text-[#53635a]">NIBSS Genuine Deposit Proof</span>
+                        <span className="text-[0.625rem] text-[#53635a]">NIBSS Genuine Deposit Proof</span>
                       </div>
                     </div>
                   )}
@@ -285,7 +285,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
                   </div>
 
                   {/* Message Timestamp & Checkmarks */}
-                  <div className="flex items-center justify-end gap-1 text-[10px] text-[#667781] select-none pt-0.5">
+                  <div className="flex items-center justify-end gap-1 text-[0.625rem] text-[#667781] select-none pt-0.5">
                     <span>{m.time}</span>
                     {isCustomer && (
                       <CheckCheck size={14} className="text-[#53bdeb]" />
@@ -316,7 +316,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
             type="button"
             onClick={() => sendMessage('Hi, I want to change money')}
             disabled={isTyping}
-            className="px-2.5 py-1 rounded-full bg-white border border-[#d1d7db] text-[11px] text-[#111b21] hover:bg-neutral-100 font-medium whitespace-nowrap cursor-pointer transition-all shadow-2xs"
+            className="px-2.5 py-1 rounded-full bg-white border border-[#d1d7db] text-[0.6875rem] text-[#111b21] hover:bg-neutral-100 font-medium whitespace-nowrap cursor-pointer transition-all shadow-2xs"
           >
             👋 Hi, I want to change money
           </button>
@@ -325,7 +325,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
             type="button"
             onClick={() => sendMessage('I want to send 1,500,000 Naira to Ghana MoMo')}
             disabled={isTyping}
-            className="px-2.5 py-1 rounded-full bg-white border border-[#d1d7db] text-[11px] text-[#111b21] hover:bg-neutral-100 font-medium whitespace-nowrap cursor-pointer transition-all shadow-2xs"
+            className="px-2.5 py-1 rounded-full bg-white border border-[#d1d7db] text-[0.6875rem] text-[#111b21] hover:bg-neutral-100 font-medium whitespace-nowrap cursor-pointer transition-all shadow-2xs"
           >
             ₦ Swap ₦1.5M to Ghana MoMo
           </button>
@@ -334,7 +334,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
             type="button"
             onClick={() => sendMessage('MTN MoMo 0245719646 Kofi Mensah')}
             disabled={isTyping}
-            className="px-2.5 py-1 rounded-full bg-white border border-[#d1d7db] text-[11px] text-[#111b21] hover:bg-neutral-100 font-medium whitespace-nowrap cursor-pointer transition-all shadow-2xs"
+            className="px-2.5 py-1 rounded-full bg-white border border-[#d1d7db] text-[0.6875rem] text-[#111b21] hover:bg-neutral-100 font-medium whitespace-nowrap cursor-pointer transition-all shadow-2xs"
           >
             📱 MTN 0245719646 Kofi Mensah
           </button>
@@ -343,7 +343,7 @@ export function CustomerSimulator({ isOpen, onClose, onSimulateTicket }: Custome
             type="button"
             onClick={handleSimulateReceiptUpload}
             disabled={isTyping}
-            className="px-2.5 py-1 rounded-full bg-[#e7f7e3] border border-[#a8df9e] text-[11px] text-[#175b3b] hover:bg-[#d5f0ce] font-bold whitespace-nowrap cursor-pointer transition-all shadow-2xs flex items-center gap-1"
+            className="px-2.5 py-1 rounded-full bg-[#e7f7e3] border border-[#a8df9e] text-[0.6875rem] text-[#175b3b] hover:bg-[#d5f0ce] font-bold whitespace-nowrap cursor-pointer transition-all shadow-2xs flex items-center gap-1"
           >
             <Paperclip size={11} />
             <span>Simulate Bank Slip</span>

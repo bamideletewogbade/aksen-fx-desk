@@ -1,147 +1,62 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { neon } from '@neondatabase/serverless';
-import { synthesizeGevEvidence } from '@/lib/openrouter';
-
-const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'aksen_otc_verify_token_2026';
 
 /**
- * Meta Webhook Verification (GET)
- * Meta Graph API sends a challenge to verify your endpoint URL.
+ * WhatsApp Cloud API webhook (preview).
+ *
+ * - GET answers Meta's verification challenge using WHATSAPP_VERIFY_TOKEN.
+ * - POST verifies the X-Hub-Signature-256 HMAC with WHATSAPP_APP_SECRET over
+ *   the raw body, then acknowledges. It deliberately creates no trades and
+ *   never marks anything as paid: messages are channel input, and payments are
+ *   confirmed by an operator in the trade room.
+ * Next step when this channel goes live: store each message in an inbox table
+ * keyed by its WhatsApp message id (to ignore Meta's retries) and route it to
+ * the desk that owns the phone number id.
  */
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const mode = searchParams.get('hub.mode');
-  const token = searchParams.get('hub.verify_token');
-  const challenge = searchParams.get('hub.challenge');
-
-  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-    return new Response(challenge, { status: 200 });
+  const expected = process.env.WHATSAPP_VERIFY_TOKEN;
+  if (!expected) return NextResponse.json({ error: 'WHATSAPP_VERIFY_TOKEN is not configured.' }, { status: 503 });
+  if (searchParams.get('hub.mode') === 'subscribe' && searchParams.get('hub.verify_token') === expected) {
+    return new Response(searchParams.get('hub.challenge') ?? '', { status: 200 });
   }
-
-  return NextResponse.json({ error: 'Forbidden. Invalid verification token.' }, { status: 403 });
+  return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
 }
 
-/**
- * Inbound Meta WhatsApp Message Webhook (POST)
- * Receives incoming customer messages, rate enquiries, and bank transfer receipts.
- */
+function validSignature(raw: string, header: string | null, secret: string) {
+  if (!header?.startsWith('sha256=')) return false;
+  const expected = Buffer.from(createHmac('sha256', secret).update(raw, 'utf8').digest('hex'));
+  const given = Buffer.from(header.slice(7));
+  return expected.length === given.length && timingSafeEqual(expected, given);
+}
+
 export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-
-    // Check if event is from WhatsApp Business account
-    if (body.object !== 'whatsapp_business_account') {
-      return NextResponse.json({ status: 'ignored' }, { status: 200 });
+  const raw = await request.text();
+  const secret = process.env.WHATSAPP_APP_SECRET;
+  const isPreview = process.env.NODE_ENV !== 'production' && !secret;
+  if (!isPreview) {
+    if (!secret) return NextResponse.json({ error: 'WHATSAPP_APP_SECRET is not configured.' }, { status: 503 });
+    if (!validSignature(raw, request.headers.get('x-hub-signature-256'), secret)) {
+      return NextResponse.json({ error: 'Invalid signature.' }, { status: 401 });
     }
-
-    const entry = body.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
-    const message = value?.messages?.[0];
-
-    if (!message) {
-      return NextResponse.json({ status: 'no_message' }, { status: 200 });
-    }
-
-    const customerPhone = message.from; // e.g. "233245719646"
-    const messageType = message.type;
-    const messageText = messageType === 'text' ? message.text?.body : '';
-    const contactName = value?.contacts?.[0]?.profile?.name || 'WhatsApp Customer';
-
-    // Parse FX intent (e.g. "₦1.8M to Ghana MoMo")
-    const amountMatch = messageText.match(/(\d+[\d,.]*)\s*(m|million|k|thousand)?/i);
-    let amountIn = 1500000;
-    if (amountMatch) {
-      let rawVal = parseFloat(amountMatch[1].replace(/,/g, ''));
-      const multiplier = (amountMatch[2] || '').toLowerCase();
-      if (multiplier.startsWith('m')) rawVal *= 1000000;
-      else if (multiplier.startsWith('k')) rawVal *= 1000;
-      if (rawVal > 10000) amountIn = rawVal;
-    }
-
-    const rate = 105.06;
-    const amountOut = parseFloat((amountIn / rate).toFixed(2));
-    const ticketId = `AKS-${Math.floor(10000 + Math.random() * 90000)}`;
-
-    const newTicket = {
-      id: ticketId,
-      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      expires_at: '15 mins',
-      customer_name: contactName,
-      whatsapp_phone: `+${customerPhone}`,
-      direction: 'NGN_TO_GHS',
-      amount_in: amountIn,
-      amount_out: amountOut,
-      rate: rate,
-      collection_bank: {
-        name: 'GTBank Nigeria',
-        accountNumber: '0123984752',
-        accountName: 'Aksen Liquidity Services Ltd',
-        narration: ticketId,
-      },
-      momo_recipient: {
-        network: 'MTN MoMo',
-        phoneNumber: customerPhone,
-        registeredName: contactName.toUpperCase(),
-        resolvedStatus: 'RESOLVED_MATCH',
-      },
-      status: messageType === 'image' || messageType === 'document' ? 'SAFE_TO_DISBURSE' : 'AWAITING_PAYMENT',
-      remitter_name: contactName,
-      gev_system1: {
-        pixelNoiseVariance: 0.04,
-        typographyDeviation: 0.2,
-        identityScore: 99.4,
-        nibssAuthenticity: 99.8,
-        probabilityFraud: 0.008,
-        verdict: 'PASS_FAST_PATH',
-        flags: ['Meta Cloud Verified Sender', '3-Way KYC Match: 100%'],
-      },
-      whatsapp_transcript: [
-        { sender: 'customer', time: 'Just now', text: messageText || `[Sent ${messageType} attachment]` },
-        { sender: 'bot', time: 'Just now', text: `Rate: 1 GHS = ₦${rate}. ₦${amountIn.toLocaleString()} = GH₵ ${amountOut.toLocaleString()}. Locked 15m. Narration: ${ticketId}` },
-      ],
-    };
-
-    // Persist to Neon Postgres if available
-    const dbUrl = process.env.DATABASE_URL;
-    if (dbUrl) {
-      try {
-        const sql = neon(dbUrl);
-        await sql`
-          INSERT INTO otc_trade_tickets (
-            id, customer_name, whatsapp_phone, direction,
-            amount_in, amount_out, rate,
-            collection_bank_name, collection_account_number, collection_narration,
-            momo_network, momo_phone, momo_name,
-            status, remitter_name,
-            gev_probability_fraud, gev_verdict, gev_flags,
-            whatsapp_transcript
-          ) VALUES (
-            ${newTicket.id}, ${newTicket.customer_name}, ${newTicket.whatsapp_phone}, ${newTicket.direction},
-            ${newTicket.amount_in}, ${newTicket.amount_out}, ${newTicket.rate},
-            ${newTicket.collection_bank.name}, ${newTicket.collection_bank.accountNumber}, ${newTicket.id},
-            ${newTicket.momo_recipient.network}, ${newTicket.momo_recipient.phoneNumber}, ${newTicket.momo_recipient.registeredName},
-            ${newTicket.status}, ${newTicket.remitter_name},
-            ${newTicket.gev_system1.probabilityFraud}, ${newTicket.gev_system1.verdict},
-            ${JSON.stringify(newTicket.gev_system1.flags)}::jsonb,
-            ${JSON.stringify(newTicket.whatsapp_transcript)}::jsonb
-          )
-          ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status;
-        `;
-      } catch (dbErr) {
-        console.error('Failed to insert Meta WhatsApp ticket in Neon DB:', dbErr);
-      }
-    }
-
-    return NextResponse.json({
-      status: 'success',
-      ticketId,
-      customerPhone,
-      amountIn,
-      amountOut,
-    });
-  } catch (err: any) {
-    console.error('Error handling Meta WhatsApp webhook:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
   }
+  let body: { object?: string; entry?: { changes?: { value?: { metadata?: { phone_number_id?: string }; messages?: { id: string; from: string; type: string; text?: { body?: string } }[]; statuses?: unknown[] } }[] }[] };
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 });
+  }
+  if (body.object !== 'whatsapp_business_account') return NextResponse.json({ status: 'ignored' });
+
+  const messages = (body.entry ?? []).flatMap((e) => (e.changes ?? []).flatMap((c) => (c.value?.messages ?? []).map((m) => ({ ...m, phoneNumberId: c.value?.metadata?.phone_number_id }))));
+  const statuses = (body.entry ?? []).flatMap((e) => (e.changes ?? []).flatMap((c) => c.value?.statuses ?? [])).length;
+
+  return NextResponse.json({
+    status: 'received',
+    preview: isPreview,
+    messages: messages.map((m) => ({ id: m.id, from: m.from, type: m.type, text: m.text?.body?.slice(0, 200) ?? null, phoneNumberId: m.phoneNumberId ?? null })),
+    statuses,
+    note: 'Preview: messages are acknowledged but not stored, and never create or clear trades.',
+  });
 }

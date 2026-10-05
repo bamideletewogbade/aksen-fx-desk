@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
-import { SESSION_COOKIE } from '@/lib/auth';
+import { logout } from '@/server/auth';
+import { clearSessionCookie, publicRoute, sessionToken } from '@/server/http';
 
-export async function POST() {
-  const response = NextResponse.json({ ok: true, message: 'Logged out successfully.' });
-  response.cookies.delete(SESSION_COOKIE);
-  return response;
-}
+export const POST = publicRoute(async ({ db }) => {
+  await logout(db, await sessionToken());
+  await clearSessionCookie();
+  return { ok: true };
+});

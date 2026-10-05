@@ -43,7 +43,7 @@ export function InspectionDrawer({
             <span className="font-mono text-sm font-bold text-[#10261d]">{ticket.id}</span>
             <span className="text-xs text-[#53635a]">&middot; Created {ticket.createdAt}</span>
             <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+              className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
                 isSafe
                   ? 'bg-[#ebf2e9] text-[#175b3b]'
                   : isFlagged
@@ -82,27 +82,27 @@ export function InspectionDrawer({
 
             <div className="flex items-center justify-between py-2 border-y border-[#e3ece1]/80">
               <div>
-                <span className="text-[11px] text-[#53635a] block">Inbound Bank Credit</span>
+                <span className="text-[0.6875rem] text-[#53635a] block">Inbound Bank Credit</span>
                 <span className="text-xl font-bold font-mono text-[#10261d]">
                   ₦{ticket.amountIn.toLocaleString()}
                 </span>
-                <span className="text-[11px] text-[#53635a] block">
+                <span className="text-[0.6875rem] text-[#53635a] block">
                   Via {ticket.collectionBank.name} ({ticket.collectionBank.accountNumber})
                 </span>
               </div>
 
               <div className="text-right">
-                <span className="text-[11px] text-[#53635a] block">Outbound MoMo Payout</span>
+                <span className="text-[0.6875rem] text-[#53635a] block">Outbound MoMo Payout</span>
                 <span className="text-xl font-bold font-mono text-[#175b3b]">
                   GH₵ {ticket.amountOut.toLocaleString()}
                 </span>
-                <span className="text-[11px] font-medium text-[#10261d] block">
+                <span className="text-[0.6875rem] font-medium text-[#10261d] block">
                   {ticket.momoRecipient.network} &middot; {ticket.momoRecipient.phoneNumber}
                 </span>
               </div>
             </div>
 
-            <div className="mt-2 flex items-center justify-between text-[11px] text-[#53635a]">
+            <div className="mt-2 flex items-center justify-between text-[0.6875rem] text-[#53635a]">
               <span>Locked Rate: 1 GHS = {ticket.rate} NGN</span>
               <span>Ref: {ticket.collectionBank.narration}</span>
             </div>
@@ -115,7 +115,7 @@ export function InspectionDrawer({
                 <ShieldCheck size={14} className={isSafe ? 'text-[#175b3b]' : 'text-red-600'} />
                 <span>GEV Forensic Verification</span>
               </h3>
-              <span className="text-[11px] font-mono text-[#53635a]">
+              <span className="text-[0.6875rem] font-mono text-[#53635a]">
                 Bayesian Prior: P(Fraud) = {(ticket.gevSystem1.probabilityFraud * 100).toFixed(1)}%
               </span>
             </div>
@@ -130,7 +130,7 @@ export function InspectionDrawer({
                 <p className="text-xs text-[#53635a] leading-relaxed">
                   Remitter identity matches WhatsApp contact and recipient MoMo wallet. Subpixel raster analysis shows no font manipulation. NIBSS session is authentic.
                 </p>
-                <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono">
+                <div className="grid grid-cols-2 gap-2 pt-1 text-[0.6875rem] font-mono">
                   <div className="bg-white/80 rounded-lg p-2 border border-[#e3ece1]">
                     <span className="text-[#53635a] block">3-Way KYC Match:</span>
                     <strong className="text-[#175b3b]">100% Verified</strong>
@@ -155,7 +155,7 @@ export function InspectionDrawer({
                 <div className="space-y-1.5 text-xs text-red-900 bg-white/70 p-3 rounded-lg border border-red-200">
                   <div className="font-semibold text-red-800">System 1 Mathematical Deviations:</div>
                   {ticket.gevSystem1.flags.map((flag, idx) => (
-                    <div key={idx} className="flex items-start gap-1.5 text-[11px]">
+                    <div key={idx} className="flex items-start gap-1.5 text-[0.6875rem]">
                       <span className="text-red-500 font-bold">&bull;</span>
                       <span>{flag}</span>
                     </div>
@@ -165,14 +165,14 @@ export function InspectionDrawer({
                 {/* System 2 LLM Deliberative Reasoning */}
                 {ticket.gevSystem2 && (
                   <div className="bg-white rounded-lg p-3 border border-red-200 space-y-1.5 text-xs">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-red-700 font-bold">
+                    <div className="flex items-center justify-between text-[0.6875rem] font-mono text-red-700 font-bold">
                       <span>{ticket.gevSystem2.model}</span>
                       <span>Context Synthesis</span>
                     </div>
-                    <p className="text-gray-700 leading-relaxed text-[11.5px]">
+                    <p className="text-gray-700 leading-relaxed text-[0.7188rem]">
                       {ticket.gevSystem2.synthesis}
                     </p>
-                    <div className="pt-1 text-[11px] font-semibold text-red-800">
+                    <div className="pt-1 text-[0.6875rem] font-semibold text-red-800">
                       Recommendation: {ticket.gevSystem2.recommendedAction}
                     </div>
                   </div>
@@ -218,7 +218,7 @@ export function InspectionDrawer({
                 <MessageSquare size={13} />
                 <span>WhatsApp Intake Log</span>
               </h4>
-              <span className="text-[10px] text-[#175b3b] font-medium">Auto-Ingested</span>
+              <span className="text-[0.625rem] text-[#175b3b] font-medium">Auto-Ingested</span>
             </div>
 
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -231,7 +231,7 @@ export function InspectionDrawer({
                       : 'bg-white border border-[#e3ece1] text-[#53635a]'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-[10px] font-mono text-[#798d81] mb-1">
+                  <div className="flex items-center justify-between text-[0.625rem] font-mono text-[#798d81] mb-1">
                     <span>{msg.sender === 'customer' ? ticket.customerName : 'Aksen Bot'}</span>
                     <span>{msg.time}</span>
                   </div>
@@ -246,7 +246,7 @@ export function InspectionDrawer({
         <div className="border-t border-[#e3ece1] p-5 bg-[#f9faf7]">
           {isSafe && (
             <div className="space-y-2.5">
-              <div className="flex items-center justify-between text-[11px] text-[#53635a] bg-white p-2.5 rounded-xl border border-[#e3ece1]">
+              <div className="flex items-center justify-between text-[0.6875rem] text-[#53635a] bg-white p-2.5 rounded-xl border border-[#e3ece1]">
                 <span className="flex items-center gap-1.5 font-medium">
                   <Lock size={12} className="text-[#175b3b]" />
                   <span>Execute on MoMo terminal &rarr; Confirm below:</span>
