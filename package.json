@@ -6,12 +6,15 @@
     "dev": "next dev --port 3010",
     "build": "next build",
     "start": "next start --port 3010",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run",
+    "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.10",
     "@electric-sql/pglite": "^0.5.8",
     "@neondatabase/serverless": "^1.2.0",
+    "@opennextjs/cloudflare": "^1.20.8",
     "clsx": "^2.1.1",
     "lucide-react": "^1.31.0",
     "next": "^15.2.0",
@@ -29,6 +32,7 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "wrangler": "^4.147.0"
   }
 }

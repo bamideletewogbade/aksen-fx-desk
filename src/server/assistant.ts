@@ -489,11 +489,14 @@ function handoff(state: BotState, reason: string, reply: string): Decision {
   return { replies: [reply], state: { ...state, misses: 0 }, handoff: reason };
 }
 
+/** Handoff reason when the assistant couldn't follow the customer (see src/server/ai/assist.ts). */
+export const NOT_UNDERSTOOD = 'The assistant didn’t understand twice in a row';
+
 /** Second miss in a row goes to a person; the first gets a gentle re-ask. */
 function miss(state: BotState, f: Facts, reask: string): Decision {
   const misses = (state.misses ?? 0) + 1;
   if (misses >= 2) {
-    return handoff(state, 'The assistant didn’t understand twice in a row', `Let me get someone from the ${f.deskName} team to help. They’ll reply right here shortly.`);
+    return handoff(state, NOT_UNDERSTOOD, `Let me get someone from the ${f.deskName} team to help. They’ll reply right here shortly.`);
   }
   return { replies: [reask], state: { ...state, misses } };
 }

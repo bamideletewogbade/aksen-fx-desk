@@ -431,4 +431,31 @@ CREATE INDEX susu_collections_saver_idx ON susu_collections (saver_id, created_a
 CREATE INDEX susu_collections_org_time_idx ON susu_collections (org_id, created_at)
 `,
   },
+  {
+    // A collector can safely retry after a lost HTTP response without filling
+    // the same booklet boxes twice. The whole round shares one request key.
+    id: '005_susu_collection_requests',
+    sql: `
+CREATE TABLE susu_collection_requests (
+  org_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  request_id uuid NOT NULL,
+  payload_hash text NOT NULL,
+  result jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (org_id, request_id)
+)
+`,
+  },
+  {
+    // AI reading of customer chat. A desk can pick its own OpenRouter model
+    // (null = platform default) and turn the reading off. Each customer message
+    // the model read keeps a note of what it understood, for operators.
+    id: '006_ai_reading',
+    sql: `
+ALTER TABLE organizations ADD COLUMN ai_model text;
+ALTER TABLE organizations ADD COLUMN ai_fallback_models text;
+ALTER TABLE organizations ADD COLUMN ai_reads_chat boolean NOT NULL DEFAULT true;
+ALTER TABLE messages ADD COLUMN ai_note jsonb
+`,
+  },
 ];

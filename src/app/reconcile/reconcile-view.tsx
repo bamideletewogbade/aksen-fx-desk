@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { BookCheck, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api, useLoad } from '@/lib/api';
-import { formatMinor, minorToMajorString, parseMajor } from '@/lib/money';
+import { formatMinor, parseMajor } from '@/lib/money';
 import { canApprove } from '@/lib/auth';
 import { clock, dateTime } from '@/lib/time';
 import type { DayCloseRail } from '@/server/day-close';
@@ -28,15 +28,12 @@ function safeParse(v: string): number | null {
 }
 
 function RailClose({ r, date, editable, onClosed }: { r: DayCloseRail; date: string; editable: boolean; onClosed: (d: Day) => void }) {
-  const [sin, setSin] = useState(minorToMajorString(r.expectedInMinor));
-  const [sout, setSout] = useState(minorToMajorString(r.expectedOutMinor));
+  // Start blank: the operator types what the statement says, rather than confirming Aksen's own figures.
+  const [sin, setSin] = useState('');
+  const [sout, setSout] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    setSin(minorToMajorString(r.expectedInMinor));
-    setSout(minorToMajorString(r.expectedOutMinor));
-  }, [r.expectedInMinor, r.expectedOutMinor]);
   const pin = safeParse(sin);
   const pout = safeParse(sout);
   const diffIn = pin === null ? null : pin - r.expectedInMinor;
@@ -95,12 +92,12 @@ function RailClose({ r, date, editable, onClosed }: { r: DayCloseRail; date: str
         >
           <p className="text-xs text-muted">Type the totals from the real statement for this day.</p>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Statement: in" htmlFor={`in-${r.railId}`} error={diffIn ? `${diffIn > 0 ? '+' : ''}${formatMinor(diffIn, r.currency)} vs Aksen` : null}><Input id={`in-${r.railId}`} mono value={sin} onChange={(e) => setSin(e.target.value)} /></Field>
-            <Field label="Statement: out" htmlFor={`out-${r.railId}`} error={diffOut ? `${diffOut > 0 ? '+' : ''}${formatMinor(diffOut, r.currency)} vs Aksen` : null}><Input id={`out-${r.railId}`} mono value={sout} onChange={(e) => setSout(e.target.value)} /></Field>
+            <Field label="Statement: in" htmlFor={`in-${r.railId}`} error={diffIn ? `${diffIn > 0 ? '+' : ''}${formatMinor(diffIn, r.currency)} vs Aksen` : null}><Input id={`in-${r.railId}`} mono inputMode="decimal" placeholder="0.00" value={sin} onChange={(e) => setSin(e.target.value)} /></Field>
+            <Field label="Statement: out" htmlFor={`out-${r.railId}`} error={diffOut ? `${diffOut > 0 ? '+' : ''}${formatMinor(diffOut, r.currency)} vs Aksen` : null}><Input id={`out-${r.railId}`} mono inputMode="decimal" placeholder="0.00" value={sout} onChange={(e) => setSout(e.target.value)} /></Field>
           </div>
           {mismatch && <Field label="Explain the difference" htmlFor={`note-${r.railId}`}><Textarea id={`note-${r.railId}`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Bank charge ₦50; credit for AK-… not yet recorded" /></Field>}
           {error && <Notice tone="risk">{error}</Notice>}
-          <Button type="submit" busy={busy} variant={mismatch ? 'secondary' : 'primary'} disabled={pin === null || pout === null || (mismatch && note.trim().length < 5)}>{mismatch ? 'Close with difference' : 'Matches. Close account for the day'}</Button>
+          <Button type="submit" busy={busy} variant={mismatch ? 'secondary' : 'primary'} disabled={pin === null || pout === null || (mismatch && note.trim().length < 5)}>{pin === null || pout === null ? 'Type both statement totals' : mismatch ? 'Close with difference' : 'Matches. Close account for the day'}</Button>
         </form>
       ) : null}
     </Card>

@@ -169,9 +169,9 @@ export const saverSchema = z.object({
   status: z.enum(['ACTIVE', 'PAUSED', 'CLOSED']).optional(),
 });
 
-export const collectSchema = z.object({ amount: money, note: z.string().trim().max(200).optional().nullable() });
+export const collectSchema = z.object({ amount: money, note: z.string().trim().max(200).optional().nullable(), requestId: uuid });
 
-export const collectBulkSchema = z.object({ rows: z.array(z.object({ saverId: uuid, amount: money })).min(1).max(200) });
+export const collectBulkSchema = z.object({ rows: z.array(z.object({ saverId: uuid, amount: money })).min(1).max(200), requestId: uuid });
 
 export const closePagesSchema = z.object({
   pages: z

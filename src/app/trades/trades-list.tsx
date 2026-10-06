@@ -54,7 +54,7 @@ export function TradesList() {
           </>
         }
       />
-      <Card className="grid gap-3 p-3 md:grid-cols-[minmax(0,1fr)_170px_150px_150px_150px]">
+      <Card className="grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_170px_150px_150px_150px]">
         <div className="relative">
           <Search size={15} className="pointer-events-none absolute left-3.5 top-3 text-subtle" />
           <Input className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" aria-label="Search trades" />
@@ -81,34 +81,58 @@ export function TradesList() {
         ) : !trades.length ? (
           <Empty title="No trades match">Try a different search or clear the filters.</Empty>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="divide-y divide-line xl:hidden">
+            {trades.map((t) => (
+              <li key={t.id} className="p-4">
+                <Link href={`/trades/${t.id}`} className="block rounded-lg hover:bg-[#f7faf6] focus-visible:outline-2 focus-visible:outline-brand">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="font-mono text-sm font-bold text-ink">{t.ref}</span>
+                      <span className="ml-2 text-xs text-subtle">{CORRIDORS[t.corridor].short}</span>
+                      <div className="mt-1 text-sm font-medium text-ink">{t.customer.name}</div>
+                      {t.beneficiary && t.beneficiary.relationship !== 'SELF' && <div className="text-xs text-muted">to {t.beneficiary.accountName}</div>}
+                    </div>
+                    <StatusBadge status={t.status} />
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-t border-line pt-3">
+                    <div className="text-xs text-muted">Sends <span className="block font-mono text-sm font-semibold tabular text-ink">{formatMinor(t.payMinor, t.payCurrency)}</span></div>
+                    <div className="text-right text-xs text-muted">Receives <span className="block font-mono text-sm font-semibold tabular text-brand">{formatMinor(t.receiveMinor, t.receiveCurrency)}</span></div>
+                  </div>
+                  <div className="mt-2 flex justify-between gap-3 text-xs text-subtle"><span>Rate {t.rate}</span><span suppressHydrationWarning>{dateTime(t.updatedAt)}</span></div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto xl:block">
             <table className="w-full min-w-[51.25rem] text-sm">
               <thead className="border-b border-line bg-[#f9fbf8] text-left text-[0.6875rem] uppercase tracking-wider text-subtle">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Trade</th>
-                  <th className="px-4 py-3 font-semibold">Customer</th>
-                  <th className="px-4 py-3 text-right font-semibold">Sends</th>
-                  <th className="px-4 py-3 text-right font-semibold">Receives</th>
-                  <th className="px-4 py-3 font-semibold">Rate</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Updated</th>
+                  <th className="px-3 py-3 font-semibold">Trade</th>
+                  <th className="px-3 py-3 font-semibold">Customer</th>
+                  <th className="px-3 py-3 text-right font-semibold">Sends</th>
+                  <th className="px-3 py-3 text-right font-semibold">Receives</th>
+                  <th className="px-3 py-3 font-semibold">Rate</th>
+                  <th className="px-3 py-3 font-semibold">Status</th>
+                  <th className="px-3 py-3 font-semibold">Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {trades.map((t) => (
                   <tr key={t.id} className="hover:bg-[#f7faf6]">
-                    <td className="px-4 py-3"><Link href={`/trades/${t.id}`} className="font-mono font-semibold text-ink hover:text-brand">{t.ref}</Link><div className="text-[0.6875rem] text-subtle">{CORRIDORS[t.corridor].short}</div></td>
-                    <td className="px-4 py-3"><Link href={`/customers/${t.customer.id}`} className="font-medium text-ink hover:text-brand">{t.customer.name}</Link>{t.beneficiary && t.beneficiary.relationship !== 'SELF' && <div className="text-[0.6875rem] text-subtle">to {t.beneficiary.accountName}</div>}</td>
-                    <td className="px-4 py-3 text-right font-mono tabular">{formatMinor(t.payMinor, t.payCurrency)}</td>
-                    <td className="px-4 py-3 text-right font-mono tabular text-brand">{formatMinor(t.receiveMinor, t.receiveCurrency)}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{t.rate}</td>
-                    <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
-                    <td className="px-4 py-3 text-xs text-subtle" suppressHydrationWarning>{dateTime(t.updatedAt)}</td>
+                    <td className="whitespace-nowrap px-3 py-3"><Link href={`/trades/${t.id}`} className="font-mono font-semibold text-ink hover:text-brand">{t.ref}</Link><div className="text-[0.6875rem] text-subtle">{CORRIDORS[t.corridor].short}</div></td>
+                    <td className="px-3 py-3"><Link href={`/customers/${t.customer.id}`} className="font-medium text-ink hover:text-brand">{t.customer.name}</Link>{t.beneficiary && t.beneficiary.relationship !== 'SELF' && <div className="text-[0.6875rem] text-subtle">to {t.beneficiary.accountName}</div>}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right font-mono tabular">{formatMinor(t.payMinor, t.payCurrency)}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right font-mono tabular text-brand">{formatMinor(t.receiveMinor, t.receiveCurrency)}</td>
+                    <td className="px-3 py-3 font-mono text-xs">{t.rate}</td>
+                    <td className="px-3 py-3"><StatusBadge status={t.status} /></td>
+                    <td className="whitespace-nowrap px-3 py-3 text-xs text-subtle" suppressHydrationWarning>{dateTime(t.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </div>

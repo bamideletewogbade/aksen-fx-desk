@@ -22,10 +22,10 @@ export const ROLE_LABEL: Record<Role, string> = {
 };
 
 export const ROLE_HELP: Record<Role, string> = {
-  OWNER: 'Everything, including other owners.',
-  ADMIN: 'Approve payouts and refunds, set rates, manage accounts, team and day close.',
-  DEALER: 'Create quotes, record credits and payouts, put trades on hold.',
-  VIEWER: 'Read-only access to trades and reports.',
+  OWNER: 'All desk actions, including changing another owner’s access.',
+  ADMIN: 'Run the desk, approve trade payouts, record Susu cash-outs, and manage rates, accounts, channels, team and day close.',
+  DEALER: 'Handle customers and messages, record trade funds and approved payouts, collect Susu savings and roll balances forward. Cannot approve cash-outs or change desk controls.',
+  VIEWER: 'View desk work, customers, Susu, balances and reports. Cannot change records or move money.',
 };
 
 const RANK: Record<Role, number> = { VIEWER: 0, DEALER: 1, ADMIN: 2, OWNER: 3 };

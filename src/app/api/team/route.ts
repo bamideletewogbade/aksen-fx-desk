@@ -16,7 +16,7 @@ export const PUT = deskRoute(async ({ req, db, ctx }) => {
   const input = await body(
     req,
     z.union([
-      z.object({ userId: z.string().uuid(), role: z.enum(['OWNER', 'ADMIN', 'DEALER', 'VIEWER']).optional(), active: z.boolean().optional() }),
+      z.object({ userId: z.string().uuid(), role: z.enum(['OWNER', 'ADMIN', 'DEALER', 'VIEWER']).optional(), active: z.boolean().optional() }).refine((v) => v.role !== undefined || v.active !== undefined, 'Choose a role or access change.'),
       z.object({ revokeInviteId: z.string().uuid() }),
     ]),
   );

@@ -9,6 +9,7 @@ import type { DeskSettings } from '@/server/desk';
 import type { ChainReport } from '@/server/audit';
 import { Button, Card, Field, Input, Notice, PageHeader, Select, Skeleton, Textarea, toast } from '@/components/ui';
 import { useSession } from '@/components/app-shell';
+import { AiCard } from './ai-card';
 
 export function SettingsView() {
   const session = useSession();
@@ -101,15 +102,15 @@ export function SettingsView() {
           <Button className="mt-3" variant="secondary" busy={checking} onClick={async () => { setChecking(true); try { setChain((await api<{ chain: ChainReport }>('/api/settings', { method: 'POST' })).chain); } finally { setChecking(false); } }}>Check now</Button>
         </Card>
         <Card className="p-5">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-ink"><Bot size={16} /> AI assistance</h2>
+          <h2 className="flex items-center gap-2 text-sm font-bold text-ink"><Bot size={16} /> What AI does here</h2>
           {ai.data ? (
             <div className="mt-2 space-y-2 text-sm text-muted">
-              <p>{ai.data.configured ? `Configured (${ai.data.primaryModel}).` : 'Not configured. The desk brief is written straight from your records.'}</p>
-              <p><span className="font-semibold text-ink">Used for:</span> {ai.data.usedFor.join(', ')}.</p>
+              <p><span className="font-semibold text-ink">Used for:</span> {ai.data.usedFor.join('; ')}.</p>
               <p><span className="font-semibold text-ink">Never used for:</span> {ai.data.neverUsedFor.join(', ').toLowerCase()}.</p>
             </div>
           ) : <Skeleton className="mt-2 h-16" />}
         </Card>
+        <AiCard />
       </div>
     </div>
   );

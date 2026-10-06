@@ -175,10 +175,10 @@ export function InsightsView() {
             {i.completed > 0 && (
               <details className="mt-3 text-xs">
                 <summary className="cursor-pointer font-semibold text-brand">Show as table</summary>
-                <table className="mt-2 w-full">
+                <div className="overflow-x-auto"><table className="mt-2 w-full min-w-[30rem]">
                   <thead className="text-left text-subtle"><tr><th className="py-1">Day</th><th>Naira → Cedis</th><th>Cedis → Naira</th><th>Trades</th></tr></thead>
                   <tbody>{i.daily.filter((d) => d.count).map((d) => <tr key={d.day} className="border-t border-line"><td className="py-1">{d.day}</td><td className="font-mono">{formatMinor(d.ngnToGhsMinor, 'NGN')}</td><td className="font-mono">{formatMinor(d.ghsToNgnMinor, 'NGN')}</td><td>{d.count}</td></tr>)}</tbody>
-                </table>
+                </table></div>
               </details>
             )}
           </Card>

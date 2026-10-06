@@ -12,6 +12,7 @@ import {
   BookCheck,
   Landmark,
   LogOut,
+  Loader2,
   Menu,
   MessageSquare,
   Plus,
@@ -28,6 +29,7 @@ import { api } from '@/lib/api';
 import { cx, StatusBadge, Toaster } from './ui';
 import type { TradeSummary } from '@/lib/trades';
 import { formatMinor } from '@/lib/money';
+import { OperatorPageSkeleton } from './operator-page-skeleton';
 
 const SessionCtx = createContext<Session | null>(null);
 export const useSession = () => {
@@ -38,17 +40,17 @@ export const useSession = () => {
 
 const NAV: { group: string; items: { href: string; label: string; icon: typeof Activity; match?: RegExp }[] }[] = [
   {
-    group: 'Operate',
+    group: 'Daily work',
     items: [
       { href: '/desk', label: 'Desk', icon: Activity },
       { href: '/inbox', label: 'Inbox', icon: Inbox },
       { href: '/trades', label: 'Trades', icon: ArrowRightLeft, match: /^\/trades(?!\/new)/ },
       { href: '/customers', label: 'Customers', icon: UserRound, match: /^\/customers/ },
-      { href: '/susu', label: 'Susu', icon: PiggyBank, match: /^\/susu/ },
+      { href: '/susu', label: 'Susu savings', icon: PiggyBank, match: /^\/susu/ },
     ],
   },
   {
-    group: 'Money',
+    group: 'Money & review',
     items: [
       { href: '/accounts', label: 'Accounts', icon: Landmark },
       { href: '/reconcile', label: 'Day close', icon: BookCheck },
@@ -57,7 +59,7 @@ const NAV: { group: string; items: { href: string; label: string; icon: typeof A
     ],
   },
   {
-    group: 'Desk',
+    group: 'Manage desk',
     items: [
       { href: '/team', label: 'Team', icon: Users },
       { href: '/settings', label: 'Settings', icon: Settings },
@@ -92,7 +94,7 @@ function useInboxBadge(): Badges {
   return badge ? { '/inbox': badge } : {};
 }
 
-function NavLinks({ onNavigate, badges = {} }: { onNavigate?: () => void; badges?: Badges }) {
+function NavLinks({ onNavigate, badges = {}, pendingHref }: { onNavigate?: (href: string) => void; badges?: Badges; pendingHref?: string | null }) {
   const path = usePathname();
   return (
     <nav aria-label="Main" className="space-y-5">
@@ -107,8 +109,9 @@ function NavLinks({ onNavigate, badges = {} }: { onNavigate?: () => void; badges
                 <li key={it.href}>
                   <Link
                     href={it.href}
-                    onClick={onNavigate}
+                    onClick={() => onNavigate?.(it.href)}
                     aria-current={active ? 'page' : undefined}
+                    aria-busy={pendingHref === it.href || undefined}
                     className={cx(
                       'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-semibold transition-colors',
                       active ? 'bg-[#1b3a2a] text-lime' : 'text-[#d0ded5] hover:bg-[#152e21] hover:text-white',
@@ -116,7 +119,7 @@ function NavLinks({ onNavigate, badges = {} }: { onNavigate?: () => void; badges
                   >
                     <Icon size={16} className={active ? 'text-lime' : 'text-[#7da08c]'} />
                     {it.label}
-                    {badges[it.href] && (
+                    {pendingHref === it.href ? <Loader2 size={14} className="ml-auto animate-spin text-lime" aria-hidden="true" /> : badges[it.href] && (
                       <span
                         className={cx('ml-auto rounded-full px-1.5 text-[0.625rem] font-bold', badges[it.href]!.urgent ? 'bg-[#ffb35c] text-ink' : 'bg-lime text-ink')}
                         title={badges[it.href]!.urgent ? 'Chats that need a person' : 'Unread messages'}
@@ -245,10 +248,38 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
 export function AppShell({ session, children }: { session: Session; children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const mobileMenuRef = useRef<HTMLButtonElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
+  const mobileDrawerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const badges = useInboxBadge();
   const signOut = useSignOut();
   const clerkUser = useClerk().isSignedIn;
+
+  useEffect(() => { setPendingHref(null); }, [pathname]);
+  const navigate = (href: string) => {
+    setMobileOpen(false);
+    if (href !== pathname) setPendingHref(href);
+  };
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    mobileCloseRef.current?.focus();
+    const onDrawerKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setMobileOpen(false); mobileMenuRef.current?.focus(); }
+      if (event.key !== 'Tab' || !mobileDrawerRef.current) return;
+      const focusable = Array.from(mobileDrawerRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]'));
+      if (!focusable.length) return;
+      if (event.shiftKey && document.activeElement === focusable[0]) { event.preventDefault(); focusable.at(-1)?.focus(); }
+      else if (!event.shiftKey && document.activeElement === focusable.at(-1)) { event.preventDefault(); focusable[0].focus(); }
+    };
+    window.addEventListener('keydown', onDrawerKey);
+    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', onDrawerKey); };
+  }, [mobileOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -285,7 +316,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
             </button>
           </div>
           <div className="flex-1 px-2">
-            <NavLinks badges={badges} />
+            <NavLinks badges={badges} pendingHref={pendingHref} onNavigate={navigate} />
           </div>
           <div className="space-y-2 border-t border-[#1c382b] p-3">
             <div className="flex items-center gap-2.5 rounded-xl bg-[#0c1f17] p-2">
@@ -310,17 +341,25 @@ export function AppShell({ session, children }: { session: Session; children: Re
             </Link>
             <div className="flex items-center gap-1">
               <button type="button" onClick={() => setPaletteOpen(true)} aria-label="Search" className="rounded-lg p-2 text-[#a3b8ac] hover:text-white cursor-pointer"><Search size={19} /></button>
-              <button type="button" onClick={() => setMobileOpen((v) => !v)} aria-label="Menu" aria-expanded={mobileOpen} className="rounded-lg p-2 text-[#a3b8ac] hover:text-white cursor-pointer">
+              <button ref={mobileMenuRef} type="button" onClick={() => setMobileOpen((v) => !v)} aria-label="Menu" aria-expanded={mobileOpen} className="rounded-lg p-2 text-[#a3b8ac] hover:text-white cursor-pointer">
                 {mobileOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </div>
           </header>
           {mobileOpen && (
-            <div className="border-b border-[#1c382b] bg-[#10261d] px-3 py-4 lg:hidden">
-              <NavLinks badges={badges} onNavigate={() => setMobileOpen(false)} />
-              <div className="mt-4 flex items-center justify-between border-t border-[#1c382b] px-3 pt-3 text-xs">
-                <span className="text-[#a3b8ac]">{session.userName} · {ROLE_LABEL[session.role]}</span>
-                <button type="button" onClick={signOut} className="font-semibold text-[#ffb4ab] cursor-pointer">Sign out</button>
+            <div className="fixed inset-0 z-50 bg-[#06140d]/60 lg:hidden" onMouseDown={(event) => { if (event.target === event.currentTarget) setMobileOpen(false); }}>
+              <div ref={mobileDrawerRef} role="dialog" aria-modal="true" aria-label="Main navigation" className="flex h-full w-full max-w-sm flex-col bg-[#10261d] text-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[#1c382b] px-4 py-3">
+                  <span className="min-w-0 truncate text-sm font-bold">AKSEN OTC <span className="font-normal text-[#a3b8ac]">· {session.orgName}</span></span>
+                  <button ref={mobileCloseRef} type="button" onClick={() => setMobileOpen(false)} aria-label="Close menu" className="rounded-lg p-2 text-[#a3b8ac] hover:text-white cursor-pointer"><X size={20} /></button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+                  <NavLinks badges={badges} pendingHref={pendingHref} onNavigate={navigate} />
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#1c382b] px-3 pt-3 text-xs">
+                    <span className="min-w-0 truncate text-[#a3b8ac]">{session.userName} · {ROLE_LABEL[session.role]}</span>
+                    <button type="button" onClick={signOut} className="shrink-0 font-semibold text-[#ffb4ab] cursor-pointer">Sign out</button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -329,7 +368,10 @@ export function AppShell({ session, children }: { session: Session; children: Re
               <strong>Sample desk.</strong> Everything here is demo data in a real working system. No money moves and no messages are sent.
             </div>
           )}
-          <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+          {pendingHref && <div className="fixed inset-x-0 top-0 z-50 h-1 overflow-hidden bg-lime-soft" role="progressbar" aria-label="Loading page"><div className="h-full w-1/3 animate-[nav-progress_1.2s_ease-in-out_infinite] bg-lime" /></div>}
+          <main aria-busy={Boolean(pendingHref)} className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            {pendingHref ? <OperatorPageSkeleton label={NAV.flatMap((g) => g.items).find((it) => it.href === pendingHref)?.label ?? 'page'} /> : children}
+          </main>
         </div>
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />

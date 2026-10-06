@@ -1,0 +1,20 @@
+{
+  // Cloudflare Worker running the full Next.js app (pages, APIs, webhooks) via @opennextjs/cloudflare.
+  // Secrets (DATABASE_URL, APP_SECRET, CLERK_SECRET_KEY, TWILIO_*, OPENROUTER_API_KEY) are set with
+  // `wrangler secret`, never here. Build from a checkout without .env.local: OpenNext compiles .env* files in.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aksen-otc",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "aksen-otc" }],
+  "observability": { "enabled": true },
+  "vars": {
+    "DB_DRIVER": "neon",
+    "NEXT_PUBLIC_CLERK_SIGN_IN_URL": "/login",
+    "NEXT_PUBLIC_CLERK_SIGN_UP_URL": "/signup",
+    "TWILIO_WHATSAPP_FROM": "whatsapp:+14155238886",
+    "TWILIO_SMS_FROM": "+16205269172"
+  }
+}

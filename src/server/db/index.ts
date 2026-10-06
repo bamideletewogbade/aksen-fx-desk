@@ -34,7 +34,9 @@ export function dbDriver(): 'neon' | 'pglite' {
 }
 
 async function createPglite(dataDir?: string): Promise<Db> {
-  const { PGlite } = await import('@electric-sql/pglite');
+  // Kept out of production bundles (Cloudflare Workers): PGlite is only for local development and tests.
+  const pkg = '@electric-sql/pglite';
+  const { PGlite } = (await import(/* webpackIgnore: true */ pkg)) as typeof import('@electric-sql/pglite');
   const pg = dataDir === 'memory' ? new PGlite() : new PGlite(dataDir ?? process.env.PGLITE_DIR ?? '.data/pglite');
   await pg.waitReady;
   const wrap = (q: { query: (t: string, p?: unknown[]) => Promise<{ rows: unknown[] }> }): Queryable => ({
@@ -50,18 +52,24 @@ async function createPglite(dataDir?: string): Promise<Db> {
   };
 }
 
+/**
+ * Neon in production. Single statements go over Neon's HTTP endpoint (no
+ * connection to keep). A transaction opens its own short-lived WebSocket
+ * connection and closes it when done. Nothing is shared between requests,
+ * which Cloudflare Workers require (an I/O object can't outlive its request).
+ */
 async function createNeon(): Promise<Db> {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('DATABASE_URL is required when DB_DRIVER=neon (production).');
-  const { Pool } = await import('@neondatabase/serverless');
-  const pool = new Pool({ connectionString: url, max: 5 });
+  const { neon, Pool } = await import('@neondatabase/serverless');
+  const sql = neon(url);
   return {
     driver: 'neon',
     async query<T extends Row>(text: string, params: unknown[] = []) {
-      const res = await pool.query(text, params);
-      return res.rows as T[];
+      return (await sql.query(text, params)) as T[];
     },
     async tx(fn) {
+      const pool = new Pool({ connectionString: url, max: 1 });
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
@@ -78,6 +86,7 @@ async function createNeon(): Promise<Db> {
         throw err;
       } finally {
         client.release();
+        await pool.end().catch(() => {});
       }
     },
   };

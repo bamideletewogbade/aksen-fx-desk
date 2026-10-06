@@ -21,6 +21,7 @@ export function TeamView() {
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const admin = canApprove(session);
+  const roles: Role[] = ['OWNER', 'ADMIN', 'DEALER', 'VIEWER'];
 
   const update = async (payload: Record<string, unknown>, msg: string) => {
     try {
@@ -33,9 +34,9 @@ export function TeamView() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Team" subtitle="Who can use your desk and what they can do. Payouts above your limit need a second person, so invite at least one other admin." actions={admin && <Button icon={<UserPlus size={15} />} onClick={() => { setOpen(true); setLink(null); setEmail(''); setError(null); }}>Invite</Button>} />
+      <PageHeader title="Team access" subtitle={admin ? 'Choose a role for each person. Larger trade payouts need approval from a different admin than the person who confirmed funds. Invite a second admin before live use.' : 'See your role and what each role can do. An admin manages the team.'} actions={admin && <Button icon={<UserPlus size={15} />} onClick={() => { setOpen(true); setLink(null); setEmail(''); setError(null); }}>Invite</Button>} />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {(['OWNER', 'ADMIN', 'DEALER', 'VIEWER'] as Role[]).map((r) => (
+        {roles.map((r) => (
           <Card key={r} className="p-4"><div className="text-sm font-semibold text-ink">{ROLE_LABEL[r]}</div><div className="mt-1 text-xs text-muted">{ROLE_HELP[r]}</div></Card>
         ))}
       </div>
@@ -50,14 +51,19 @@ export function TeamView() {
                 </div>
                 <div className="flex items-center gap-2">
                   {!m.active && <Pill tone="done">Removed</Pill>}
-                  {admin && m.user_id !== session.userId && m.active ? (
+                  {admin && m.user_id !== session.userId && m.active && (m.role !== 'OWNER' || session.role === 'OWNER') ? (
                     <>
-                      <Select aria-label={`Role for ${m.name}`} value={m.role} onChange={(e) => update({ userId: m.user_id, role: e.target.value }, 'Role updated')} className="!w-auto !py-1.5 text-xs">
-                        {(['OWNER', 'ADMIN', 'DEALER', 'VIEWER'] as Role[]).filter((r) => r !== 'OWNER' || session.role === 'OWNER').map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                      <Select aria-label={`Role for ${m.name}`} value={m.role} onChange={(e) => {
+                        const next = e.target.value as Role;
+                        if (next !== m.role && confirm(`Change ${m.name} from ${ROLE_LABEL[m.role]} to ${ROLE_LABEL[next]}?\n\n${ROLE_HELP[next]}\n\nThe new rights take effect on their next request.`)) {
+                          void update({ userId: m.user_id, role: next }, 'Role updated');
+                        }
+                      }} className="!w-auto !py-1.5 text-xs">
+                        {roles.filter((r) => r !== 'OWNER' || session.role === 'OWNER').map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                       </Select>
-                      <Button size="sm" variant="danger" onClick={() => confirm(`Remove ${m.name}? They are signed out immediately.`) && update({ userId: m.user_id, active: false }, 'Access removed')}>Remove</Button>
+                      {(m.role !== 'OWNER' || session.role === 'OWNER') && <Button size="sm" variant="danger" onClick={() => confirm(`Remove ${m.name}? They are signed out immediately.`) && update({ userId: m.user_id, active: false }, 'Access removed')}>Remove</Button>}
                     </>
-                  ) : admin && !m.active ? (
+                  ) : admin && !m.active && (m.role !== 'OWNER' || session.role === 'OWNER') ? (
                     <Button size="sm" variant="secondary" onClick={() => update({ userId: m.user_id, active: true }, 'Access restored')}>Restore</Button>
                   ) : (
                     <Pill>{ROLE_LABEL[m.role]}</Pill>
@@ -71,6 +77,7 @@ export function TeamView() {
                 {admin && <Button size="sm" variant="ghost" onClick={() => update({ revokeInviteId: i.id }, 'Invite cancelled')}>Cancel invite</Button>}
               </li>
             ))}
+            {data && !data.members.length && !data.invites.length && <li className="px-5 py-8 text-sm text-muted">No team members yet.</li>}
           </ul>
         )}
       </Card>

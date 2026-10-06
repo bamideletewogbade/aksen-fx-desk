@@ -22,7 +22,7 @@ const action = z.discriminatedUnion('action', [
 export const POST = deskRoute<P>(async ({ req, db, ctx, params }) => {
   const a = await body(req, action);
   const result = a.action === 'collect'
-    ? await recordCollection(db, ctx, { saverId: params.id, amountMinor: a.amount, note: a.note })
+    ? await recordCollection(db, ctx, { saverId: params.id, amountMinor: a.amount, note: a.note, requestId: a.requestId })
     : await withdraw(db, ctx, { saverId: params.id, method: a.method, reference: a.reference });
   return { result, ...(await getSaver(db, ctx, params.id)) };
 });

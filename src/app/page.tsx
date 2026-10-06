@@ -10,14 +10,14 @@ import { Pebbles } from '@/components/marketing/pebbles';
 
 export const metadata = {
   title: 'Aksen OTC · Desk software for licensed currency operators',
-  description: 'Quote links for customers, payment checks against your statement, two-person payout approval and daily reconciliation for Nigeria and Ghana currency desks.',
+  description: 'One inbox for WhatsApp and SMS rate requests, locked quote links, payment checks against your own statement, two-person payout approval and a daily close for Nigeria and Ghana currency desks.',
 };
 
 const FACTS = [
-  { icon: ShieldCheck, t: 'Software only', d: 'Your licences, accounts and money stay yours.', tint: 'from-[#e7fbc9] to-[#d3efb0]' },
+  { icon: ShieldCheck, t: 'Software only', d: 'Your licences, accounts and money stay yours. We don’t hold customer funds.', tint: 'from-[#e7fbc9] to-[#d3efb0]' },
   { icon: Landmark, t: 'Your statement decides', d: 'No bank connection needed to start.', tint: 'from-[#e3eefb] to-[#cfe0f5]' },
-  { icon: MessageCircle, t: 'Your WhatsApp', d: 'Send links the way you already talk.', tint: 'from-[#dcf5e6] to-[#c3ebd2]' },
-  { icon: Bot, t: 'AI assists', d: 'It summarises. People approve.', tint: 'from-[#f1ece2] to-[#e5dccb]' },
+  { icon: MessageCircle, t: 'One inbox for every chat', d: 'WhatsApp and SMS in one place. Anyone on your team can take over a chat.', tint: 'from-[#dcf5e6] to-[#c3ebd2]' },
+  { icon: Bot, t: 'The assistant quotes. People pay.', d: 'It answers routine rate questions. Only your team confirms funds and payouts.', tint: 'from-[#f1ece2] to-[#e5dccb]' },
 ];
 
 const PILOT = [
@@ -39,7 +39,7 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-7xl space-y-12">
           <Reveal className="max-w-2xl">
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-brand">How it works</span>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Your customer taps a link. <span className="text-brand">Your desk sees every step.</span></h2>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Your customer asks on WhatsApp. <span className="text-brand">Your desk sees every step.</span></h2>
           </Reveal>
           <Reveal delay={120}><PhoneSimulator /></Reveal>
         </div>
@@ -54,7 +54,7 @@ export default function LandingPage() {
           <Reveal className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-lime">Controls</span>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Edited receipts don’t get paid here.</h2>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">A screenshot can’t release a payout. Your statement can.</h2>
             </div>
             <p className="text-sm text-white/55">Pick a case and watch where the money stops.</p>
           </Reveal>

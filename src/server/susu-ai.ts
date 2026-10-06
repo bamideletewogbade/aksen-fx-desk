@@ -2,7 +2,7 @@ import 'server-only';
 import type { Db } from './db';
 import type { Ctx } from './auth';
 import { listSavers, susuOverview, type SaverSummary } from './susu';
-import { askJev } from '@/lib/jev';
+import { askJev, probability } from '@/lib/jev';
 import { chatComplete } from '@/lib/openrouter';
 import { formatMinor } from '@/lib/money';
 import { periodLabel } from '@/lib/susu';
@@ -51,16 +51,15 @@ export async function nudgeList(db: Db, ctx: Ctx): Promise<{ nudges: Nudge[]; en
         drifting.slice(0, 10).map((x, i) => [
           `s${i}`,
           {
-            type: 'score' as const,
-            instructions: `Probability from 0 to 1 that this daily saver misses at least 3 of the next 7 days. Saves ${formatMinor(x.s.dailyMinor, x.s.currency)} a day; ${x.s.page!.daysPaid} of ${x.s.page!.expected} expected days paid this month; last paid ${x.quiet ?? 'never'} days ago; unbroken streak ${x.s.streak} days; saver for ${daysSince(x.s.createdAt)} days.`,
+            type: 'noul' as const,
+            instructions: `Will this daily saver miss at least 3 of the next 7 days? Saves ${formatMinor(x.s.dailyMinor, x.s.currency)} a day; ${x.s.page!.daysPaid} of ${x.s.page!.expected} expected days paid this month; last paid ${x.quiet ?? 'never'} days ago; unbroken streak ${x.s.streak} days; saver for ${daysSince(x.s.createdAt)} days.`,
           },
         ]),
       );
       const answers = await askJev({ state: 'Daily susu savings group run by a small business in Ghana. Savers hand over cash daily; missed days can be caught up later in the month.', questions, timeoutMs: 8000 });
       drifting.slice(0, 10).forEach((x, i) => {
-        const a = answers[`s${i}`];
-        const v = a?.score ?? a?.confidence;
-        if (typeof v === 'number' && Number.isFinite(v)) scores[x.s.id] = Math.max(0, Math.min(1, v > 1 ? v / 100 : v));
+        const p = probability(answers[`s${i}`]);
+        if (p !== null) scores[x.s.id] = p;
       });
       if (Object.keys(scores).length) engine = 'jev';
     } catch {

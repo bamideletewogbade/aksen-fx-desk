@@ -28,7 +28,8 @@ export async function api<T = unknown>(url: string, init: RequestInit & { json?:
     if (res.status === 401 && typeof window !== 'undefined' && !url.startsWith('/api/portal') && !url.startsWith('/api/auth')) {
       window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
     }
-    throw new ApiError(err?.code ?? 'HTTP', err?.message ?? `Request failed (${res.status}).`, res.status, err?.details ?? null);
+    const fallback = res.status >= 500 ? 'Something went wrong on our side, so nothing was saved. Please try again.' : `Request failed (${res.status}).`;
+    throw new ApiError(err?.code ?? 'HTTP', err?.message ?? fallback, res.status, err?.details ?? null);
   }
   return data as T;
 }

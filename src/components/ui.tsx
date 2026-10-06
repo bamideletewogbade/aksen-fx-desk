@@ -62,7 +62,7 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
         <h1 className="text-2xl font-bold tracking-tight text-ink">{title}</h1>
         {subtitle && <p className="mt-1 max-w-2xl text-sm text-muted">{subtitle}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2 sm:max-w-[60%] sm:flex-shrink-0 sm:justify-end">{actions}</div>}
     </div>
   );
 }
@@ -188,7 +188,7 @@ export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLText
 
 export function Segmented<T extends string>({ value, onChange, options, className, size = 'md' }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[]; className?: string; size?: 'sm' | 'md' }) {
   return (
-    <div role="radiogroup" className={cx('inline-flex rounded-xl border border-line bg-[#eef4ec] p-1', className)}>
+    <div role="radiogroup" className={cx('inline-flex max-w-full overflow-x-auto rounded-xl border border-line bg-[#eef4ec] p-1', className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -197,7 +197,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cx(
-            'rounded-lg font-semibold transition-colors cursor-pointer',
+            'shrink-0 whitespace-nowrap rounded-lg font-semibold transition-colors cursor-pointer',
             size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3.5 py-1.5 text-sm',
             value === o.value ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink',
           )}

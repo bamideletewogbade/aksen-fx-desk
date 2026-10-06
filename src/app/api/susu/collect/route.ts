@@ -9,5 +9,5 @@ const action = z.union([z.object({ preview: z.string().min(1).max(10_000) }), co
 export const POST = deskRoute(async ({ req, db, ctx }) => {
   const a = await body(req, action);
   if ('preview' in a) return { lines: await parseCollections(db, ctx, a.preview) };
-  return { results: await recordCollections(db, ctx, a.rows.map((r) => ({ saverId: r.saverId, amountMinor: r.amount }))) };
+  return { results: await recordCollections(db, ctx, a.rows.map((r) => ({ saverId: r.saverId, amountMinor: r.amount })), a.requestId) };
 });

@@ -14,7 +14,8 @@ Traditional cross-border FX corridors in West Africa lose millions annually to f
    - Handles natural language trade negotiations (*"Hi, I want to change money"*, *"Swap ₦1.5M to Ghana MoMo"*).
    - Instant calculation against real-time wholesale corridor spreads (`1 GHS = 105.06 NGN`).
    - Generates 15-minute rate locks with unique ticket identifiers (`AKS-xxxxx`).
-   - Automatically assigns rotated Nigeria collection bank accounts with strict narration enforcement.
+   - Automatically assigns rotated Ninpm run dev
+   geria collection bank accounts with strict narration enforcement.
 2. **GEV System 1 & System 2 Slip Forensics:**
    - Multi-layer analysis of payment slips detecting font deviations, ELA noise variance, and NIBSS session discrepancies.
    - Fast-path verification under 1.2s for clean receipts, automated hold/escalation for altered slips.

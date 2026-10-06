@@ -121,6 +121,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
+@keyframes nav-progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
 
 /* ---------- Operator app frame ---------- */
 .app-frame {
@@ -139,14 +143,15 @@ body {
   flex-direction: column;
   overflow-y: auto;
 }
-@media (max-width: 1024px) {
+/* Matches Tailwind's lg (min-width: 1024px) so exactly one of the rail or the mobile header shows. */
+@media (max-width: 1023.98px) {
   .app-frame { display: block; }
   .app-rail { display: none; }
 }
 
 /* Legacy operator shell (WhatsApp console) */
 .operator-shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100dvh; }
-@media (max-width: 1024px) { .operator-shell { display: block; } }
+@media (max-width: 1023.98px) { .operator-shell { display: block; } }
 
 @media print {
   .no-print { display: none !important; }

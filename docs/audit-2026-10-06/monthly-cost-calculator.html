@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aksen OTC · Monthly operating cost calculator</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #17232d; background: #f2f5f3; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1140px; margin: auto; padding: 32px 20px 72px; }
+    h1 { margin: 6px 0 8px; font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: -.045em; }
+    h2 { margin: 0 0 14px; font-size: 1.12rem; }
+    p { line-height: 1.55; }
+    .eyebrow { color: #0c7a5a; font-size: .76rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .intro { max-width: 740px; color: #50606b; margin: 0 0 25px; }
+    .grid { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(290px,.8fr); gap: 18px; align-items: start; }
+    .card { background: white; border: 1px solid #dce6e1; border-radius: 18px; padding: 22px; box-shadow: 0 8px 24px #2444320a; }
+    .fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 13px; }
+    label { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; font-weight: 700; }
+    label small { color: #6c7b83; font-size: .72rem; font-weight: 400; line-height: 1.35; }
+    input, select { width: 100%; padding: 10px 11px; border: 1px solid #cbd8d2; border-radius: 9px; color: #17232d; background: #fff; font: inherit; font-size: .96rem; }
+    input:focus, select:focus { outline: 3px solid #a5dec8; border-color: #0c7a5a; }
+    .section { border-top: 1px solid #e5ece8; margin-top: 20px; padding-top: 20px; }
+    .total { background: #123a2e; color: #fff; border: 0; }
+    .total .minor { color: #b8e0cf; }
+    .amount { font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 800; letter-spacing: -.05em; line-height: 1.1; }
+    .usd { margin: 5px 0 16px; font-size: 1.2rem; }
+    dl { margin: 0; }
+    .row { display: flex; justify-content: space-between; gap: 18px; border-bottom: 1px solid #e7eeea; padding: 10px 0; }
+    .row:last-child { border: 0; }
+    dt { color: #52616a; } dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
+    .note { font-size: .82rem; color: #65757d; }
+    .callout { background: #eef8f3; border-left: 3px solid #0c7a5a; padding: 11px 14px; border-radius: 0 8px 8px 0; }
+    a { color: #087858; }
+    .links { margin-top: 20px; font-size: .8rem; line-height: 1.8; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .fields { grid-template-columns: 1fr; } main { padding: 24px 14px 50px; } .card { padding: 18px; } }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">6 October 2026 · Ghana planning model</div>
+  <h1>Monthly operating cost</h1>
+  <p class="intro">Enter expected activity for one client business. This models Aksen OTC's current Cloudflare + Neon + Twilio + OpenRouter path. It is a planning estimate, not a provider quote or deployment sign-off.</p>
+  <div class="grid">
+    <div class="card">
+      <h2>Activity and exchange rate</h2>
+      <div class="fields">
+        <label>USD → GHS planning rate <input id="fx" type="number" min="0" step="0.0001" value="11.765"><small>BoG 5 Oct 2026 mid-rate; card settlement may differ.</small></label>
+        <label>Monthly customer conversations <input id="conversations" type="number" min="0" step="1" value="500"></label>
+        <label>Average inbound WhatsApp messages / conversation <input id="inbound" type="number" min="0" step="0.1" value="5"></label>
+        <label>Average outbound service replies / conversation <input id="outbound" type="number" min="0" step="0.1" value="5"><small>Assumes delivered replies within the customer service window.</small></label>
+        <label>Meta Ghana service rate, USD <input id="metaRate" type="number" min="0" step="0.0001" value="0.0040"><small>October 2026 planning assumption; verify on provider bill.</small></label>
+        <label>Monthly free service replies <input id="metaFree" type="number" min="0" step="1" value="1000"><small>Per registered WhatsApp business number.</small></label>
+      </div>
+      <div class="section">
+        <h2>Infrastructure and authentication</h2>
+        <div class="fields">
+          <label>Cloudflare Workers, USD/month <input id="worker" type="number" min="0" step="0.01" value="5"><small>Includes usage within Paid plan limits.</small></label>
+          <label>Neon CU-hours/month <input id="cuHours" type="number" min="0" step="0.01" value="87.5"><small>CU size × active hours, e.g. 0.25 × 350.</small></label>
+          <label>Neon compute USD/CU-hour <input id="cuRate" type="number" min="0" step="0.001" value="0.106"><small>Launch plan; Scale is $0.222.</small></label>
+          <label>Neon stored GB <input id="gb" type="number" min="0" step="0.1" value="1"><small>Includes attachments stored in Postgres.</small></label>
+          <label>Neon storage USD/GB-month <input id="storageRate" type="number" min="0" step="0.01" value="0.35"></label>
+          <label>Clerk USD/month <select id="clerk"><option value="25">Pro monthly · $25</option><option value="20">Pro annual equivalent · $20</option><option value="0">Hobby · $0</option></select><small>Pro is the modeled MFA option.</small></label>
+          <label>Domain USD/month <input id="domain" type="number" min="0" step="0.01" value="0.8717"><small>Set to zero if already paid.</small></label>
+          <label>WhatsApp sender rental USD/month <input id="sender" type="number" min="0" step="0.01" value="0"><small>Get an actual production-sender quote.</small></label>
+        </div>
+      </div>
+      <div class="section">
+        <h2>AI and SMS</h2>
+        <div class="fields">
+          <label>AI calls/month <input id="aiCalls" type="number" min="0" step="1" value="500"><small>Only rule-engine misses and explicit summaries need calls.</small></label>
+          <label>Input tokens/call <input id="inputTokens" type="number" min="0" step="1" value="1000"></label>
+          <label>Output tokens/call <input id="outputTokens" type="number" min="0" step="1" value="150"></label>
+          <label>AI input USD/million tokens <input id="aiInputRate" type="number" min="0" step="0.01" value="0.05"><small>GPT-5 nano example.</small></label>
+          <label>AI output USD/million tokens <input id="aiOutputRate" type="number" min="0" step="0.01" value="0.40"></label>
+          <label>Other AI/brief allowance USD/month <input id="aiAllowance" type="number" min="0" step="0.001" value="0.942"><small>Produces approximately $1 total AI budget in this pilot.</small></label>
+          <label>Outbound Ghana SMS segments/month <input id="sms" type="number" min="0" step="1" value="0"></label>
+          <label>SMS route <select id="smsRoute"><option value="0.3741">Current Twilio route · $0.3741/segment</option><option value="local">Local Ghana estimate · GH₵0.031/segment</option></select><small>Local route is comparison only; integration is not built.</small></label>
+          <label>Other USD/month <input id="other" type="number" min="0" step="0.01" value="0"><small>Monitoring, support plan, email, etc. if contracted.</small></label>
+          <label>Contingency % <input id="buffer" type="number" min="0" step="1" value="20"><small>For FX, usage and vendor-rate movement; taxes excluded.</small></label>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card total" aria-live="polite">
+        <div class="eyebrow minor">Estimated base cost / month</div>
+        <div class="amount" id="ghs">GH₵0</div>
+        <div class="usd" id="usd">$0.00</div>
+        <div class="minor" id="withBuffer">With contingency: GH₵0</div>
+      </div>
+      <div class="card" style="margin-top:18px">
+        <h2>Where the money goes</h2>
+        <dl id="breakdown"></dl>
+        <p class="note" id="usage"></p>
+      </div>
+      <p class="callout note">The local SMS option is not implemented in Aksen OTC. Sender rental, Meta template categories, carrier surcharges, taxes, human support, transfer fees and compliance work require separate quotes.</p>
+      <p class="links"><a href="./operating-costs.md">Read the assumptions and sources</a> · <a href="https://www.twilio.com/en-us/whatsapp/pricing">Twilio WhatsApp</a> · <a href="https://neon.com/blog/major-compute-price-reduction-on-neon">Neon</a> · <a href="https://developers.cloudflare.com/workers/platform/pricing/">Cloudflare</a> · <a href="https://www.bog.gov.gh/treasury-and-the-markets/daily-interbank-fx-rates/">BoG FX</a></p>
+    </div>
+  </div>
+</main>
+<script>
+  const ids = ['fx','conversations','inbound','outbound','metaRate','metaFree','worker','cuHours','cuRate','gb','storageRate','clerk','domain','sender','aiCalls','inputTokens','outputTokens','aiInputRate','aiOutputRate','aiAllowance','sms','smsRoute','other','buffer'];
+  const n = id => Math.max(0, Number(document.getElementById(id).value) || 0);
+  const usd = x => '$' + x.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const ghs = x => 'GH₵' + x.toLocaleString('en-US', {maximumFractionDigits:0});
+  function update() {
+    const fx = n('fx');
+    const inbound = n('conversations') * n('inbound');
+    const outbound = n('conversations') * n('outbound');
+    const twilio = (inbound + outbound) * 0.005;
+    const meta = Math.max(0, outbound - n('metaFree')) * n('metaRate');
+    const neon = Math.max(5, n('cuHours') * n('cuRate') + n('gb') * n('storageRate'));
+    const aiTokens = n('aiCalls') * (n('inputTokens') * n('aiInputRate') + n('outputTokens') * n('aiOutputRate')) / 1e6;
+    const ai = aiTokens * 1.055 + n('aiAllowance');
+    const localSms = document.getElementById('smsRoute').value === 'local';
+    const sms = n('sms') * (localSms ? 0.031 / (fx || 1) : 0.3741);
+    const fixed = n('worker') + n('clerk') + n('domain') + n('sender') + n('other');
+    const total = twilio + meta + neon + ai + sms + fixed;
+    document.getElementById('ghs').textContent = ghs(total * fx);
+    document.getElementById('usd').textContent = usd(total);
+    document.getElementById('withBuffer').textContent = 'With ' + n('buffer') + '% contingency: ' + ghs(total * fx * (1 + n('buffer') / 100));
+    const rows = [['Twilio WhatsApp',twilio],['Meta service replies',meta],['Neon',neon],['Cloudflare + Clerk + domain + sender + other',fixed],['AI tokens + allowance',ai],[(localSms ? 'Local SMS (unbuilt)' : 'Twilio SMS'),sms]];
+    document.getElementById('breakdown').replaceChildren(...rows.map(([label,value]) => {
+      const row = document.createElement('div'); row.className = 'row';
+      const dt = document.createElement('dt'); dt.textContent = label;
+      const dd = document.createElement('dd'); dd.textContent = usd(value);
+      row.append(dt,dd); return row;
+    }));
+    document.getElementById('usage').textContent = Math.round(inbound).toLocaleString() + ' inbound and ' + Math.round(outbound).toLocaleString() + ' outbound WhatsApp messages; ' + Math.max(0,Math.round(outbound - n('metaFree'))).toLocaleString() + ' chargeable Meta service replies. AI token estimate: ' + usd(aiTokens) + ' before OpenRouter credit fee.';
+  }
+  ids.forEach(id => document.getElementById(id).addEventListener('input', update));
+  update();
+</script>
+</body>
+</html>

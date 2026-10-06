@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Db, Queryable } from './db';
 import { actorOf, requirePermission, type Ctx } from './auth';
 import { appendAudit } from './audit';
@@ -131,7 +131,10 @@ export async function saveSaver(
       const s = await lockSaver(q, ctx.orgId, input.id);
       await q.query('UPDATE susu_savers SET name = $3, phone = $4, notes = $5, status = COALESCE($6, status) WHERE id = $1 AND org_id = $2', [s.id, ctx.orgId, name, phone, input.notes?.trim() || null, input.status ?? null]);
       let dailyChange: 'now' | 'next_page' | null = null;
-      if (input.dailyMinor !== N(s.daily_minor)) {
+      if (input.dailyMinor === N(s.daily_minor) && s.next_daily_minor !== null) {
+        // Choosing the current amount again cancels a change queued for a future page.
+        await q.query('UPDATE susu_savers SET next_daily_minor = NULL WHERE id = $1', [s.id]);
+      } else if (input.dailyMinor !== N(s.daily_minor)) {
         // An untouched page can switch now; otherwise the new amount starts on the next page so filled boxes keep their value.
         const [cur] = await q.query<{ id: string; days_paid: number }>(
           `SELECT id, days_paid FROM susu_pages WHERE saver_id = $1 AND status = 'OPEN' AND period = $2 ORDER BY page_no LIMIT 1`,
@@ -175,15 +178,36 @@ export interface CollectionResult {
   pages: { period: Period; days: number }[];
 }
 
+async function oncePerRequest<T>(q: Queryable, ctx: Ctx, requestId: string | undefined, payload: unknown, record: () => Promise<T>): Promise<T> {
+  if (!requestId) return record(); // Direct domain calls and older test fixtures.
+  const hash = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  // The unique key is the concurrency gate: an identical retry waits for the
+  // first transaction, then reads its committed result instead of collecting again.
+  await q.query(
+    `INSERT INTO susu_collection_requests (org_id, request_id, payload_hash)
+     VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+    [ctx.orgId, requestId, hash],
+  );
+  const [saved] = await q.query<{ payload_hash: string; result: T | string | null }>(
+    'SELECT payload_hash, result FROM susu_collection_requests WHERE org_id = $1 AND request_id = $2 FOR UPDATE',
+    [ctx.orgId, requestId],
+  );
+  if (saved.payload_hash !== hash) fail('CONFLICT', 'This collection request was already used for a different amount. Refresh and try again.');
+  if (saved.result !== null) return (typeof saved.result === 'string' ? JSON.parse(saved.result) : saved.result) as T;
+  const result = await record();
+  await q.query('UPDATE susu_collection_requests SET result = $3::jsonb WHERE org_id = $1 AND request_id = $2', [ctx.orgId, requestId, JSON.stringify(result)]);
+  return result;
+}
+
 /**
  * Records cash a saver handed over. Fills whole boxes from this month onward
  * (missed boxes this month are caught up first), spills extra days onto the
  * next months, and returns the change that doesn't make a whole day.
  */
-export async function recordCollection(db: Db, ctx: Ctx, input: { saverId: string; amountMinor: number; note?: string | null }): Promise<CollectionResult> {
+export async function recordCollection(db: Db, ctx: Ctx, input: { saverId: string; amountMinor: number; note?: string | null; requestId?: string }): Promise<CollectionResult> {
   requirePermission(ctx, 'trade');
   if (!(input.amountMinor > 0)) fail('INVALID', 'Enter the amount collected.');
-  return db.tx((q) => collectInTx(q, ctx, input));
+  return db.tx((q) => oncePerRequest(q, ctx, input.requestId, { kind: 'single', saverId: input.saverId, amountMinor: input.amountMinor, note: input.note?.trim() || null }, () => collectInTx(q, ctx, input)));
 }
 
 async function collectInTx(q: Queryable, ctx: Ctx, input: { saverId: string; amountMinor: number; note?: string | null }): Promise<CollectionResult> {
@@ -243,14 +267,14 @@ async function collectInTx(q: Queryable, ctx: Ctx, input: { saverId: string; amo
 }
 
 /** Several collections in one go (an end-of-round entry). All succeed or none do. */
-export async function recordCollections(db: Db, ctx: Ctx, rows: { saverId: string; amountMinor: number }[]): Promise<CollectionResult[]> {
+export async function recordCollections(db: Db, ctx: Ctx, rows: { saverId: string; amountMinor: number }[], requestId?: string): Promise<CollectionResult[]> {
   requirePermission(ctx, 'trade');
   if (!rows.length) fail('INVALID', 'Nothing to record.');
-  return db.tx(async (q) => {
+  return db.tx((q) => oncePerRequest(q, ctx, requestId, { kind: 'round', rows }, async () => {
     const out: CollectionResult[] = [];
     for (const r of rows) out.push(await collectInTx(q, ctx, r));
     return out;
-  });
+  }));
 }
 
 // ---------------------------------------------------------------- closing pages
@@ -272,10 +296,15 @@ export async function closePage(
 }
 
 async function closeInTx(q: Queryable, ctx: Ctx, input: { pageId: string; kind: CloseKind; method?: string | null; reference?: string | null }) {
+  // A rollover stays on the desk; a payout or withdrawal releases saver funds.
+  if (input.kind !== 'ROLLOVER') requirePermission(ctx, 'approve');
+  const [identity] = await q.query<{ saver_id: string }>('SELECT saver_id FROM susu_pages WHERE id = $1 AND org_id = $2', [input.pageId, ctx.orgId]);
+  if (!identity) fail('NOT_FOUND', 'Page not found.');
+  // Collections and edits lock the saver first. Keep that order for closes too.
+  const saver = await lockSaver(q, ctx.orgId, identity.saver_id);
   const [raw] = await q.query<Record<string, unknown>>('SELECT * FROM susu_pages WHERE id = $1 AND org_id = $2 FOR UPDATE', [input.pageId, ctx.orgId]);
   if (!raw) fail('NOT_FOUND', 'Page not found.');
   const page = mapPage(raw);
-  const saver = await lockSaver(q, ctx.orgId, raw.saver_id as string);
   if (page.status !== 'OPEN') fail('CONFLICT', 'This page is already closed.');
   const today = await orgToday(q, ctx.orgId);
   const current = periodOf(today);
@@ -324,6 +353,13 @@ export async function closePages(db: Db, ctx: Ctx, rows: { pageId: string; kind:
   requirePermission(ctx, 'trade');
   if (!rows.length) fail('INVALID', 'Choose at least one page to close.');
   return db.tx(async (q) => {
+    // Two operators may close overlapping batches in different UI orders.
+    // Acquire all saver locks in one stable order before touching any pages.
+    const ids = [...new Set((await q.query<{ saver_id: string }>(
+      'SELECT saver_id FROM susu_pages WHERE org_id = $1 AND id = ANY($2::uuid[])',
+      [ctx.orgId, rows.map((r) => r.pageId)],
+    )).map((r) => r.saver_id))].sort();
+    for (const id of ids) await lockSaver(q, ctx.orgId, id);
     const out = [];
     for (const r of rows) out.push(await closeInTx(q, ctx, r));
     return out;
@@ -392,7 +428,10 @@ export async function getSaver(db: Db, ctx: Ctx, id: string) {
   const pages = (await db.query<Record<string, unknown>>('SELECT * FROM susu_pages WHERE saver_id = $1 AND org_id = $2 ORDER BY period DESC, page_no DESC', [id, ctx.orgId])).map(mapPage);
   const collections = await db.query<Record<string, unknown>>(
     `SELECT c.*, p.period, u.name AS recorded_by_name FROM susu_collections c JOIN susu_pages p ON p.id = c.page_id LEFT JOIN users u ON u.id = c.recorded_by
-      WHERE c.saver_id = $1 AND c.org_id = $2 ORDER BY c.created_at DESC LIMIT 200`,
+      WHERE c.saver_id = $1 AND c.org_id = $2 AND c.payment_id IN (
+        SELECT payment_id FROM susu_collections WHERE saver_id = $1 AND org_id = $2
+        GROUP BY payment_id ORDER BY MAX(created_at) DESC, payment_id DESC LIMIT 200
+      ) ORDER BY c.created_at DESC, c.id DESC`,
     [id, ctx.orgId],
   );
   // One entry per payment, even when it spilled across pages.
@@ -407,6 +446,8 @@ export async function getSaver(db: Db, ctx: Ctx, id: string) {
     e.note = e.note ?? ((c.note as string) ?? null);
     payments.set(k, e);
   }
+  // Both halves of a spilled payment share a timestamp, so row order alone can't be trusted: list months oldest first.
+  for (const p of payments.values()) p.periods.sort();
   return { saver: summary, pages, payments: [...payments.values()], today: await orgToday(db, ctx.orgId) };
 }
 
@@ -438,6 +479,8 @@ export async function susuOverview(db: Db, ctx: Ctx, savers?: SaverSummary[]): P
           WHERE c.org_id = $1 AND to_char(c.created_at AT TIME ZONE o.timezone, 'YYYY-MM') = $3) AS month_in,
        (SELECT COALESCE(SUM(fee_minor), 0) FROM susu_pages p JOIN organizations o ON o.id = p.org_id
           WHERE p.org_id = $1 AND p.status = 'CLOSED' AND to_char(p.closed_at AT TIME ZONE o.timezone, 'YYYY-MM') = $3) AS fees_month,
+       (SELECT COALESCE(SUM(CASE WHEN days_paid > 0 THEN daily_minor ELSE 0 END), 0)
+          FROM susu_pages WHERE org_id = $1 AND status = 'OPEN' AND period <= $3) AS fees_due,
        (SELECT COUNT(*) FROM susu_pages WHERE org_id = $1 AND status = 'OPEN' AND period < $3) AS to_close`,
     [ctx.orgId, today, period],
   );
@@ -456,7 +499,7 @@ export async function susuOverview(db: Db, ctx: Ctx, savers?: SaverSummary[]): P
     collectedThisMonthMinor: N(r.month_in),
     heldMinor: list.reduce((s, x) => s + x.heldMinor, 0),
     feesThisMonthMinor: N(r.fees_month),
-    feesDueMinor: list.reduce((s, x) => s + (x.page && x.page.period <= period ? x.page.feeMinor : 0), 0),
+    feesDueMinor: N(r.fees_due),
     pagesToClose: N(r.to_close),
   };
 }
@@ -489,7 +532,7 @@ export interface ParsedLine {
   amountMinor: number | null;
   saverId: string | null;
   saverName: string | null;
-  candidates: { id: string; name: string; ref: string }[];
+  candidates: { id: string; name: string; ref: string; dailyMinor: number }[];
   days: number;
   changeMinor: number;
   problem: string | null;
@@ -501,12 +544,17 @@ export async function parseCollections(db: Db, ctx: Ctx, text: string): Promise<
   const savers = await listSavers(db, ctx);
   const active = savers.filter((s) => s.status === 'ACTIVE');
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-  const lines = text.split(/\n|;|,(?![0-9]{3}\b)/).map((l) => l.trim()).filter(Boolean).slice(0, 200);
+  const lines = text.split(/\n|;|,(?![0-9]{3}\b)/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length > 200) fail('INVALID', 'A collection round can have at most 200 lines. Split this round into smaller batches.');
   return lines.map((line) => {
-    const amt = line.match(/(?:gh₵|ghs|ghc|₵|¢)?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?/i);
+    const amounts = [...line.matchAll(/(?:gh₵|ghs|ghc|₵|¢)?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?/gi)];
+    // A saver reference (S-0001), or a phone number before an amount, is an identifier rather than the cash.
+    const amt = amounts.find((m) => !/\bS-$/i.test(line.slice(0, m.index ?? 0).trimEnd()) && !(amounts.length > 1 && m[1].replace(/,/g, '').length >= 8)) ?? null;
     const amountMinor = amt ? Math.round((Number(amt[1].replace(/,/g, '')) + (amt[2] ? Number(amt[2].padEnd(2, '0')) / 100 : 0)) * 100) : null;
-    const who = norm(line.replace(amt?.[0] ?? '', ' ').replace(/\b(gh₵|ghs|ghc|cedis?|paid|for|days?)\b/gi, ' '));
-    let matches = who ? active.filter((s) => s.ref.toLowerCase() === who || norm(s.name) === who) : [];
+    const at = amt?.index ?? -1;
+    const withoutAmount = at < 0 ? line : `${line.slice(0, at)} ${line.slice(at + amt![0].length)}`;
+    const who = norm(withoutAmount.replace(/\b(gh₵|ghs|ghc|cedis?|paid|for|days?)\b/gi, ' '));
+    let matches = who ? active.filter((s) => norm(s.ref) === who || norm(s.name) === who) : [];
     if (!matches.length && who) matches = active.filter((s) => norm(s.name).split(' ').some((w) => w === who) || norm(s.name).startsWith(who));
     if (!matches.length && who) matches = active.filter((s) => norm(s.name).includes(who) || (s.phone ?? '').replace(/\D/g, '').endsWith(who.replace(/\D/g, '') || '#'));
     const saver = matches.length === 1 ? matches[0] : null;
@@ -528,7 +576,7 @@ export async function parseCollections(db: Db, ctx: Ctx, text: string): Promise<
       amountMinor,
       saverId: saver?.id ?? null,
       saverName: saver?.name ?? null,
-      candidates: matches.length > 1 ? matches.slice(0, 5).map((m) => ({ id: m.id, name: m.name, ref: m.ref })) : [],
+      candidates: matches.length > 1 ? matches.slice(0, 5).map((m) => ({ id: m.id, name: m.name, ref: m.ref, dailyMinor: m.page?.dailyMinor ?? m.dailyMinor })) : [],
       days: split.days,
       changeMinor: split.changeMinor,
       problem,

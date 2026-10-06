@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowLeft, Flame, HandCoins, Pencil, Phone } from 'lucide-react';
 import { api, ApiError, useLoad } from '@/lib/api';
-import { canTrade } from '@/lib/auth';
+import { canApprove, canTrade } from '@/lib/auth';
 import { cedis, closeMath, daysInMonth, periodLabel, splitCash } from '@/lib/susu';
 import { dateTime } from '@/lib/time';
 import { useSession } from '@/components/app-shell';
@@ -81,7 +81,7 @@ function EditSaver({ s, onClose, onSaved }: { s: SaverSummary; onClose: () => vo
       <div className="space-y-4">
         <Field label="Full name" htmlFor="e-name"><Input id="e-name" value={name} onChange={(e) => setName(e.target.value)} /></Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Saves each day (GH₵)" htmlFor="e-daily" hint="If boxes are already filled this month, a new amount starts on the next page."><Input id="e-daily" mono value={daily} onChange={(e) => setDaily(e.target.value)} /></Field>
+          <Field label="Daily contribution (GH₵)" htmlFor="e-daily" hint="If boxes are already filled, a new amount starts when the next new page opens. Any prepaid page keeps its original amount."><Input id="e-daily" mono value={daily} onChange={(e) => setDaily(e.target.value)} /></Field>
           <Field label="Phone" htmlFor="e-phone" optional><Input id="e-phone" mono value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
         </div>
         <Field label="Notes" htmlFor="e-notes" optional><Input id="e-notes" value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
@@ -108,7 +108,7 @@ function Withdraw({ s, page, onClose, onDone }: { s: SaverSummary; page: SusuPag
     setBusy(true);
     try {
       const d = await api<Data & { result: { balanceMinor: number } }>(`/api/susu/${s.id}`, { method: 'POST', json: { action: 'withdraw', method, reference: reference || null } });
-      toast(`Pay ${s.name.split(' ')[0]} ${cedis(d.result.balanceMinor)}`);
+      toast(`Withdrawal recorded for ${s.name.split(' ')[0]} · ${cedis(d.result.balanceMinor)}`);
       onDone(d);
       onClose();
     } catch (e) {
@@ -118,17 +118,17 @@ function Withdraw({ s, page, onClose, onDone }: { s: SaverSummary; page: SusuPag
     }
   };
   return (
-    <Dialog open onClose={onClose} title={`Withdrawal for ${s.name}`} footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={m.balanceMinor <= 0} onClick={go}>Pay {cedis(m.balanceMinor)} and close page</Button></>}>
+    <Dialog open onClose={onClose} title={`Withdrawal for ${s.name}`} footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={m.balanceMinor <= 0} onClick={go}>Record withdrawal and close page</Button></>}>
       <div className="space-y-4 text-sm">
         <div className="space-y-1.5 rounded-xl bg-paper p-4">
           {page.broughtForwardMinor > 0 && <Row label="Brought forward" value={cedis(page.broughtForwardMinor)} />}
-          <Row label={`Saved this page (${page.daysPaid} day${page.daysPaid === 1 ? '' : 's'})`} value={cedis(m.savedMinor)} />
-          <Row label={`${desk} fee (1 day)`} value={`− ${cedis(m.feeMinor)}`} />
+          <Row label={`Contributed this page (${page.daysPaid} day${page.daysPaid === 1 ? '' : 's'})`} value={cedis(m.savedMinor)} />
+          <Row label={`${desk} collection fee (1 day)`} value={`− ${cedis(m.feeMinor)}`} />
           <div className="border-t border-line pt-1.5"><Row label={<strong>They receive</strong>} value={<strong>{cedis(m.balanceMinor)}</strong>} /></div>
         </div>
-        <p className="text-xs text-muted">The page closes now. The {page.capacity - page.daysPaid} remaining day{page.capacity - page.daysPaid === 1 ? '' : 's'} of {periodLabel(page.period)} continue on a fresh page, which will have its own one-day fee when it closes.</p>
+        <p className="text-xs text-muted">Complete the payout before recording it here. The page closes now. The {page.capacity - page.daysPaid} remaining day{page.capacity - page.daysPaid === 1 ? '' : 's'} of {periodLabel(page.period)} continue on a fresh page, which will have its own one-day fee when it closes.</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Paid by" htmlFor="w-method"><Select id="w-method" value={method} onChange={(e) => setMethod(e.target.value)}><option>Cash</option><option>MoMo</option><option>Bank</option></Select></Field>
+          <Field label="Payout method" htmlFor="w-method"><Select id="w-method" value={method} onChange={(e) => setMethod(e.target.value)}><option>Cash</option><option>MoMo</option><option>Bank</option></Select></Field>
           <Field label="Reference" htmlFor="w-ref" optional><Input id="w-ref" mono value={reference} onChange={(e) => setReference(e.target.value)} placeholder={method === 'Cash' ? 'e.g. receipt no.' : 'Transaction ID'} /></Field>
         </div>
       </div>
@@ -144,6 +144,7 @@ export function SaverView({ id }: { id: string }) {
   const session = useSession();
   const { data, setData, error } = useLoad<Data>(`/api/susu/${id}`);
   const [amount, setAmount] = useState('');
+  const collectionRequestId = useRef<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -162,9 +163,11 @@ export function SaverView({ id }: { id: string }) {
   const collect = async () => {
     setBusy(true);
     try {
-      const d = await api<Data & { result: { days: number; changeMinor: number } }>(`/api/susu/${id}`, { method: 'POST', json: { action: 'collect', amount } });
+      collectionRequestId.current ??= crypto.randomUUID();
+      const d = await api<Data & { result: { days: number; changeMinor: number } }>(`/api/susu/${id}`, { method: 'POST', json: { action: 'collect', amount, requestId: collectionRequestId.current } });
       setData(d);
       setAmount('');
+      collectionRequestId.current = null;
       toast(`${d.result.days} day${d.result.days === 1 ? '' : 's'} recorded${d.result.changeMinor ? ` · give back ${cedis(d.result.changeMinor)}` : ''}`);
     } catch (e) {
       toast(e instanceof ApiError ? e.message : 'Could not record.', 'risk');
@@ -186,29 +189,31 @@ export function SaverView({ id }: { id: string }) {
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
               <span className="font-mono">{s.ref}</span>
-              <span>{cedis(daily)} a day{s.nextDailyMinor ? ` → ${cedis(s.nextDailyMinor)} from next page` : ''}</span>
+              <span>{cedis(daily)} a day{s.nextDailyMinor ? ` → ${cedis(s.nextDailyMinor)} when the next new page opens` : ''}</span>
               {s.phone && <a href={`tel:${s.phone}`} className="inline-flex items-center gap-1 font-semibold text-brand hover:underline"><Phone size={13} /> {s.phone}</a>}
             </div>
             {s.notes && <p className="mt-2 text-xs text-subtle">{s.notes}</p>}
           </div>
-          <div className="flex gap-6 text-right">
-            <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Holding</div><div className="font-mono text-2xl font-bold tabular text-ink">{cedis(s.heldMinor)}</div></div>
+          <div className="flex flex-wrap gap-4 sm:gap-6 sm:text-right">
+            <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Held for saver</div><div className="font-mono text-2xl font-bold tabular text-ink">{cedis(s.heldMinor)}</div></div>
             <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Streak</div><div className="inline-flex items-center gap-1 font-mono text-2xl font-bold tabular text-amber"><Flame size={18} />{s.streak}</div></div>
           </div>
         </div>
-        {allowed && s.status === 'ACTIVE' && (
+        {allowed && (
           <div className="mt-5 flex flex-wrap items-end gap-3 border-t border-line pt-4">
-            <Field label="Cash received today" htmlFor="sv-amt">
-              <Input id="sv-amt" mono inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && split?.days && collect()} placeholder={`GH₵ ${daily / 100}`} className="w-40" />
-            </Field>
-            <Button busy={busy} disabled={!split?.days} onClick={collect}>Record</Button>
-            {[1, 2, 7].map((n) => (
-              <Button key={n} variant="secondary" size="sm" onClick={() => setAmount(String((daily * n) / 100))}>{n === 1 ? '1 day' : `${n} days`}</Button>
-            ))}
-            {split && <span className={cx('text-xs', split.days ? 'text-muted' : 'text-risk')}>{split.days ? `${split.days} day${split.days === 1 ? '' : 's'}${split.changeMinor ? ` · change ${cedis(split.changeMinor)}` : ''}` : 'Less than one day'}</span>}
+            {s.status === 'ACTIVE' && <>
+              <Field label="Contribution received" htmlFor="sv-amt">
+                <Input id="sv-amt" mono inputMode="decimal" value={amount} onChange={(e) => { collectionRequestId.current = null; setAmount(e.target.value); }} onKeyDown={(e) => e.key === 'Enter' && split?.days && collect()} placeholder={`GH₵ ${daily / 100}`} className="w-40" />
+              </Field>
+              <Button busy={busy} disabled={!split?.days} onClick={collect}>Record</Button>
+              {[1, 2, 7].map((n) => (
+                <Button key={n} variant="secondary" size="sm" onClick={() => { collectionRequestId.current = null; setAmount(String((daily * n) / 100)); }}>{n === 1 ? '1 day' : `${n} days`}</Button>
+              ))}
+              {split && <span className={cx('text-xs', split.days ? 'text-muted' : 'text-risk')}>{split.days ? `${split.days} day${split.days === 1 ? '' : 's'}${split.changeMinor ? ` · change ${cedis(split.changeMinor)}` : ''}` : 'Less than one day'}</span>}
+            </>}
             <div className="ml-auto flex gap-2">
               <Button variant="ghost" size="sm" icon={<Pencil size={13} />} onClick={() => setEditing(true)}>Edit</Button>
-              {page && page.daysPaid + (page.broughtForwardMinor ? 1 : 0) > 1 && <Button variant="secondary" size="sm" icon={<HandCoins size={14} />} onClick={() => setWithdrawing(true)}>Withdraw now</Button>}
+              {canApprove(session) && page && page.balanceIfClosedMinor > 0 && <Button variant="secondary" size="sm" icon={<HandCoins size={14} />} onClick={() => setWithdrawing(true)}>Record withdrawal</Button>}
             </div>
           </div>
         )}
@@ -232,18 +237,18 @@ export function SaverView({ id }: { id: string }) {
           <Card className="space-y-2 p-5 text-sm">
             <h2 className="mb-2 text-sm font-bold text-ink">If this page closed today</h2>
             {page.broughtForwardMinor > 0 && <Row label="Brought forward" value={cedis(page.broughtForwardMinor)} />}
-            <Row label={`Saved (${page.daysPaid} × ${cedis(page.dailyMinor)})`} value={cedis(page.savedMinor)} />
-            <Row label="Fee (1 day)" value={`− ${cedis(page.feeMinor)}`} />
+            <Row label={`Contributed (${page.daysPaid} × ${cedis(page.dailyMinor)})`} value={cedis(page.savedMinor)} />
+            <Row label="Collection fee (1 day)" value={`− ${cedis(page.feeMinor)}`} />
             <div className="border-t border-line pt-2"><Row label={<strong className="text-ink">{s.name.split(' ')[0]} would get</strong>} value={<strong>{cedis(page.balanceIfClosedMinor)}</strong>} /></div>
             {future.length > 0 && <Notice tone="good" className="!mt-4">Paid ahead: {future.map((p) => `${p.daysPaid} day${p.daysPaid === 1 ? '' : 's'} in ${periodLabel(p.period)}`).join(', ')}.</Notice>}
-            <p className="pt-2 text-xs text-subtle">At month end you choose to cash out or roll over. Rolling over carries the balance onto the next page and it’s never charged again.</p>
+            <p className="pt-2 text-xs text-subtle">At month end, record a payout or roll the balance over. Rolled-over money is not charged again.</p>
           </Card>
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">
-          <h2 className="mb-3 text-sm font-bold text-ink">Collections</h2>
+          <h2 className="mb-3 text-sm font-bold text-ink">Contributions</h2>
           {!data.payments.length ? <p className="text-sm text-subtle">Nothing collected yet.</p> : (
             <ul className="divide-y divide-line text-sm">
               {data.payments.map((p) => (
@@ -269,7 +274,7 @@ export function SaverView({ id }: { id: string }) {
                     <span className="block text-xs text-subtle" suppressHydrationWarning>{p.closedAt ? dateTime(p.closedAt) : ''}{p.payoutReference ? ` · ref ${p.payoutReference}` : ''}</span>
                   </span>
                   <Pill tone={p.closeKind === 'ROLLOVER' ? 'neutral' : 'good'}>
-                    {p.closeKind === 'ROLLOVER' ? `Rolled over ${cedis(p.carriedMinor ?? 0)}` : `${p.closeKind === 'WITHDRAWAL' ? 'Withdrew' : 'Cashed out'} ${cedis(p.paidOutMinor ?? 0)}`}
+                    {p.closeKind === 'ROLLOVER' ? `Rolled over ${cedis(p.carriedMinor ?? 0)}` : `${p.closeKind === 'WITHDRAWAL' ? 'Withdrew' : 'Paid out'} ${cedis(p.paidOutMinor ?? 0)}`}
                   </Pill>
                 </li>
               ))}
@@ -278,7 +283,7 @@ export function SaverView({ id }: { id: string }) {
         </Card>
       </div>
 
-      {editing && <EditSaver s={s} onClose={() => setEditing(false)} onSaved={(d) => { setData(d); setEditing(false); toast(d.dailyChange === 'next_page' ? 'Saved. The new daily amount starts on the next page.' : 'Saved'); }} />}
+      {editing && <EditSaver s={s} onClose={() => setEditing(false)} onSaved={(d) => { setData(d); setEditing(false); toast(d.dailyChange === 'next_page' ? 'Saved. The new daily amount starts when the next new page opens.' : 'Saved'); }} />}
       {withdrawing && page && <Withdraw s={s} page={page} onClose={() => setWithdrawing(false)} onDone={setData} />}
     </div>
   );

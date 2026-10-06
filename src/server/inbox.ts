@@ -5,6 +5,8 @@ import { appendAudit } from './audit';
 import { DomainError, fail } from './errors';
 import { cancelFromChat, createChatQuote, MAX_EVIDENCE_BYTES, portalAccept, portalAddEvidence, portalToken, sweepExpired } from './trades';
 import * as A from './assistant';
+import { decideWithAi, type AiNote } from './ai/assist';
+import { chatReader, loadDeskAi } from './ai/settings';
 import { explainStatusError, fetchMedia, sendMessage } from './twilio';
 import { parseRate, rateToString, type Corridor, type Currency } from '@/lib/money';
 import type { Beneficiary, TradeStatus } from '@/lib/trades';
@@ -279,7 +281,14 @@ async function runAssistant(db: Db, convId: string, input: { messageId: string; 
     const c = await loadConv(db, convId);
     if (c.mode !== 'ASSISTANT' || !c.assistant_enabled) return;
     const facts = await loadFacts(db, c);
-    const decision = A.decide({ text: input.text, media: input.media, state: botState(c), facts });
+    // Rules answer first; the desk's AI model only reads messages the rules couldn't follow.
+    const ai = await loadDeskAi(db, c.org_id);
+    const [last] = await db.query<{ body: string | null }>(
+      `SELECT body FROM messages WHERE conversation_id = $1 AND direction = 'OUT' ORDER BY created_at DESC, rev DESC LIMIT 1`,
+      [c.id],
+    );
+    const { decision, ai: aiNote } = await decideWithAi({ text: input.text, media: input.media, state: botState(c), facts, lastReply: last?.body ?? null }, chatReader(ai));
+    if (aiNote) await db.query('UPDATE messages SET ai_note = $2::jsonb WHERE id = $1', [input.messageId, JSON.stringify(aiNote)]);
     let { replies, state, handoff } = decision;
     replies = [...replies];
 
@@ -563,6 +572,8 @@ export interface MessageView {
   error: string | null;
   tradeId: string | null;
   createdAt: string;
+  /** What the AI model read in a customer message the rules couldn't follow. */
+  ai: AiNote | null;
 }
 
 const SUMMARY_SQL = `
@@ -621,7 +632,7 @@ export async function getConversation(db: Db, ctx: Ctx, id: string): Promise<{ c
   if (!r) fail('NOT_FOUND', 'Conversation not found.');
   const rows = await db.query<Record<string, unknown>>(
     `SELECT * FROM (
-       SELECT id, direction, author, author_label, body, media_mime, (media_data IS NOT NULL) AS has_media, media_count, status, error, trade_id, created_at, rev
+       SELECT id, direction, author, author_label, body, media_mime, (media_data IS NOT NULL) AS has_media, media_count, status, error, trade_id, created_at, rev, ai_note
          FROM messages WHERE conversation_id = $1 AND org_id = $2 ORDER BY created_at DESC, rev DESC LIMIT 400
      ) x ORDER BY created_at, rev`,
     [id, ctx.orgId],
@@ -641,6 +652,7 @@ export async function getConversation(db: Db, ctx: Ctx, id: string): Promise<{ c
       error: (m.error as string) ?? null,
       tradeId: (m.trade_id as string) ?? null,
       createdAt: iso(m.created_at)!,
+      ai: m.ai_note ? ((typeof m.ai_note === 'string' ? JSON.parse(m.ai_note) : m.ai_note) as AiNote) : null,
     })),
   };
 }

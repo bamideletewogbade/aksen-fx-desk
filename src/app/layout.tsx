@@ -13,6 +13,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Every operator page depends on who is signed in and reads the database, so nothing is pre-rendered at build time.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "Aksen OTC",
   description: "Desk software for licensed currency operators: customer quote links, payment checks against your statement, two-person payout approval and daily reconciliation.",

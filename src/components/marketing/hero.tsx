@@ -107,7 +107,7 @@ export function Hero() {
               .
             </h1>
             <p className="max-w-xl text-lg leading-relaxed text-muted">
-              Quote by link, confirm every credit on your statement, and pay out with a second pair of eyes. <strong className="font-semibold text-ink">Your accounts and your float stay yours.</strong>
+              Customers ask for a rate on WhatsApp and get a locked quote back. You check every credit against your own statement, and a second person signs off larger payouts. <strong className="font-semibold text-ink">Your accounts and your float stay yours.</strong>
             </p>
             <div className="flex flex-col gap-3 pt-1 sm:flex-row">
               <a href="#demo" className="group flex items-center justify-center gap-2 rounded-full bg-brand px-8 py-4 text-sm font-bold text-white shadow-md transition-colors hover:bg-brand-deep">

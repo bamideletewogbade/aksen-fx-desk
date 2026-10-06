@@ -323,12 +323,7 @@ export function DeskView() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={
-          <span className="inline-flex items-center gap-2" suppressHydrationWarning>
-            {today}
-            <span className="inline-flex items-center gap-1 normal-case tracking-normal text-brand"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" /> live</span>
-          </span>
-        }
+        eyebrow={<span suppressHydrationWarning>{today}</span>}
         title={`${greeting}, ${session.userName.split(' ')[0]}`}
         subtitle={trades.length ? `${trades.length} trade${trades.length === 1 ? '' : 's'} in progress at ${session.orgName}.` : `Nothing in progress at ${session.orgName} right now.`}
         actions={<BriefButton />}

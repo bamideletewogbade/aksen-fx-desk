@@ -84,6 +84,19 @@ function Rich({ text }: { text: string }) {
   );
 }
 
+/** What the AI model read in a message the chat rules couldn't follow. */
+function AiLine({ ai }: { ai: NonNullable<MessageView['ai']> }) {
+  const label = ai.status === 'used' ? 'AI read this as' : ai.status === 'failed' ? 'AI couldn’t read this' : 'AI read this, but it wasn’t actionable';
+  return (
+    <div className={cx('rounded-lg border px-2 py-1 text-[0.6875rem] leading-snug', ai.status === 'used' ? 'border-[#cfeea0] bg-lime-soft text-brand' : 'border-line bg-paper text-subtle')} title={ai.error ?? ai.summary ?? ''}>
+      <span className="inline-flex items-center gap-1 font-semibold"><Bot size={11} /> {label}</span>
+      {ai.reading && <span>: {ai.reading}</span>}
+      {ai.summary && <span className="block opacity-80">“{ai.summary}”</span>}
+      <span className="block font-mono text-[0.5625rem] opacity-60">{ai.model ?? 'no model'} · {(ai.ms / 1000).toFixed(1)} s</span>
+    </div>
+  );
+}
+
 function Bubble({ m }: { m: MessageView }) {
   const time = new Date(m.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   if (m.direction === 'NOTE') {
@@ -113,6 +126,7 @@ function Bubble({ m }: { m: MessageView }) {
         <div className="space-y-1.5">
           <MediaBlock m={m} />
           {m.body && <div className="whitespace-pre-wrap break-words leading-relaxed"><Rich text={m.body} /></div>}
+          {!mine && m.ai && <AiLine ai={m.ai} />}
         </div>
         <div className={cx('mt-1 flex items-center justify-end gap-1.5 text-[0.625rem]', mine && !bot ? 'text-[#cfe3d6]' : 'text-subtle')}>
           {time}
@@ -248,9 +262,9 @@ function PlayCustomer({ c, onDone }: { c: ConversationSummary; onDone: () => voi
     }
   };
   return (
-    <div className="flex items-center gap-2 border-t border-dashed border-[#d9c7a6] bg-[#fffaf1] px-3 py-2">
+    <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-[#d9c7a6] bg-[#fffaf1] px-3 py-2">
       <FlaskConical size={14} className="flex-shrink-0 text-amber" />
-      <Input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && play()} placeholder="Reply as the customer (test)…" aria-label="Customer message" className="flex-1 py-1.5 text-xs" />
+      <Input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && play()} placeholder="Reply as the customer (test)…" aria-label="Customer message" className="min-w-[12rem] flex-1 py-1.5 text-xs" />
       <Button size="sm" variant="secondary" busy={busy} onClick={() => play()}>Send as customer</Button>
       <Button size="sm" variant="ghost" onClick={() => play(true)} title="Send a sample receipt image" icon={<Paperclip size={13} />}>Receipt</Button>
     </div>
@@ -401,12 +415,12 @@ export function InboxView() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow={<span className="inline-flex items-center gap-1.5"><span className={cx('h-1.5 w-1.5 rounded-full', live ? 'bg-brand animate-pulse' : 'bg-subtle')} /> {live ? 'Live' : 'Reconnecting…'}</span>}
+        eyebrow={live ? undefined : <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-subtle" /> Reconnecting…</span>}
         title="Inbox"
         subtitle="Every WhatsApp and SMS conversation with your customers. The assistant handles routine quotes; anything it hands over shows up here as “Needs you”."
         actions={<Link href="/whatsapp" className="text-sm font-semibold text-brand hover:underline">Numbers & test chats</Link>}
       />
-      <Card className="grid h-[calc(100vh-12.5rem)] min-h-[520px] overflow-hidden lg:grid-cols-[22rem_1fr]">
+      <Card className="grid h-[calc(100dvh-12.5rem)] min-h-[520px] overflow-hidden lg:grid-cols-[22rem_1fr]">
         <div className={cx('flex min-h-0 flex-col border-line lg:border-r', selected && 'hidden lg:flex')}>
           <div className="space-y-2 border-b border-line p-3">
             <div className="relative">

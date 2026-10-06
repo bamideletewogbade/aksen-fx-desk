@@ -305,11 +305,21 @@ export async function logout(db: Db, token: string | undefined) {
 
 // ---------- Team ----------
 
+async function currentTeamRole(q: Queryable, ctx: Ctx): Promise<Role> {
+  const [actor] = await q.query<{ role: Role }>(
+    'SELECT role FROM memberships WHERE org_id = $1 AND user_id = $2 AND active',
+    [ctx.orgId, ctx.userId],
+  );
+  if (!actor || !can(actor, 'team')) fail('FORBIDDEN', 'Your team access has changed. Refresh and try again.');
+  return actor.role;
+}
+
 export async function createInvite(db: Db, ctx: Ctx, input: { email: string; role: Exclude<Role, 'OWNER'> }) {
   requirePermission(ctx, 'team');
   const email = normEmail(input.email);
   const token = newToken(24);
   return db.tx(async (q) => {
+    await currentTeamRole(q, ctx);
     const member = await q.query(
       'SELECT 1 FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.org_id = $1 AND u.email = $2 AND m.active',
       [ctx.orgId, email],
@@ -380,13 +390,14 @@ export async function acceptInvite(
 }
 
 export async function listTeam(db: Db, ctx: Ctx) {
+  const managesTeam = can(ctx, 'team');
   const members = await db.query<{ user_id: string; name: string; email: string; role: Role; active: boolean; last_login_at: string | null }>(
     `SELECT u.id AS user_id, u.name, u.email, m.role, m.active, u.last_login_at
        FROM memberships m JOIN users u ON u.id = m.user_id
-      WHERE m.org_id = $1 ORDER BY m.active DESC, m.created_at`,
-    [ctx.orgId],
+      WHERE m.org_id = $1 ${managesTeam ? '' : 'AND m.user_id = $2'} ORDER BY m.active DESC, m.created_at`,
+    managesTeam ? [ctx.orgId] : [ctx.orgId, ctx.userId],
   );
-  const invites = can(ctx, 'team')
+  const invites = managesTeam
     ? await db.query<{ id: string; email: string; role: Role; expires_at: string }>(
         `SELECT id, email, role, expires_at FROM invites
           WHERE org_id = $1 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()
@@ -400,14 +411,26 @@ export async function listTeam(db: Db, ctx: Ctx) {
 export async function updateMember(db: Db, ctx: Ctx, input: { userId: string; role?: Role; active?: boolean }) {
   requirePermission(ctx, 'team');
   if (input.userId === ctx.userId) fail('INVALID', 'You cannot change your own role or access.');
+  if (input.role === undefined && input.active === undefined) fail('INVALID', 'Choose a role or access change.');
   return db.tx(async (q) => {
+    // Serialize membership changes for this desk, then recheck the actor. A
+    // request begun just before their own demotion must not keep admin rights.
+    await q.query('SELECT id FROM organizations WHERE id = $1 FOR NO KEY UPDATE', [ctx.orgId]);
+    const actorRole = await currentTeamRole(q, ctx);
     const [m] = await q.query<{ role: Role }>(
       'SELECT role FROM memberships WHERE org_id = $1 AND user_id = $2 FOR UPDATE',
       [ctx.orgId, input.userId],
     );
     if (!m) fail('NOT_FOUND', 'Team member not found.');
-    if (m.role === 'OWNER' && ctx.role !== 'OWNER') fail('FORBIDDEN', 'Only an owner can change another owner.');
-    if (input.role === 'OWNER' && ctx.role !== 'OWNER') fail('FORBIDDEN', 'Only an owner can make someone an owner.');
+    if (m.role === 'OWNER' && actorRole !== 'OWNER') fail('FORBIDDEN', 'Only an owner can change another owner.');
+    if (input.role === 'OWNER' && actorRole !== 'OWNER') fail('FORBIDDEN', 'Only an owner can make someone an owner.');
+    if (m.role === 'OWNER' && (input.active === false || (input.role && input.role !== 'OWNER'))) {
+      const [owners] = await q.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM memberships WHERE org_id = $1 AND role = 'OWNER' AND active",
+        [ctx.orgId],
+      );
+      if (Number(owners.count) <= 1) fail('CONFLICT', 'This desk must keep at least one active owner.');
+    }
     await q.query(
       'UPDATE memberships SET role = COALESCE($3, role), active = COALESCE($4, active) WHERE org_id = $1 AND user_id = $2',
       [ctx.orgId, input.userId, input.role ?? null, input.active ?? null],
@@ -421,7 +444,15 @@ export async function updateMember(db: Db, ctx: Ctx, input: { userId: string; ro
 
 export async function revokeInvite(db: Db, ctx: Ctx, inviteId: string) {
   requirePermission(ctx, 'team');
-  await db.query('UPDATE invites SET revoked_at = now() WHERE id = $1 AND org_id = $2', [inviteId, ctx.orgId]);
+  await db.tx(async (q) => {
+    await currentTeamRole(q, ctx);
+    const [invite] = await q.query<{ email: string }>(
+      'UPDATE invites SET revoked_at = now() WHERE id = $1 AND org_id = $2 AND accepted_at IS NULL AND revoked_at IS NULL RETURNING email',
+      [inviteId, ctx.orgId],
+    );
+    if (!invite) fail('NOT_FOUND', 'Pending invite not found.');
+    await appendAudit(q, { orgId: ctx.orgId, action: 'team.invite_revoked', actor: actorOf(ctx), data: { email: invite.email } });
+  });
 }
 
 export function isDomainError(e: unknown): e is DomainError {

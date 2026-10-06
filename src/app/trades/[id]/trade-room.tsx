@@ -667,12 +667,12 @@ export function TradeRoom({ id }: { id: string }) {
           <div className="flex items-center gap-3 text-right">
             <div>
               <div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Customer sends</div>
-              <div className="font-mono text-lg font-bold tabular text-ink">{formatMinor(t.payMinor, t.payCurrency)}</div>
+              <div className="whitespace-nowrap font-mono text-lg font-bold tabular text-ink">{formatMinor(t.payMinor, t.payCurrency)}</div>
             </div>
             <ArrowRight size={18} className="text-subtle" />
             <div>
               <div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Customer receives</div>
-              <div className="font-mono text-lg font-bold tabular text-brand">{formatMinor(t.receiveMinor, t.receiveCurrency)}</div>
+              <div className="whitespace-nowrap font-mono text-lg font-bold tabular text-brand">{formatMinor(t.receiveMinor, t.receiveCurrency)}</div>
             </div>
           </div>
         </div>
@@ -685,7 +685,7 @@ export function TradeRoom({ id }: { id: string }) {
         </dl>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
           <NextStep t={t} rails={rails.data?.rails ?? []} act={act} />
           {t.status !== 'FUNDS_CONFIRMED' && t.signals.length > 0 && (

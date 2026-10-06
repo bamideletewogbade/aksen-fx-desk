@@ -32,7 +32,7 @@ function layout(w: number, h: number, card: { right: number; top: number } | nul
   return { A, L, arcs };
 }
 
-function Node({ x, y, label, coord, align }: { x: number; y: number; label: string; coord: string; align: 'start' | 'end' }) {
+function Node({ x, y, label, coord, align, showLabel }: { x: number; y: number; label: string; coord: string; align: 'start' | 'end'; showLabel: boolean }) {
   const tx = align === 'start' ? x + 16 : x - 16;
   const ty = y;
   return (
@@ -42,11 +42,18 @@ function Node({ x, y, label, coord, align }: { x: number; y: number; label: stri
         <animate attributeName="r" values="5;22" dur="3.2s" repeatCount="indefinite" />
         <animate attributeName="opacity" values="0.5;0" dur="3.2s" repeatCount="indefinite" />
       </circle>
-      <text x={tx} y={ty - 6} textAnchor={align} fontSize="12" fontWeight="700" fill="#10261d" fontFamily="var(--font-geist-mono), monospace" letterSpacing="1.5">{label}</text>
-      <text x={tx} y={ty + 10} textAnchor={align} fontSize="10" fill="#6f8378" fontFamily="var(--font-geist-mono), monospace">{coord}</text>
+      {showLabel && (
+        <>
+          <text x={tx} y={ty - 6} textAnchor={align} fontSize="12" fontWeight="700" fill="#10261d" fontFamily="var(--font-geist-mono), monospace" letterSpacing="1.5">{label}</text>
+          <text x={tx} y={ty + 10} textAnchor={align} fontSize="10" fill="#6f8378" fontFamily="var(--font-geist-mono), monospace">{coord}</text>
+        </>
+      )}
     </g>
   );
 }
+
+// Below this width the city labels collide with the stats row and the quote card.
+const LABEL_MIN_WIDTH = 1400;
 
 const SPOT = 460;
 
@@ -166,8 +173,8 @@ export function HeroBackdrop() {
               ))}
           </g>
         ))}
-        <Node x={A.x} y={A.y} label="ACCRA · GHS" coord="5.60°N 0.19°W" align="start" />
-        <Node x={L.x} y={L.y} label="LAGOS · NGN" coord="6.52°N 3.38°E" align="end" />
+        {size.w >= LABEL_MIN_WIDTH && <Node x={A.x} y={A.y} label="ACCRA · GHS" coord="5.60°N 0.19°W" align="start" showLabel />}
+        <Node x={L.x} y={L.y} label="LAGOS · NGN" coord="6.52°N 3.38°E" align="end" showLabel={size.w >= LABEL_MIN_WIDTH} />
       </svg>
       {/* soften the lines right behind the headline so the copy stays easy to read */}
       <div className="absolute left-0 top-[18%] h-[55%] w-[50%] bg-[radial-gradient(ellipse_at_35%_50%,rgba(246,248,244,0.85),transparent_70%)] max-lg:hidden" />
