@@ -7,6 +7,8 @@ import { fail } from './errors';
 const API = 'https://sms.arkesel.com/api/v2';
 type Fetcher = typeof fetch;
 type SmsRow = { id: string; org_id: string; saver_id: string; recipient: string; message: string; attempts: number; provider_id: string | null };
+export type SusuSmsStatus = 'DRAFT' | 'QUEUED' | 'SENDING' | 'ACCEPTED' | 'SANDBOX' | 'DELIVERED' | 'NOT_DELIVERED' | 'FAILED' | 'UNKNOWN' | 'CANCELLED';
+export type SusuSmsView = { id: string; kind: string; status: SusuSmsStatus; errorCode: string | null; createdAt: string; updatedAt: string; message: string; recipient: string };
 
 /** Local Ghana numbers become international; other countries must include + or 00. */
 export function smsPhone(value: string | null | undefined): string | null {
@@ -38,8 +40,45 @@ export async function queueSusuSms(q: Queryable, ctx: Ctx, saverId: string, even
     `SELECT s.phone, s.sms_enabled, o.susu_sms_enabled FROM susu_savers s JOIN organizations o ON o.id = s.org_id WHERE s.id = $1 AND s.org_id = $2`, [saverId, ctx.orgId]);
   const phone = smsPhone(s?.phone);
   if (!s?.sms_enabled || !s.susu_sms_enabled || !phone) return;
-  await q.query(`INSERT INTO susu_sms (org_id,saver_id,event_key,kind,recipient,message) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (org_id,event_key) DO NOTHING`,
+  await q.query(`INSERT INTO susu_sms (org_id,saver_id,event_key,kind,recipient,message,status) VALUES ($1,$2,$3,$4,$5,$6,'DRAFT') ON CONFLICT (org_id,event_key) DO NOTHING`,
     [ctx.orgId, saverId, eventKey, kind, phone, message]);
+}
+
+function smsView(row: Record<string, unknown>): SusuSmsView {
+  return {
+    id: row.id as string,
+    kind: row.kind as string,
+    status: row.status as SusuSmsStatus,
+    errorCode: (row.error_code as string) ?? null,
+    createdAt: new Date(row.created_at as string).toISOString(),
+    updatedAt: new Date(row.updated_at as string).toISOString(),
+    message: row.message as string,
+    recipient: row.recipient as string,
+  };
+}
+
+export async function saverSusuSms(db: Db, ctx: Ctx, saverId: string): Promise<SusuSmsView[]> {
+  requirePermission(ctx, 'read');
+  const rows = await db.query<Record<string, unknown>>(
+    `SELECT m.* FROM susu_sms m JOIN susu_savers s ON s.id=m.saver_id
+      WHERE m.org_id=$1 AND m.saver_id=$2 AND s.org_id=$1 ORDER BY m.created_at DESC LIMIT 30`,
+    [ctx.orgId, saverId],
+  );
+  return rows.map(smsView);
+}
+
+export async function manageSusuSms(db: Db, ctx: Ctx, input: { id: string; saverId?: string; action: 'save' | 'send' | 'cancel'; message?: string }) {
+  requirePermission(ctx, 'trade');
+  const message = input.message?.trim();
+  if (input.action !== 'cancel' && (!message || message.length > 480)) fail('INVALID', 'Write a message between 1 and 480 characters.');
+  await db.tx(async (q) => {
+    const [row] = await q.query<{ id: string; saver_id: string; status: SusuSmsStatus }>('SELECT id,saver_id,status FROM susu_sms WHERE id=$1 AND org_id=$2 AND ($3::uuid IS NULL OR saver_id=$3) FOR UPDATE', [input.id, ctx.orgId, input.saverId ?? null]);
+    if (!row) fail('NOT_FOUND', 'SMS draft not found.');
+    if (row.status !== 'DRAFT') fail('CONFLICT', 'Only an unsent draft can be edited, sent or skipped. Refresh to see its latest status.');
+    const status = input.action === 'send' ? 'QUEUED' : input.action === 'cancel' ? 'CANCELLED' : 'DRAFT';
+    await q.query(`UPDATE susu_sms SET status=$3,message=COALESCE($4,message),error_code=NULL,available_at=CASE WHEN $3='QUEUED' THEN now() ELSE available_at END,updated_at=now() WHERE id=$1 AND org_id=$2`, [input.id, ctx.orgId, status, message ?? null]);
+    await appendAudit(q,{orgId:ctx.orgId,actor:actorOf(ctx),action:`susu.sms_${input.action}`,data:{messageId:input.id,saverId:row.saver_id}});
+  });
 }
 
 async function finish(db: Db, id: string, status: string, code: string | null = null, providerId: string | null = null) {
@@ -128,7 +167,7 @@ export async function setSusuSmsEnabled(db: Db, ctx: Ctx, enabled: boolean) {
   if (enabled && !smsConfig().configured) fail('INVALID','Configure the Arkesel API key and approved sender name on the server first.');
   await db.tx(async (q) => {
     await q.query('UPDATE organizations SET susu_sms_enabled=$2 WHERE id=$1',[ctx.orgId,enabled]);
-    if (!enabled) await q.query(`UPDATE susu_sms SET status='CANCELLED',error_code='desk_disabled',updated_at=now() WHERE org_id=$1 AND status IN ('QUEUED','FAILED')`,[ctx.orgId]);
+    if (!enabled) await q.query(`UPDATE susu_sms SET status='CANCELLED',error_code='desk_disabled',updated_at=now() WHERE org_id=$1 AND status IN ('DRAFT','QUEUED','FAILED')`,[ctx.orgId]);
     await appendAudit(q,{orgId:ctx.orgId,actor:actorOf(ctx),action:'susu.sms_setting',data:{enabled}});
   });
 }

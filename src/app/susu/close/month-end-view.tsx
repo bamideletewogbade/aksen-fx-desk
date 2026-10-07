@@ -46,7 +46,7 @@ export function MonthEndView() {
         method: 'POST',
         json: { pages: pages.map((p) => ({ pageId: p.id, kind: choice(p.id).kind, method: choice(p.id).kind === 'PAYOUT' ? choice(p.id).method : null, reference: choice(p.id).reference || null })) },
       });
-      toast(`${d.closed.length} page${d.closed.length === 1 ? '' : 's'} closed · ${cedis(totals.fees)} in fees`);
+      toast(`${d.closed.length} page${d.closed.length === 1 ? '' : 's'} closed · ${cedis(totals.fees)} in fees · SMS drafts ready on saver pages`);
       setData({ today: d.today, pages: d.pages });
       setChoices({});
     } catch (e) {

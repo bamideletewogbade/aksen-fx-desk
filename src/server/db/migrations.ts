@@ -488,4 +488,14 @@ CREATE INDEX susu_sms_saver_idx ON susu_sms (saver_id, created_at DESC);
 CREATE INDEX susu_sms_receipts_idx ON susu_sms (checked_at) WHERE status = 'ACCEPTED'
 `,
   },
+  {
+    // Generated receipts wait for a human review. Operators can edit or skip
+    // the draft before it becomes eligible for the background sender.
+    id: '008_susu_sms_drafts',
+    sql: `
+ALTER TABLE susu_sms DROP CONSTRAINT susu_sms_status_check;
+ALTER TABLE susu_sms ALTER COLUMN status SET DEFAULT 'DRAFT';
+ALTER TABLE susu_sms ADD CONSTRAINT susu_sms_status_check CHECK (status IN ('DRAFT','QUEUED','SENDING','ACCEPTED','SANDBOX','DELIVERED','NOT_DELIVERED','FAILED','UNKNOWN','CANCELLED'))
+`,
+  },
 ];

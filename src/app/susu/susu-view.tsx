@@ -123,7 +123,7 @@ function OneCollection({ savers, onSaved }: { savers: SaverSummary[]; onSaved: (
     try {
       requestId.current ??= crypto.randomUUID();
       const r = await api<{ result: { days: number; changeMinor: number; name: string } }>(`/api/susu/${saverId}`, { method: 'POST', json: { action: 'collect', amount, requestId: requestId.current } });
-      toast(`${r.result.name.split(' ')[0]}: ${r.result.days} day${r.result.days === 1 ? '' : 's'} recorded${r.result.changeMinor ? ` · give back ${cedis(r.result.changeMinor)}` : ''}`);
+      toast(`${r.result.name.split(' ')[0]}: ${r.result.days} day${r.result.days === 1 ? '' : 's'} recorded${r.result.changeMinor ? ` · give back ${cedis(r.result.changeMinor)}` : ''}${saver?.smsEnabled ? ' · SMS draft ready on their page' : ''}`);
       requestId.current = null;
       setAmount('');
       onSaved();
@@ -190,7 +190,7 @@ function RoundEntry({ onSaved }: { onSaved: () => void }) {
       requestId.current ??= crypto.randomUUID();
       const d = await api<{ results: { days: number; changeMinor: number; name: string }[] }>('/api/susu/collect', { method: 'POST', json: { rows: ready.map((r) => ({ saverId: r.saverId, amount: (r.l.amountMinor! / 100).toFixed(2) })), requestId: requestId.current } });
       const change = d.results.filter((r) => r.changeMinor > 0);
-      toast(`${d.results.length} collection${d.results.length === 1 ? '' : 's'} recorded${change.length ? ` · give change to ${change.map((c) => `${c.name.split(' ')[0]} ${cedis(c.changeMinor)}`).join(', ')}` : ''}`);
+      toast(`${d.results.length} collection${d.results.length === 1 ? '' : 's'} recorded${change.length ? ` · give change to ${change.map((c) => `${c.name.split(' ')[0]} ${cedis(c.changeMinor)}`).join(', ')}` : ''} · SMS drafts are ready on saver pages`);
       setText('');
       setLines(null);
       requestId.current = null;

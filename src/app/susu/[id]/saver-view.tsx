@@ -2,18 +2,67 @@
 
 import Link from 'next/link';
 import { useRef, useState } from 'react';
-import { ArrowLeft, Flame, HandCoins, Pencil, Phone } from 'lucide-react';
+import { ArrowLeft, Flame, HandCoins, MessageSquareText, Pencil, Phone, Send, X } from 'lucide-react';
 import { api, ApiError, useLoad } from '@/lib/api';
 import { canApprove, canTrade } from '@/lib/auth';
 import { cedis, closeMath, daysInMonth, periodLabel, splitCash } from '@/lib/susu';
 import { dateTime } from '@/lib/time';
 import { useSession } from '@/components/app-shell';
-import { Button, Card, cx, Dialog, Field, Input, Notice, Pill, Select, Skeleton, toast } from '@/components/ui';
+import { Button, Card, cx, Dialog, Field, Input, Notice, Pill, Select, Skeleton, Textarea, toast } from '@/components/ui';
 import type { SaverSummary, SusuPage } from '@/server/susu';
+import type { SusuSmsView } from '@/server/susu-sms';
 import { StandingPill } from '../susu-view';
 
 type Payment = { id: string; at: string; receivedMinor: number; changeMinor: number; days: number; periods: string[]; note: string | null; by: string | null };
-type Data = { saver: SaverSummary; pages: SusuPage[]; payments: Payment[]; today: string };
+type Data = { saver: SaverSummary; pages: SusuPage[]; payments: Payment[]; sms: SusuSmsView[]; smsDeskEnabled: boolean; today: string };
+
+const smsStatus: Record<SusuSmsView['status'], { label: string; tone: 'neutral' | 'waiting' | 'good' | 'risk' | 'done' }> = {
+  DRAFT: { label: 'Needs your review', tone: 'waiting' }, QUEUED: { label: 'Waiting to send', tone: 'waiting' }, SENDING: { label: 'Sending', tone: 'waiting' },
+  ACCEPTED: { label: 'Accepted by Arkesel', tone: 'neutral' }, SANDBOX: { label: 'Test only', tone: 'neutral' }, DELIVERED: { label: 'Delivered', tone: 'good' },
+  NOT_DELIVERED: { label: 'Not delivered', tone: 'risk' }, FAILED: { label: 'Rejected', tone: 'risk' }, UNKNOWN: { label: 'Check Arkesel', tone: 'risk' }, CANCELLED: { label: 'Skipped', tone: 'done' },
+};
+
+function SmsDraft({ saverId, sms, onChanged }: { saverId: string; sms: SusuSmsView; onChanged: (data: Data) => void }) {
+  const [message, setMessage] = useState(sms.message);
+  const [busy, setBusy] = useState<'save' | 'send' | 'cancel' | null>(null);
+  const act = async (action: 'save' | 'send' | 'cancel') => {
+    setBusy(action);
+    try {
+      const data = await api<Data>(`/api/susu/${saverId}/sms`, { method: 'POST', json: { messageId: sms.id, action, ...(action === 'cancel' ? {} : { message }) } });
+      onChanged(data);
+      toast(action === 'send' ? 'SMS queued for sending' : action === 'cancel' ? 'SMS skipped' : 'Draft saved');
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : 'Could not update the SMS.', 'risk');
+    } finally { setBusy(null); }
+  };
+  return <div className="rounded-xl border border-amber/30 bg-amber-bg/40 p-4">
+    <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><strong className="text-sm text-ink">Review before sending</strong><Pill tone="waiting">Draft</Pill></div>
+    <Textarea rows={4} value={message} maxLength={480} onChange={(e) => setMessage(e.target.value)} aria-label="SMS message" />
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <span className="mr-auto text-xs text-subtle">{message.length}/480 characters{message.length > 160 ? ' · may use more than one SMS credit' : ''}</span>
+      <Button size="sm" variant="ghost" icon={<X size={13} />} busy={busy === 'cancel'} onClick={() => act('cancel')}>Skip</Button>
+      <Button size="sm" variant="secondary" busy={busy === 'save'} disabled={!message.trim() || message === sms.message} onClick={() => act('save')}>Save draft</Button>
+      <Button size="sm" icon={<Send size={13} />} busy={busy === 'send'} disabled={!message.trim()} onClick={() => act('send')}>Send SMS</Button>
+    </div>
+  </div>;
+}
+
+function SaverSms({ data, allowed, onChanged }: { data: Data; allowed: boolean; onChanged: (data: Data) => void }) {
+  const drafts = data.sms.filter((m) => m.status === 'DRAFT');
+  const history = data.sms.filter((m) => m.status !== 'DRAFT').slice(0, 8);
+  return <Card className="space-y-4 p-5">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><h2 className="flex items-center gap-2 text-sm font-bold text-ink"><MessageSquareText size={16} /> Saver SMS</h2><p className="mt-1 text-xs text-muted">Review the words, then send. Saving money never depends on SMS delivery.</p></div>
+      <Pill tone={data.smsDeskEnabled && data.saver.smsEnabled ? 'good' : 'done'}>{!data.smsDeskEnabled ? 'SMS off in Settings' : data.saver.smsEnabled ? 'Receipts on' : 'Receipts off'}</Pill>
+    </div>
+    {!data.smsDeskEnabled ? <p className="text-sm text-subtle">Turn on Susu SMS receipts in Settings before creating new drafts.</p> : !data.saver.smsEnabled ? <p className="text-sm text-subtle">Turn receipts on under Edit after confirming the phone number.</p> : !data.sms.length ? <p className="text-sm text-subtle">No SMS drafts or delivery history yet.</p> : null}
+    {allowed && drafts.map((m) => <SmsDraft key={m.id} saverId={data.saver.id} sms={m} onChanged={onChanged} />)}
+    {!allowed && drafts.length > 0 && <Notice tone="info">{drafts.length} SMS draft{drafts.length === 1 ? '' : 's'} waiting for an operator to review.</Notice>}
+    {history.length > 0 && <div><h3 className="mb-1 text-xs font-semibold text-ink">Recent messages</h3><ul className="divide-y divide-line">
+      {history.map((m) => <li key={m.id} className="py-2 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-subtle" suppressHydrationWarning>{dateTime(m.createdAt)} · +{m.recipient}</span><Pill tone={smsStatus[m.status].tone}>{smsStatus[m.status].label}</Pill></div><p className="mt-1 line-clamp-2 text-xs text-muted">{m.message}</p></li>)}
+    </ul></div>}
+  </Card>;
+}
 
 /** The page as the saver would see it in their booklet: a box per day of the month. */
 function Booklet({ page, today }: { page: SusuPage; today: string }) {
@@ -110,7 +159,7 @@ function Withdraw({ s, page, onClose, onDone }: { s: SaverSummary; page: SusuPag
     setBusy(true);
     try {
       const d = await api<Data & { result: { balanceMinor: number } }>(`/api/susu/${s.id}`, { method: 'POST', json: { action: 'withdraw', method, reference: reference || null } });
-      toast(`Withdrawal recorded for ${s.name.split(' ')[0]} · ${cedis(d.result.balanceMinor)}`);
+      toast(`Withdrawal recorded for ${s.name.split(' ')[0]} · ${cedis(d.result.balanceMinor)}${s.smsEnabled ? ' · SMS draft ready below' : ''}`);
       onDone(d);
       onClose();
     } catch (e) {
@@ -144,7 +193,7 @@ function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode 
 
 export function SaverView({ id }: { id: string }) {
   const session = useSession();
-  const { data, setData, error } = useLoad<Data>(`/api/susu/${id}`);
+  const { data, setData, error } = useLoad<Data>(`/api/susu/${id}`, { pollMs: 10_000 });
   const [amount, setAmount] = useState('');
   const collectionRequestId = useRef<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -170,7 +219,7 @@ export function SaverView({ id }: { id: string }) {
       setData(d);
       setAmount('');
       collectionRequestId.current = null;
-      toast(`${d.result.days} day${d.result.days === 1 ? '' : 's'} recorded${d.result.changeMinor ? ` · give back ${cedis(d.result.changeMinor)}` : ''}`);
+      toast(`${d.result.days} day${d.result.days === 1 ? '' : 's'} recorded${d.result.changeMinor ? ` · give back ${cedis(d.result.changeMinor)}` : ''}${s.smsEnabled ? ' · SMS draft ready below' : ''}`);
     } catch (e) {
       toast(e instanceof ApiError ? e.message : 'Could not record.', 'risk');
     } finally {
@@ -220,6 +269,8 @@ export function SaverView({ id }: { id: string }) {
           </div>
         )}
       </Card>
+
+      <SaverSms data={data} allowed={allowed} onChanged={setData} />
 
       {page && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">

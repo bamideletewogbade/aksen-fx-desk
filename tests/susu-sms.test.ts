@@ -3,13 +3,19 @@ import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import { createTestDb, type Db } from '@/server/db';
 import { signup, login, resolveSession, type Ctx } from '@/server/auth';
 import { saveSaver, recordCollection, recordCollections, getSaver, closePage, withdraw } from '@/server/susu';
-import { dispatchSusuSms, refreshSusuSmsDelivery, retrySusuSms, setSusuSmsEnabled, smsPhone, susuSmsOverview } from '@/server/susu-sms';
+import { dispatchSusuSms, manageSusuSms, refreshSusuSmsDelivery, retrySusuSms, saverSusuSms, setSusuSmsEnabled, smsPhone, susuSmsOverview } from '@/server/susu-sms';
 
 describe('Susu transactional SMS', () => {
   let db:Db, owner:Ctx;
   const phone = '0244123456';
   const saved = () => saveSaver(db,owner,{name:'Receipt Saver',phone,dailyMinor:1000,smsEnabled:true});
   const queue = (id:string) => db.query<{id:string;status:string;message:string;kind:string;provider_id:string}>('SELECT * FROM susu_sms WHERE saver_id=$1 ORDER BY created_at',[id]);
+  const sendFirstDraft = async (id:string) => {
+    const row=(await queue(id)).find(r=>r.status==='DRAFT');
+    if (!row) throw new Error('Expected an SMS draft');
+    await manageSusuSms(db,owner,{id:row.id,action:'send',message:row.message});
+    return row;
+  };
   const accepted = vi.fn<typeof fetch>(async (_url,init) => {
     const body = JSON.parse(init!.body as string);
     return Response.json({status:'success',data:[{recipient:body.recipients[0],id:randomUUID()}]});
@@ -34,10 +40,27 @@ describe('Susu transactional SMS', () => {
     await recordCollection(db,owner,{saverId:id,amountMinor:2500,requestId});
     const rows=await queue(id);
     expect(rows.map(r=>r.kind)).toEqual(['WELCOME','COLLECTION']);
+    expect(rows.map(r=>r.status)).toEqual(['DRAFT','DRAFT']);
     expect(rows[1].message).toMatch(/Susu receipt\. Saved GHS 20\.00 on \d{1,2} [A-Z][a-z]{2} \d{4} \(2 days\)\./);
     expect(rows[1].message).toContain('Total in your susu book: GHS 20.00 before fee.');
     expect(rows[1].message).toContain('Change GHS 5.00.');
     expect(accepted).not.toHaveBeenCalled();
+  });
+  it('requires review and allows editing before a draft can be sent',async () => {
+    const {id}=await saved();accepted.mockClear();
+    const [draft]=await queue(id);
+    expect(draft.status).toBe('DRAFT');
+    await dispatchSusuSms(db,owner.orgId,accepted,1);
+    expect(accepted).not.toHaveBeenCalled();
+    await expect(manageSusuSms(db,{...owner,role:'VIEWER'},{id:draft.id,action:'save',message:draft.message})).rejects.toThrow();
+    await expect(manageSusuSms(db,owner,{id:draft.id,saverId:randomUUID(),action:'save',message:draft.message})).rejects.toThrow(/not found/i);
+    const edited='SMS Test Desk: Welcome. Your susu booklet is ready. Keep every receipt.';
+    await manageSusuSms(db,owner,{id:draft.id,action:'save',message:edited});
+    expect((await saverSusuSms(db,owner,id))[0]).toMatchObject({status:'DRAFT',message:edited});
+    await manageSusuSms(db,owner,{id:draft.id,action:'send',message:edited});
+    expect((await queue(id))[0].status).toBe('QUEUED');
+    await dispatchSusuSms(db,owner.orgId,accepted,1);
+    expect((await queue(id))[0]).toMatchObject({status:'SANDBOX',message:edited});
   });
   it('shows the saver an up-to-date running susu total',async () => {
     const {id} = await saved();
@@ -85,8 +108,9 @@ describe('Susu transactional SMS', () => {
     expect((await queue(s.id))[0].status).toBe('CANCELLED');
   });
   it('claims once under competing workers and never calls sandbox sends delivered',async () => {
-    await db.query("UPDATE susu_sms SET status='CANCELLED' WHERE status='QUEUED'");
+    await db.query("UPDATE susu_sms SET status='CANCELLED' WHERE status IN ('DRAFT','QUEUED')");
     const s=await saved();accepted.mockClear();
+    await sendFirstDraft(s.id);
     await Promise.all([dispatchSusuSms(db,owner.orgId,accepted,1),dispatchSusuSms(db,owner.orgId,accepted,1)]);
     expect(accepted).toHaveBeenCalledTimes(1);
     expect(JSON.parse(accepted.mock.calls[0][1]!.body as string).sandbox).toBe(true);
@@ -95,16 +119,19 @@ describe('Susu transactional SMS', () => {
   it('holds timeout and stale claims for review; definitive rejection can safely retry',async () => {
     const s=await saved();
     const timeout=vi.fn<typeof fetch>(async()=>{throw new Error('timeout');});
+    await sendFirstDraft(s.id);
     await dispatchSusuSms(db,owner.orgId,timeout,1);
     const [row]=await queue(s.id);expect(row.status).toBe('UNKNOWN');
     await expect(retrySusuSms(db,owner,row.id)).rejects.toThrow();
     await dispatchSusuSms(db,owner.orgId,timeout,1);expect(timeout).toHaveBeenCalledTimes(1);
     const rejected=await saved();
+    await sendFirstDraft(rejected.id);
     await dispatchSusuSms(db,owner.orgId,async()=>new Response('',{status:402}),1);
     const [r]=await queue(rejected.id);expect(r.status).toBe('FAILED');
     await retrySusuSms(db,owner,r.id);await dispatchSusuSms(db,owner.orgId,accepted,1);
     expect((await queue(rejected.id))[0].status).toBe('SANDBOX');
     const stale=await saved();
+    await sendFirstDraft(stale.id);
     await db.query("UPDATE susu_sms SET status='SENDING',claimed_at=now()-interval '6 minutes' WHERE saver_id=$1",[stale.id]);
     await dispatchSusuSms(db,owner.orgId,accepted,1);
     expect((await queue(stale.id))[0].status).toBe('UNKNOWN');
@@ -112,6 +139,7 @@ describe('Susu transactional SMS', () => {
   });
   it('confirms delivery only from a matching authenticated provider result',async () => {
     vi.stubEnv('ARKESEL_SANDBOX','false');const s=await saved();
+    await sendFirstDraft(s.id);
     await dispatchSusuSms(db,owner.orgId,accepted,1);
     const [r]=await queue(s.id);expect(r.status).toBe('ACCEPTED');
     await refreshSusuSmsDelivery(db,owner.orgId,async()=>Response.json({status:'success',data:{ID:r.provider_id,recipient:'233244000000',status:'DELIVERED'}}));

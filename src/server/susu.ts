@@ -6,7 +6,7 @@ import { fail } from './errors';
 import { todayIn } from './day-close';
 import { closeMath, daysInMonth, dueToday, expectedByToday, nextPeriod, periodLabel, periodOf, splitCash, standing, streak, type Period, type Standing } from '@/lib/susu';
 import { formatMinor, type Currency } from '@/lib/money';
-import { queueSusuSms, smsDate, smsMoney, smsPhone, smsText } from './susu-sms';
+import { queueSusuSms, saverSusuSms, smsDate, smsMoney, smsPhone, smsText } from './susu-sms';
 
 /**
  * Susu (daily savings) for a desk. Desk staff record cash they collect; the
@@ -135,7 +135,7 @@ export async function saveSaver(
       await q.query('UPDATE susu_savers SET name = $3, phone = $4, notes = $5, status = COALESCE($6, status) WHERE id = $1 AND org_id = $2', [s.id, ctx.orgId, name, phone, input.notes?.trim() || null, input.status ?? null]);
       await q.query('UPDATE susu_savers SET sms_enabled = CASE WHEN $3::boolean IS FALSE THEN false ELSE COALESCE($2, sms_enabled) END WHERE id=$1', [s.id, input.smsEnabled ?? null, !!smsPhone(phone)]);
       // Never deliver a queued financial receipt to an edited number later.
-      await q.query(`UPDATE susu_sms SET status='CANCELLED',error_code='recipient_or_preference_changed',updated_at=now() WHERE saver_id=$1 AND status IN ('QUEUED','FAILED') AND (recipient IS DISTINCT FROM $2 OR NOT (SELECT sms_enabled FROM susu_savers WHERE id=$1))`, [s.id, smsPhone(phone)]);
+      await q.query(`UPDATE susu_sms SET status='CANCELLED',error_code='recipient_or_preference_changed',updated_at=now() WHERE saver_id=$1 AND status IN ('DRAFT','QUEUED','FAILED') AND (recipient IS DISTINCT FROM $2 OR NOT (SELECT sms_enabled FROM susu_savers WHERE id=$1))`, [s.id, smsPhone(phone)]);
       let dailyChange: 'now' | 'next_page' | null = null;
       if (input.dailyMinor === N(s.daily_minor) && s.next_daily_minor !== null) {
         // Choosing the current amount again cancels a change queued for a future page.
@@ -444,6 +444,7 @@ export async function getSaver(db: Db, ctx: Ctx, id: string) {
   requirePermission(ctx, 'read');
   const [summary] = await summarise(db, ctx, 'AND s.id = $2', [id]);
   if (!summary) fail('NOT_FOUND', 'Saver not found.');
+  const [smsDesk] = await db.query<{ susu_sms_enabled: boolean }>('SELECT susu_sms_enabled FROM organizations WHERE id=$1', [ctx.orgId]);
   const pages = (await db.query<Record<string, unknown>>('SELECT * FROM susu_pages WHERE saver_id = $1 AND org_id = $2 ORDER BY period DESC, page_no DESC', [id, ctx.orgId])).map(mapPage);
   const collections = await db.query<Record<string, unknown>>(
     `SELECT c.*, p.period, u.name AS recorded_by_name FROM susu_collections c JOIN susu_pages p ON p.id = c.page_id LEFT JOIN users u ON u.id = c.recorded_by
@@ -467,7 +468,7 @@ export async function getSaver(db: Db, ctx: Ctx, id: string) {
   }
   // Both halves of a spilled payment share a timestamp, so row order alone can't be trusted: list months oldest first.
   for (const p of payments.values()) p.periods.sort();
-  return { saver: summary, pages, payments: [...payments.values()], today: await orgToday(db, ctx.orgId) };
+  return { saver: summary, pages, payments: [...payments.values()], sms: await saverSusuSms(db, ctx, id), smsDeskEnabled: smsDesk?.susu_sms_enabled === true, today: await orgToday(db, ctx.orgId) };
 }
 
 export interface SusuOverview {
