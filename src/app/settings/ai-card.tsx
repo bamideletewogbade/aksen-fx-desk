@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { Bot, FlaskConical, Wallet } from 'lucide-react';
 import { api, ApiError, useLoad } from '@/lib/api';
 import type { AiOverview } from '@/server/ai/settings';
-import { Button, Card, cx, Field, Input, Notice, Pill, Skeleton, toast } from '@/components/ui';
+import { Button, Card, Field, Input, Notice, Pill, Skeleton, toast } from '@/components/ui';
 import { useSession } from '@/components/app-shell';
 
 type TestResult = { text: string; ok: boolean; model: string | null; ms: number; reading: string | null; reply: string | null; error?: string };
+const AI_BUDGET_TARGET_USD = 4.80;
 
 /**
  * The desk's AI assistant: which OpenRouter model reads customer chat, whether
@@ -36,7 +37,6 @@ export function AiCard() {
   const acc = ai.account;
   const preset = ai.presets.find((p) => p.id === ai.models.model);
   const paid = !ai.models.model.endsWith(':free');
-  const noCredit = acc.balanceUsd !== null && acc.balanceUsd <= 0;
 
   const save = async () => {
     setBusy('save');
@@ -79,9 +79,9 @@ export function AiCard() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl bg-paper p-3">
-          <div className="flex items-center gap-1.5 text-xs text-subtle"><Wallet size={13} /> OpenRouter balance</div>
-          <div className={cx('mt-0.5 font-mono text-lg font-bold', noCredit ? 'text-amber' : 'text-ink')}>{acc.balanceUsd === null ? 'n/a' : `$${acc.balanceUsd.toFixed(2)}`}</div>
-          <div className="text-xs text-subtle">{noCredit ? 'Top up to use paid models. Free models still work.' : 'Paid models draw from this.'}</div>
+          <div className="flex items-center gap-1.5 text-xs text-subtle"><Wallet size={13} /> AI budget target</div>
+          <div className="mt-0.5 font-mono text-lg font-bold text-ink">${AI_BUDGET_TARGET_USD.toFixed(2)}</div>
+          <div className="text-xs text-subtle">Planning amount for paid-model usage.</div>
         </div>
         <div className="rounded-xl bg-paper p-3">
           <div className="text-xs text-subtle">Free requests today</div>
