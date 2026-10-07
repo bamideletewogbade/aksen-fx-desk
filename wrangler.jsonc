@@ -4,7 +4,8 @@
   // `wrangler secret`, never here. Build from a checkout without .env.local: OpenNext compiles .env* files in.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aksen-otc",
-  "main": ".open-next/worker.js",
+  "main": "custom-worker.ts",
+  "triggers": { "crons": ["*/2 * * * *"] },
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },

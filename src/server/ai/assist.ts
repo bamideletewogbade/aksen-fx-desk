@@ -36,11 +36,14 @@ export async function decideWithAi(
 
   const step = ({ ...A.FRESH, ...(input.state ?? {}) } as A.BotState).step;
   const { masked, numbers } = maskNumbers(input.text);
+  // Previous assistant replies can contain collection or payout accounts. They
+  // provide conversational context, but the external reader never needs the digits.
+  const safeLastReply = input.lastReply ? maskNumbers(input.lastReply).masked.replace(/#\d+/g, '[private number]') : null;
   const started = Date.now();
   let reading: Reading | null = null;
   let model: string | null = null;
   try {
-    const res = await complete(readingPrompt({ maskedText: masked, step, lastReply: input.lastReply ?? null }));
+    const res = await complete(readingPrompt({ maskedText: masked, step, lastReply: safeLastReply }));
     model = res.model;
     reading = groundReading(res.content, { text: input.text, numbers });
   } catch (e) {

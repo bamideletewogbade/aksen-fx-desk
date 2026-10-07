@@ -11,7 +11,7 @@ export function OriginStory() {
         </div>
 
         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#10261d] leading-snug">
-          "I remember first arriving in Ghana as a student. The anxiety of waiting for Cedis never leaves you."
+          &ldquo;I remember first arriving in Ghana as a student. The anxiety of waiting for Cedis never leaves you.&rdquo;
         </h2>
 
         <div className="prose prose-sm text-[#47584e] space-y-4 text-sm sm:text-base leading-relaxed">

@@ -3,6 +3,7 @@ import { actorOf, requirePermission, type Ctx } from './auth';
 import { appendAudit } from './audit';
 import { fail } from './errors';
 import { post, railAccount, railBalances } from './ledger';
+import { assertRailDayOpen } from './day-close';
 import { CORRIDORS, parseRate, rateToString, type Corridor, type Currency } from '@/lib/money';
 
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
@@ -282,11 +283,13 @@ export async function adjustFloat(
     const rails = await q.query<{ id: string; currency: Currency; label: string }>('SELECT id, currency, label FROM rails WHERE org_id = $1 AND id = ANY($2::uuid[])', [ctx.orgId, [input.railId, input.toRailId].filter(Boolean)]);
     const from = rails.find((r) => r.id === input.railId);
     if (!from) fail('NOT_FOUND', 'Account not found.');
+    await assertRailDayOpen(q, ctx.orgId, from!.id);
     const amt = input.amountMinor;
     if (input.toRailId) {
       const to = rails.find((r) => r.id === input.toRailId);
       if (!to) fail('NOT_FOUND', 'Destination account not found.');
       if (to!.currency !== from!.currency) fail('INVALID', 'Transfers must be between accounts of the same currency.');
+      await assertRailDayOpen(q, ctx.orgId, to!.id);
       await post(q, { orgId: ctx.orgId, kind: 'float_transfer', memo: input.memo, userId: ctx.userId, lines: [
         { account: railAccount(from!.id), currency: from!.currency, amountMinor: -amt },
         { account: railAccount(to!.id), currency: to!.currency, amountMinor: amt },
@@ -324,11 +327,15 @@ export interface CustomerRow {
 
 const CUSTOMER_SELECT = `
   SELECT c.*,
-    (SELECT COUNT(*) FROM trades t WHERE t.customer_id = c.id) AS trade_count,
-    (SELECT COUNT(*) FROM trades t WHERE t.customer_id = c.id AND t.status = 'COMPLETED') AS completed_count,
+    (SELECT COUNT(*) FROM trades t WHERE t.customer_id = c.id
+       AND NOT EXISTS (SELECT 1 FROM conversations cv WHERE cv.id = t.conversation_id AND cv.is_test)) AS trade_count,
+    (SELECT COUNT(*) FROM trades t WHERE t.customer_id = c.id AND t.status = 'COMPLETED'
+       AND NOT EXISTS (SELECT 1 FROM conversations cv WHERE cv.id = t.conversation_id AND cv.is_test)) AS completed_count,
     (SELECT COALESCE(SUM(CASE WHEN t.pay_currency = 'NGN' THEN t.pay_minor ELSE t.receive_minor END),0)
-       FROM trades t WHERE t.customer_id = c.id AND t.status = 'COMPLETED') AS volume_ngn,
-    (SELECT MAX(t.created_at) FROM trades t WHERE t.customer_id = c.id) AS last_trade_at
+       FROM trades t WHERE t.customer_id = c.id AND t.status = 'COMPLETED'
+       AND NOT EXISTS (SELECT 1 FROM conversations cv WHERE cv.id = t.conversation_id AND cv.is_test)) AS volume_ngn,
+    (SELECT MAX(t.created_at) FROM trades t WHERE t.customer_id = c.id
+       AND NOT EXISTS (SELECT 1 FROM conversations cv WHERE cv.id = t.conversation_id AND cv.is_test)) AS last_trade_at
   FROM customers c`;
 
 function mapCustomer(r: Record<string, unknown>): CustomerRow {
@@ -379,6 +386,7 @@ export async function saveCustomer(
     if (input.id) {
       const [before] = await q.query<{ kyc_status: string }>('SELECT kyc_status FROM customers WHERE id=$1 AND org_id=$2 FOR UPDATE', [input.id, ctx.orgId]);
       if (!before) fail('NOT_FOUND', 'Customer not found.');
+      if (input.kycStatus && input.kycStatus !== before.kyc_status) requirePermission(ctx, 'approve');
       await q.query(
         `UPDATE customers SET name=$3, phone=$4, email=$5, kyc_status=COALESCE($6, kyc_status), id_type=$7, id_reference=$8,
            per_trade_limit_ngn=$9, notes=$10, updated_at=now() WHERE id=$1 AND org_id=$2`,

@@ -169,7 +169,7 @@ export function TrustAndReviews() {
                 </div>
 
                 <p className="text-xs text-[#334239] leading-relaxed italic">
-                  "{vouch.quote}"
+                  &ldquo;{vouch.quote}&rdquo;
                 </p>
               </div>
 

@@ -17,6 +17,7 @@ import {
   Clock,
   SlidersHorizontal,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { OperatorRailToggle } from './operator-rail-toggle';
 import { Session, initialsOf } from '@/lib/auth';
 
@@ -36,7 +37,7 @@ const read = () => {
 interface NavItem {
   href: string;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   badge?: string;
 }
 

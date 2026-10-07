@@ -10,6 +10,7 @@ import type { ChainReport } from '@/server/audit';
 import { Button, Card, Field, Input, Notice, PageHeader, Select, Skeleton, Textarea, toast } from '@/components/ui';
 import { useSession } from '@/components/app-shell';
 import { AiCard } from './ai-card';
+import { SmsCard } from './sms-card';
 
 export function SettingsView() {
   const session = useSession();
@@ -111,6 +112,7 @@ export function SettingsView() {
           ) : <Skeleton className="mt-2 h-16" />}
         </Card>
         <AiCard />
+        {editable && <SmsCard />}
       </div>
     </div>
   );

@@ -162,6 +162,7 @@ export const simulateSchema = z.object({
 });
 
 export const saverSchema = z.object({
+  smsEnabled: z.boolean().optional(),
   name: z.string().trim().min(2, 'Enter the saver’s name').max(80),
   phone: z.string().trim().max(30).optional().nullable(),
   daily: money,

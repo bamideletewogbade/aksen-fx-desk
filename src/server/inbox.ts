@@ -735,6 +735,14 @@ export async function saveChannel(db: Db, ctx: Ctx, input: { id?: string; kind?:
   }
   if (!input.kind || !input.number) fail('INVALID', 'Choose WhatsApp or SMS and enter the number.');
   const address = channelAddress(input.kind!, input.number!);
+  const configured = input.kind === 'WHATSAPP' ? process.env.TWILIO_WHATSAPP_FROM : process.env.TWILIO_SMS_FROM;
+  const allowed = configured ? channelAddress(input.kind!, configured) : null;
+  const localSandbox = process.env.NODE_ENV !== 'production' && input.kind === 'WHATSAPP' && address === 'whatsapp:+14155238886';
+  if (!localSandbox && address !== allowed) {
+    fail('FORBIDDEN', configured
+      ? 'This number does not match the Twilio sender configured on the server.'
+      : `Configure ${input.kind === 'WHATSAPP' ? 'TWILIO_WHATSAPP_FROM' : 'TWILIO_SMS_FROM'} on the server before connecting this number.`);
+  }
   const [taken] = await db.query<{ org_id: string }>('SELECT org_id FROM channels WHERE address = $1', [address]);
   if (taken) fail('CONFLICT', taken.org_id === ctx.orgId ? 'This number is already connected.' : 'This number is connected to another desk.');
   const [row] = await db.query<{ id: string }>(

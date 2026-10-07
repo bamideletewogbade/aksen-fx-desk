@@ -11,8 +11,25 @@ interface AiHealthModalProps {
   onClose: () => void;
 }
 
+interface AiHealthData {
+  status: string;
+  provider: string;
+  primaryModel: string;
+  fallbackModels: string[];
+  latencyAvgMs: number;
+  tokensUsedToday: number;
+  costTodayUsd: number;
+  system1FastPathRate: string;
+  system2EscalationRate: string;
+  humanInTheLoop: {
+    mode: string;
+    aiPayoutAuth: boolean;
+    operatorConfirmationRequired: boolean;
+  };
+}
+
 export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
-  const [healthData, setHealthData] = useState<any>({
+  const [healthData, setHealthData] = useState<AiHealthData>({
     status: 'HEALTHY',
     provider: 'OpenRouter Multi-Model Gateway',
     primaryModel: 'anthropic/claude-3.5-sonnet',
@@ -35,7 +52,7 @@ export function AiHealthModal({ isOpen, onClose }: AiHealthModalProps) {
       try {
         const res = await fetch('/api/ai/health');
         if (res.ok) {
-          const data = await res.json();
+          const data = (await res.json()) as AiHealthData;
           setHealthData(data);
         }
       } catch (e) {

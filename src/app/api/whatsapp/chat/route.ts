@@ -310,10 +310,10 @@ How much volume would you like to swap, or would you like to provide the recipie
       updatedTradeState: state,
       createdTicket,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('WhatsApp chat simulation error:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }

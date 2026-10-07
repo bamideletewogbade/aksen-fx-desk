@@ -59,6 +59,7 @@ function Booklet({ page, today }: { page: SusuPage; today: string }) {
 function EditSaver({ s, onClose, onSaved }: { s: SaverSummary; onClose: () => void; onSaved: (d: Data & { dailyChange: 'now' | 'next_page' | null }) => void }) {
   const [name, setName] = useState(s.name);
   const [phone, setPhone] = useState(s.phone ?? '');
+  const [smsEnabled, setSmsEnabled] = useState(s.smsEnabled);
   const [daily, setDaily] = useState(String((s.nextDailyMinor ?? s.dailyMinor) / 100));
   const [notes, setNotes] = useState(s.notes ?? '');
   const [status, setStatus] = useState(s.status);
@@ -68,7 +69,7 @@ function EditSaver({ s, onClose, onSaved }: { s: SaverSummary; onClose: () => vo
     setBusy(true);
     setError(null);
     try {
-      const d = await api<Data & { dailyChange: 'now' | 'next_page' | null }>(`/api/susu/${s.id}`, { method: 'PUT', json: { name, phone: phone || null, daily, notes: notes || null, status } });
+      const d = await api<Data & { dailyChange: 'now' | 'next_page' | null }>(`/api/susu/${s.id}`, { method: 'PUT', json: { name, phone: phone || null, daily, notes: notes || null, status, smsEnabled: !!phone && smsEnabled } });
       onSaved(d);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save.');
@@ -85,6 +86,7 @@ function EditSaver({ s, onClose, onSaved }: { s: SaverSummary; onClose: () => vo
           <Field label="Phone" htmlFor="e-phone" optional><Input id="e-phone" mono value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
         </div>
         <Field label="Notes" htmlFor="e-notes" optional><Input id="e-notes" value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
+        <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" className="mt-1" checked={smsEnabled} disabled={!phone} onChange={e => setSmsEnabled(e.target.checked)} /><span>Send savings receipts to this number. Confirm it belongs to the saver. SMS must also be enabled in Settings.</span></label>
         <Field label="Booklet" htmlFor="e-status">
           <Select id="e-status" value={status} onChange={(e) => setStatus(e.target.value as SaverSummary['status'])}>
             <option value="ACTIVE">Active: collecting</option>

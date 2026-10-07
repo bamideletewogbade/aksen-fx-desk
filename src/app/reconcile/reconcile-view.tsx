@@ -59,8 +59,8 @@ function RailClose({ r, date, editable, onClosed }: { r: DayCloseRail; date: str
           <ul className="mt-2 divide-y divide-line">
             {r.items.map((i, k) => (
               <li key={k} className="flex items-center justify-between gap-3 py-2 text-xs">
-                <span className="min-w-0"><Link href={`/trades/${i.tradeId}`} className="font-mono font-semibold text-ink hover:text-brand">{i.tradeRef}</Link> <span className="text-subtle">· {i.kind === 'IN' ? 'credit' : i.kind === 'REFUND' ? 'refund' : 'payout'} {i.reference} · {clock(i.at)}</span></span>
-                <span className={cx('font-mono tabular', i.kind === 'IN' ? 'text-brand' : 'text-ink')}>{i.kind === 'IN' ? '+' : '−'}{formatMinor(i.amountMinor, r.currency)}</span>
+                <span className="min-w-0">{i.tradeId ? <Link href={`/trades/${i.tradeId}`} className="font-mono font-semibold text-ink hover:text-brand">{i.tradeRef}</Link> : <span className="font-semibold text-ink">{i.tradeRef}</span>} <span className="text-subtle">· {i.kind === 'IN' ? 'credit' : i.kind === 'REFUND' ? 'refund' : i.kind === 'FLOAT_IN' ? 'float added' : i.kind === 'FLOAT_OUT' ? 'float removed' : 'payout'} {i.reference} · {clock(i.at)}</span></span>
+                <span className={cx('font-mono tabular', i.kind === 'IN' || i.kind === 'FLOAT_IN' ? 'text-brand' : 'text-ink')}>{i.kind === 'IN' || i.kind === 'FLOAT_IN' ? '+' : '−'}{formatMinor(i.amountMinor, r.currency)}</span>
               </li>
             ))}
           </ul>

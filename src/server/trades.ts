@@ -5,6 +5,7 @@ import { fail } from './errors';
 import { hmac, safeEqual } from './secret';
 import { humanCode, newToken, sha256 } from './crypto';
 import { post, railAccount } from './ledger';
+import { assertRailDayOpen } from './day-close';
 import { computeQuote, CORRIDORS, formatMinor, parseRate, rateToString, type Corridor, type Currency } from '@/lib/money';
 import {
   OPEN_STATUSES,
@@ -411,6 +412,8 @@ export async function recordFunds(
     const [rail] = await q.query<{ id: string; currency: string; can_collect: boolean; status: string; label: string }>('SELECT id, currency, can_collect, status, label FROM rails WHERE id = $1 AND org_id = $2', [input.railId, ctx.orgId]);
     if (!rail) fail('NOT_FOUND', 'Collection account not found.');
     if (rail.currency !== t.pay_currency) fail('INVALID', `This trade is paid in ${t.pay_currency}; ${rail.label} holds ${rail.currency}.`);
+    if (!rail.can_collect || rail.status !== 'ACTIVE') fail('INVALID', `${rail.label} is not an active collection account.`);
+    await assertRailDayOpen(q, ctx.orgId, rail.id);
     const [dupe] = await q.query<{ ref: string }>(
       'SELECT t.ref FROM funds_receipts f JOIN trades t ON t.id = f.trade_id WHERE f.org_id = $1 AND f.rail_id = $2 AND f.bank_reference = $3',
       [ctx.orgId, rail.id, reference],
@@ -438,8 +441,16 @@ export async function recordFunds(
     const extra: Record<string, unknown> = { funds_received_minor: received };
     let next: TradeStatus = t.status;
 
+    const arrivedLate = t.status === 'AWAITING_FUNDS' && t.funds_due_at && new Date(t.funds_due_at as string) < new Date();
     if (t.status === 'AWAITING_FUNDS') {
-      if (full) {
+      if (arrivedLate) {
+        next = 'ON_HOLD';
+        Object.assign(extra, {
+          status_before_hold: full ? 'FUNDS_CONFIRMED' : 'AWAITING_FUNDS',
+          hold_reason: 'Money arrived after the payment window. Confirm the rate with the customer, then release or refund.',
+          ...(full ? { funds_confirmed_at: new Date(), funds_confirmed_by: ctx.userId } : {}),
+        });
+      } else if (full) {
         next = 'FUNDS_CONFIRMED';
         Object.assign(extra, { funds_confirmed_at: new Date(), funds_confirmed_by: ctx.userId });
       }
@@ -452,6 +463,13 @@ export async function recordFunds(
       });
     } else if (t.status === 'ON_HOLD' && t.status_before_hold === 'AWAITING_FUNDS' && full) {
       Object.assign(extra, { status_before_hold: 'FUNDS_CONFIRMED', funds_confirmed_at: new Date(), funds_confirmed_by: ctx.userId });
+    } else if (t.status === 'REFUNDED' || t.status === 'COMPLETED') {
+      next = 'REFUND_DUE';
+      Object.assign(extra, {
+        closed_reason: 'Additional money arrived after this trade was closed. Return the outstanding amount.',
+        approved_at: null,
+        approved_by: null,
+      });
     }
     await setStatus(q, t, next, extra);
     await appendAudit(q, {
@@ -500,10 +518,14 @@ export async function recordPayout(db: Db, ctx: Ctx, input: { id: string; versio
   await db.tx(async (q) => {
     const t = await lockTrade(q, ctx.orgId, input.id, input.version);
     requireStatus(t, ['APPROVED'], 'record a payout for');
+    const [customer] = await q.query<{ name: string; kyc_status: string }>('SELECT name, kyc_status FROM customers WHERE id = $1 AND org_id = $2 FOR SHARE', [t.customer_id, ctx.orgId]);
+    if (!customer) fail('NOT_FOUND', 'Customer not found.');
+    if (customer.kyc_status === 'REJECTED') fail('FORBIDDEN', `${customer.name} is marked as rejected. Refund instead of paying out.`);
     const [rail] = await q.query<{ id: string; currency: string; can_pay: boolean; status: string; label: string }>('SELECT id, currency, can_pay, status, label FROM rails WHERE id = $1 AND org_id = $2', [input.railId, ctx.orgId]);
     if (!rail) fail('NOT_FOUND', 'Payout account not found.');
     if (rail.currency !== t.receive_currency || !rail.can_pay) fail('INVALID', `Choose a ${t.receive_currency} account that can pay out.`);
     if (rail.status !== 'ACTIVE') fail('INVALID', `${rail.label} is paused. Choose an active account.`);
+    await assertRailDayOpen(q, ctx.orgId, rail.id);
     // Desks keep account balances private: Aksen records which account paid, not how much is left in it.
     const [dupe] = await q.query<{ ref: string }>('SELECT t.ref FROM payouts p JOIN trades t ON t.id = p.trade_id WHERE p.org_id = $1 AND p.rail_id = $2 AND p.reference = $3', [ctx.orgId, rail.id, reference]);
     if (dupe) fail('CONFLICT', `Payout reference ${reference} is already used on ${dupe.ref}.`);
@@ -597,6 +619,7 @@ export async function recordRefund(db: Db, ctx: Ctx, input: { id: string; versio
     if (!(input.amountMinor > 0) || input.amountMinor > refundable) fail('INVALID', `You can refund up to ${formatMinor(refundable, t.pay_currency)}.`);
     const [rail] = await q.query<{ id: string; currency: string; can_pay: boolean; label: string }>('SELECT id, currency, can_pay, label FROM rails WHERE id = $1 AND org_id = $2', [input.railId, ctx.orgId]);
     if (!rail || rail.currency !== t.pay_currency || !rail.can_pay) fail('INVALID', `Choose a ${t.pay_currency} account that can pay out.`);
+    await assertRailDayOpen(q, ctx.orgId, rail.id);
     await q.query(
       `INSERT INTO payouts (org_id, trade_id, rail_id, kind, currency, amount_minor, reference, recorded_by)
        VALUES ($1,$2,$3,'REFUND',$4,$5,$6,$7)`,

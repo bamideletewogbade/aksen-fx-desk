@@ -26,6 +26,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const content = process.env.CLERK_SECRET_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+    ? <ClerkProvider>{children}</ClerkProvider>
+    : children;
   return (
     <html
       lang="en"
@@ -33,9 +36,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
-        <ClerkProvider>
-          {children}
-        </ClerkProvider>
+        {content}
       </body>
     </html>
   );

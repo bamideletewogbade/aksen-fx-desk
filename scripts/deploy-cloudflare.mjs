@@ -48,7 +48,7 @@ if (existsSync(envFile)) {
 console.log(`Public build values: ${Object.keys(publicEnv).join(', ') || 'none'}`);
 
 const env = { ...process.env, ...publicEnv, NEXT_TELEMETRY_DISABLED: '1' };
-for (const k of Object.keys(env)) if (/^(DATABASE_URL|TWILIO_|CLERK_SECRET|OPENROUTER_API_KEY|APP_SECRET|DINEROYARD_)/.test(k)) delete env[k];
+for (const k of Object.keys(env)) if (/^(DATABASE_URL|TWILIO_|CLERK_SECRET|OPENROUTER_API_KEY|APP_SECRET|DINEROYARD_|ARKESEL_|SUSU_SMS_)/.test(k)) delete env[k];
 const run = (cmd) => execSync(cmd, { cwd: out, stdio: 'inherit', env });
 
 run('pnpm install --frozen-lockfile --config.confirmModulesPurge=false');

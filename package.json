@@ -6,7 +6,7 @@
     "dev": "next dev --port 3010",
     "build": "next build",
     "start": "next start --port 3010",
-    "lint": "next lint",
+    "lint": "eslint src tests scripts custom-worker.ts next.config.ts open-next.config.ts vitest.config.mts eslint.config.mjs",
     "test": "vitest run",
     "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs"
   },
@@ -25,10 +25,13 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "15.5.27",
     "postcss": "^8.4.38",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.0.0",

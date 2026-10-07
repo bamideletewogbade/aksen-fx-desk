@@ -60,6 +60,7 @@ function Tile({ label, value, sub, icon, tone }: { label: string; value: string;
 function AddSaver({ today, onClose, onSaved }: { today: string; onClose: () => void; onSaved: (id: string) => void }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [smsEnabled, setSmsEnabled] = useState(true);
   const [daily, setDaily] = useState('');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
@@ -68,7 +69,7 @@ function AddSaver({ today, onClose, onSaved }: { today: string; onClose: () => v
     setBusy(true);
     setError(null);
     try {
-      const r = await api<{ id: string }>('/api/susu', { method: 'POST', json: { name, phone: phone || null, daily, notes: notes || null } });
+      const r = await api<{ id: string }>('/api/susu', { method: 'POST', json: { name, phone: phone || null, daily, notes: notes || null, smsEnabled: !!phone && smsEnabled } });
       toast(`${name.split(' ')[0]} added`);
       onSaved(r.id);
     } catch (e) {
@@ -88,6 +89,7 @@ function AddSaver({ today, onClose, onSaved }: { today: string; onClose: () => v
           <Field label="Phone" htmlFor="sv-phone" optional><Input id="sv-phone" mono value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="024 412 3456" /></Field>
         </div>
         <Field label="Notes" htmlFor="sv-notes" optional><Input id="sv-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Shop at Makola, collect after 4pm" /></Field>
+        <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" className="mt-1" checked={smsEnabled} disabled={!phone} onChange={e => setSmsEnabled(e.target.checked)} /><span>Send welcome and savings receipts to this number. Confirm it belongs to the saver. SMS must also be enabled in Settings.</span></label>
         {toMinor(daily) && (
           <div className="rounded-xl bg-paper p-4 text-sm">
             <div className="mb-2 font-semibold text-ink">This month’s booklet, if they contribute every day</div>

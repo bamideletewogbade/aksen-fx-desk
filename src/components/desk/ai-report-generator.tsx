@@ -46,7 +46,7 @@ export function AiReportGenerator({ isOpen, onClose }: AiReportGeneratorProps) {
       } else {
         throw new Error(data.error || 'Failed to generate report');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Report error:', e);
       setReport('⚠️ Desk Copilot could not reach upstream inference pool. Please try again or switch to another report preset.');
     } finally {

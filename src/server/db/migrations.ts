@@ -458,4 +458,34 @@ ALTER TABLE organizations ADD COLUMN ai_reads_chat boolean NOT NULL DEFAULT true
 ALTER TABLE messages ADD COLUMN ai_note jsonb
 `,
   },
+  {
+    id: '007_susu_sms',
+    sql: `
+ALTER TABLE organizations ADD COLUMN susu_sms_enabled boolean NOT NULL DEFAULT false;
+ALTER TABLE susu_savers ADD COLUMN sms_enabled boolean NOT NULL DEFAULT false;
+CREATE TABLE susu_sms (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  saver_id uuid NOT NULL REFERENCES susu_savers(id) ON DELETE CASCADE,
+  event_key text NOT NULL,
+  kind text NOT NULL,
+  recipient text NOT NULL,
+  message text NOT NULL,
+  status text NOT NULL DEFAULT 'QUEUED' CHECK (status IN ('QUEUED','SENDING','ACCEPTED','SANDBOX','DELIVERED','NOT_DELIVERED','FAILED','UNKNOWN','CANCELLED')),
+  attempts integer NOT NULL DEFAULT 0,
+  provider_id text,
+  error_code text,
+  available_at timestamptz NOT NULL DEFAULT now(),
+  claimed_at timestamptz,
+  checked_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (org_id, event_key)
+);
+CREATE INDEX susu_sms_queue_idx ON susu_sms (available_at, created_at) WHERE status = 'QUEUED';
+CREATE INDEX susu_sms_org_idx ON susu_sms (org_id, created_at DESC);
+CREATE INDEX susu_sms_saver_idx ON susu_sms (saver_id, created_at DESC);
+CREATE INDEX susu_sms_receipts_idx ON susu_sms (checked_at) WHERE status = 'ACCEPTED'
+`,
+  },
 ];
