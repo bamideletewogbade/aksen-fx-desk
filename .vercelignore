@@ -1,0 +1,13 @@
+node_modules
+.next
+.next-*
+.data
+.audit
+.git
+.open-next
+.wrangler
+.cloudflare
+cloudflare-app
+coverage
+docs
+cookies.txt
