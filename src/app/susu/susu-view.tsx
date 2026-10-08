@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
-import { CalendarCheck, Flame, PiggyBank, Plus, RefreshCw, Search, Sparkles, Phone, Wand2 } from 'lucide-react';
+import { CalendarCheck, Flame, PiggyBank, Plus, RefreshCw, Search, Sparkles, Phone } from 'lucide-react';
 import { api, ApiError, useLoad } from '@/lib/api';
 import { canTrade } from '@/lib/auth';
 import { cedis, periodLabel, splitCash } from '@/lib/susu';
 import { timeAgo } from '@/lib/time';
 import { useSession } from '@/components/app-shell';
-import { Button, Card, cx, Dialog, Empty, Field, Input, Notice, PageHeader, Pill, Segmented, Select, Skeleton, Textarea, toast } from '@/components/ui';
-import type { ParsedLine, SaverSummary, SusuOverview } from '@/server/susu';
+import { Button, Card, cx, Dialog, Empty, Field, Input, Notice, PageHeader, Pill, Select, Skeleton, toast } from '@/components/ui';
+import type { SaverSummary, SusuOverview } from '@/server/susu';
 import type { Nudge } from '@/server/susu-ai';
 
 type Data = { savers: SaverSummary[]; overview: SusuOverview };
@@ -61,6 +61,7 @@ function AddSaver({ today, onClose, onSaved }: { today: string; onClose: () => v
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [smsEnabled, setSmsEnabled] = useState(true);
+  const [smsAutoSend, setSmsAutoSend] = useState(false);
   const [daily, setDaily] = useState('');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
@@ -69,7 +70,7 @@ function AddSaver({ today, onClose, onSaved }: { today: string; onClose: () => v
     setBusy(true);
     setError(null);
     try {
-      const r = await api<{ id: string }>('/api/susu', { method: 'POST', json: { name, phone: phone || null, daily, notes: notes || null, smsEnabled: !!phone && smsEnabled } });
+      const r = await api<{ id: string }>('/api/susu', { method: 'POST', json: { name, phone: phone || null, daily, notes: notes || null, smsEnabled: !!phone && smsEnabled, smsAutoSend: !!phone && smsEnabled && smsAutoSend } });
       toast(`${name.split(' ')[0]} added`);
       onSaved(r.id);
     } catch (e) {
@@ -89,7 +90,11 @@ function AddSaver({ today, onClose, onSaved }: { today: string; onClose: () => v
           <Field label="Phone" htmlFor="sv-phone" optional><Input id="sv-phone" mono value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="024 412 3456" /></Field>
         </div>
         <Field label="Notes" htmlFor="sv-notes" optional><Input id="sv-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Shop at Makola, collect after 4pm" /></Field>
-        <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" className="mt-1" checked={smsEnabled} disabled={!phone} onChange={e => setSmsEnabled(e.target.checked)} /><span>Send welcome and savings receipts to this number. Confirm it belongs to the saver. SMS must also be enabled in Settings.</span></label>
+        <div className="space-y-3 rounded-xl border border-line p-3">
+          <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" className="mt-1" checked={smsEnabled} disabled={!phone} onChange={e => { setSmsEnabled(e.target.checked); if (!e.target.checked) setSmsAutoSend(false); }} /><span><strong className="font-semibold text-ink">Send SMS receipts</strong><span className="mt-0.5 block text-xs text-subtle">Send a welcome message and savings receipts to this number.</span></span></label>
+          <label className="ml-6 flex items-start gap-2 border-t border-line pt-3 text-sm text-muted"><input type="checkbox" className="mt-1" checked={smsAutoSend} disabled={!phone || !smsEnabled} onChange={e => setSmsAutoSend(e.target.checked)} /><span><strong className="font-semibold text-ink">Send automatically</strong><span className="mt-0.5 block text-xs text-subtle">Skip review and send each new message as soon as it is created.</span></span></label>
+          <p className="ml-6 text-xs text-subtle">Confirm the number belongs to the saver. SMS must also be enabled in Settings.</p>
+        </div>
         {toMinor(daily) && (
           <div className="rounded-xl bg-paper p-4 text-sm">
             <div className="mb-2 font-semibold text-ink">This month’s booklet, if they contribute every day</div>
@@ -123,7 +128,7 @@ function OneCollection({ savers, onSaved }: { savers: SaverSummary[]; onSaved: (
     try {
       requestId.current ??= crypto.randomUUID();
       const r = await api<{ result: { days: number; changeMinor: number; name: string } }>(`/api/susu/${saverId}`, { method: 'POST', json: { action: 'collect', amount, requestId: requestId.current } });
-      toast(`${r.result.name.split(' ')[0]}: ${r.result.days} day${r.result.days === 1 ? '' : 's'} recorded${r.result.changeMinor ? ` · give back ${cedis(r.result.changeMinor)}` : ''}${saver?.smsEnabled ? ' · SMS draft ready on their page' : ''}`);
+      toast(`${r.result.name.split(' ')[0]}: ${r.result.days} day${r.result.days === 1 ? '' : 's'} recorded${r.result.changeMinor ? ` · give back ${cedis(r.result.changeMinor)}` : ''}${saver?.smsEnabled ? saver.smsAutoSend ? ' · SMS queued automatically' : ' · SMS draft ready on their page' : ''}`);
       requestId.current = null;
       setAmount('');
       onSaved();
@@ -151,93 +156,6 @@ function OneCollection({ savers, onSaved }: { savers: SaverSummary[]; onSaved: (
             ? <>That’s <strong className="text-ink">{split.days} day{split.days === 1 ? '' : 's'}</strong>{split.changeMinor ? <> · give back <strong className="text-amber">{cedis(split.changeMinor)}</strong> change</> : null}{saver.page && split.days > saver.page.capacity - saver.page.daysPaid ? ' · extra days go onto next month’s page' : ''}.</>
             : `Less than one day (${cedis(daily)}).`}
         </p>
-      )}
-    </div>
-  );
-}
-
-function RoundEntry({ onSaved }: { onSaved: () => void }) {
-  const [text, setText] = useState('');
-  const [lines, setLines] = useState<ParsedLine[] | null>(null);
-  const [picks, setPicks] = useState<Record<number, string>>({});
-  const [busy, setBusy] = useState(false);
-  const requestId = useRef<string | null>(null);
-  const check = async () => {
-    setBusy(true);
-    try {
-      const d = await api<{ lines: ParsedLine[] }>('/api/susu/collect', { method: 'POST', json: { preview: text } });
-      setLines(d.lines);
-      setPicks({});
-      requestId.current = null;
-    } catch (e) {
-      toast(e instanceof ApiError ? e.message : 'Could not read that.', 'risk');
-    } finally {
-      setBusy(false);
-    }
-  };
-  const checked = (lines ?? []).map((l, i) => {
-    const picked = l.candidates.find((c) => c.id === picks[i]);
-    const saverId = l.saverId ?? picked?.id;
-    const split = picked && l.amountMinor ? splitCash(l.amountMinor, picked.dailyMinor) : { days: l.days, changeMinor: l.changeMinor };
-    return { l, saverId, split, ready: Boolean(saverId && l.amountMinor && split.days > 0 && (!l.problem || picked)) };
-  });
-  const ready = checked.filter((x) => x.ready);
-  const allReady = checked.length > 0 && ready.length === checked.length;
-  const save = async () => {
-    setBusy(true);
-    try {
-      if (!allReady) return;
-      requestId.current ??= crypto.randomUUID();
-      const d = await api<{ results: { days: number; changeMinor: number; name: string }[] }>('/api/susu/collect', { method: 'POST', json: { rows: ready.map((r) => ({ saverId: r.saverId, amount: (r.l.amountMinor! / 100).toFixed(2) })), requestId: requestId.current } });
-      const change = d.results.filter((r) => r.changeMinor > 0);
-      toast(`${d.results.length} collection${d.results.length === 1 ? '' : 's'} recorded${change.length ? ` · give change to ${change.map((c) => `${c.name.split(' ')[0]} ${cedis(c.changeMinor)}`).join(', ')}` : ''} · SMS drafts are ready on saver pages`);
-      setText('');
-      setLines(null);
-      requestId.current = null;
-      onSaved();
-    } catch (e) {
-      toast(e instanceof ApiError ? e.message : 'Nothing was saved.', 'risk');
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div className="space-y-3">
-      {!lines ? (
-        <>
-          <Textarea rows={4} value={text} onChange={(e) => { requestId.current = null; setText(e.target.value); }} placeholder={'Type or paste the round, one per line or separated by commas:\nAma 50\nKofi 30, Esi 100'} aria-label="Collection round" />
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-subtle">First names are enough. You’ll check every line before anything is saved.</p>
-            <Button variant="secondary" busy={busy} disabled={!text.trim()} onClick={check} icon={<Wand2 size={14} />}>Check the round</Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <ul className="divide-y divide-line rounded-xl border border-line">
-            {lines.map((l, i) => (
-              <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-                <span className="min-w-0">
-                  <span className="font-semibold text-ink">{l.saverName ?? (l.candidates.length ? '' : '—')}</span>
-                  {l.candidates.length > 0 && (
-                    <Select aria-label={`Who is “${l.line}”?`} value={picks[i] ?? ''} onChange={(e) => { requestId.current = null; setPicks({ ...picks, [i]: e.target.value }); }} className="py-1 text-xs">
-                      <option value="">Which one?</option>
-                      {l.candidates.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.ref})</option>)}
-                    </Select>
-                  )}
-                  <span className="ml-2 font-mono text-xs text-subtle">“{l.line}”</span>
-                </span>
-                <span className={cx('text-xs', !checked[i].ready ? 'text-risk' : 'text-muted')}>
-                  {!checked[i].ready ? (picks[i] && checked[i].split.days === 0 ? 'Less than one day for this saver.' : l.problem) : <>{l.amountMinor ? cedis(l.amountMinor) : ''} = {checked[i].split.days} day{checked[i].split.days === 1 ? '' : 's'}{checked[i].split.changeMinor ? <> · <span className="text-amber">change {cedis(checked[i].split.changeMinor)}</span></> : null}</>}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {!allReady && <span className="mr-auto text-xs text-risk">Resolve or edit every line before saving this round.</span>}
-            <Button variant="ghost" onClick={() => { requestId.current = null; setLines(null); }}>Edit</Button>
-            <Button busy={busy} disabled={!allReady} onClick={save}>Save {ready.length} collection{ready.length === 1 ? '' : 's'}</Button>
-          </div>
-        </>
       )}
     </div>
   );
@@ -306,7 +224,6 @@ export function SusuView() {
   const [q, setQ] = useState('');
   const { data, loading, reload } = useLoad<Data>('/api/susu', { pollMs: 30_000 });
   const [adding, setAdding] = useState(false);
-  const [mode, setMode] = useState<'one' | 'round'>('one');
   const allowed = canTrade(session);
   const o = data?.overview;
   const savers = useMemo(() => {
@@ -335,7 +252,7 @@ export function SusuView() {
           <Tile label="Contributions today" value={cedis(o.collectedTodayMinor)} sub={o.paidTodayCount ? `from ${o.paidTodayCount} saver${o.paidTodayCount === 1 ? '' : 's'}` : 'No contributions yet today'} icon={<PiggyBank size={15} />} tone={o.collectedTodayMinor ? 'good' : undefined} />
           <Tile label="Held for savers" value={cedis(o.heldMinor)} sub="Everything saved and not yet paid out" icon={<PiggyBank size={15} />} />
           <Tile label="Collection fees" value={cedis(o.feesThisMonthMinor)} sub={`earned this month · ${cedis(o.feesDueMinor)} estimated on open pages`} icon={<CalendarCheck size={15} />} />
-          <Tile label="On track" value={`${o.savers.onTrack + o.savers.ahead} of ${o.savers.active}`} sub={o.savers.behind ? `${o.savers.behind} behind this month` : o.savers.active ? 'Nobody behind' : 'Add your first saver'} icon={<Flame size={15} />} tone={o.savers.behind ? 'amber' : undefined} />
+          <Tile label="Expected today" value={cedis(o.expectedTodayMinor)} sub={o.savers.active ? `across ${o.savers.active} active saver${o.savers.active === 1 ? '' : 's'}` : 'Add an active saver to set today’s target'} icon={<CalendarCheck size={15} />} />
         </div>
       )}
       {o && o.pagesToClose > 0 && (
@@ -348,11 +265,8 @@ export function SusuView() {
         <div className="space-y-6">
           {allowed && (data?.savers.length ?? 0) > 0 && (
             <Card className="space-y-4 p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-sm font-bold text-ink">Record contributions</h2>
-                <Segmented size="sm" value={mode} onChange={setMode} options={[{ value: 'one', label: 'One saver' }, { value: 'round', label: 'Collection round' }]} />
-              </div>
-              {mode === 'one' ? <OneCollection savers={data!.savers} onSaved={reload} /> : <RoundEntry onSaved={reload} />}
+              <h2 className="text-sm font-bold text-ink">Record a contribution</h2>
+              <OneCollection savers={data!.savers} onSaved={reload} />
             </Card>
           )}
 

@@ -6,7 +6,7 @@ import { fail } from './errors';
 import { todayIn } from './day-close';
 import { closeMath, daysInMonth, dueToday, expectedByToday, nextPeriod, periodLabel, periodOf, splitCash, standing, streak, type Period, type Standing } from '@/lib/susu';
 import { formatMinor, type Currency } from '@/lib/money';
-import { queueSusuSms, saverSusuSms, smsDate, smsMoney, smsPhone, smsText } from './susu-sms';
+import { queueSusuSms, saverSusuSms, smsConfig, smsDate, smsMoney, smsPhone, smsText } from './susu-sms';
 
 /**
  * Susu (daily savings) for a desk. Desk staff record cash they collect; the
@@ -16,6 +16,7 @@ import { queueSusuSms, saverSusuSms, smsDate, smsMoney, smsPhone, smsText } from
 const N = (v: unknown) => Number(v ?? 0);
 const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
 const MAX_PAGES_AHEAD = 24;
+const smsBrand = (ctx: Ctx) => smsText(smsConfig().sender || ctx.orgName);
 
 // ---------------------------------------------------------------- types
 
@@ -44,6 +45,7 @@ export interface SaverSummary {
   name: string;
   phone: string | null;
   smsEnabled: boolean;
+  smsAutoSend: boolean;
   notes: string | null;
   currency: Currency;
   dailyMinor: number;
@@ -86,7 +88,7 @@ async function orgToday(q: Queryable, orgId: string): Promise<string> {
   return todayIn(o?.timezone || 'Africa/Accra');
 }
 
-type SaverRow = { id: string; org_id: string; name: string; daily_minor: string | number; next_daily_minor: string | number | null; status: string; currency: Currency };
+type SaverRow = { id: string; org_id: string; name: string; daily_minor: string | number; next_daily_minor: string | number | null; status: string; currency: Currency; sms_enabled: boolean; sms_auto_send: boolean };
 
 async function lockSaver(q: Queryable, orgId: string, id: string): Promise<SaverRow> {
   const [s] = await q.query<SaverRow>('SELECT * FROM susu_savers WHERE id = $1 AND org_id = $2 FOR UPDATE', [id, orgId]);
@@ -120,7 +122,7 @@ function fullMonth(period: Period) {
 export async function saveSaver(
   db: Db,
   ctx: Ctx,
-  input: { id?: string; name: string; phone?: string | null; dailyMinor: number; notes?: string | null; status?: SaverSummary['status']; smsEnabled?: boolean },
+  input: { id?: string; name: string; phone?: string | null; dailyMinor: number; notes?: string | null; status?: SaverSummary['status']; smsEnabled?: boolean; smsAutoSend?: boolean },
 ): Promise<{ id: string; dailyChange: 'now' | 'next_page' | null }> {
   requirePermission(ctx, 'trade');
   const name = input.name.trim().replace(/\s+/g, ' ');
@@ -132,8 +134,10 @@ export async function saveSaver(
     const today = await orgToday(q, ctx.orgId);
     if (input.id) {
       const s = await lockSaver(q, ctx.orgId, input.id);
+      const smsEnabled = !!smsPhone(phone) && (input.smsEnabled ?? s.sms_enabled);
+      const smsAutoSend = smsEnabled && (input.smsAutoSend ?? s.sms_auto_send);
       await q.query('UPDATE susu_savers SET name = $3, phone = $4, notes = $5, status = COALESCE($6, status) WHERE id = $1 AND org_id = $2', [s.id, ctx.orgId, name, phone, input.notes?.trim() || null, input.status ?? null]);
-      await q.query('UPDATE susu_savers SET sms_enabled = CASE WHEN $3::boolean IS FALSE THEN false ELSE COALESCE($2, sms_enabled) END WHERE id=$1', [s.id, input.smsEnabled ?? null, !!smsPhone(phone)]);
+      await q.query('UPDATE susu_savers SET sms_enabled=$2, sms_auto_send=$3 WHERE id=$1', [s.id, smsEnabled, smsAutoSend]);
       // Never deliver a queued financial receipt to an edited number later.
       await q.query(`UPDATE susu_sms SET status='CANCELLED',error_code='recipient_or_preference_changed',updated_at=now() WHERE saver_id=$1 AND status IN ('DRAFT','QUEUED','FAILED') AND (recipient IS DISTINCT FROM $2 OR NOT (SELECT sms_enabled FROM susu_savers WHERE id=$1))`, [s.id, smsPhone(phone)]);
       let dailyChange: 'now' | 'next_page' | null = null;
@@ -158,7 +162,7 @@ export async function saveSaver(
       await appendAudit(q, { orgId: ctx.orgId, action: 'susu.saver_updated', actor: actorOf(ctx), data: { saverId: s.id, name, dailyMinor: input.dailyMinor, dailyChange, status: input.status ?? null } });
       if (dailyChange || (input.status && input.status !== s.status)) {
         const changes = [dailyChange ? `Daily saving ${smsMoney(input.dailyMinor, s.currency)} ${dailyChange === 'next_page' ? 'from your next new page' : 'from now'}.` : '', input.status && input.status !== s.status ? `Booklet ${input.status.toLowerCase()}.` : ''].filter(Boolean).join(' ');
-        await queueSusuSms(q,ctx,s.id,`update:${randomUUID()}`,'ACCOUNT_UPDATE',`${smsText(ctx.orgName)}: ${changes} Contact your collector for questions.`);
+        await queueSusuSms(q,ctx,s.id,`update:${randomUUID()}`,'ACCOUNT_UPDATE',`${smsBrand(ctx)}: ${changes} Contact your collector for questions.`);
       }
       return { id: s.id, dailyChange };
     }
@@ -172,8 +176,8 @@ export async function saveSaver(
     const period = periodOf(today);
     const day = Number(today.slice(8, 10));
     await openPage(q, row, { period, startDay: day, capacity: daysInMonth(period) - day + 1 });
-    await q.query('UPDATE susu_savers SET sms_enabled=$2 WHERE id=$1',[row.id,input.smsEnabled ?? false]);
-    await queueSusuSms(q,ctx,row.id,`welcome:${row.id}`,'WELCOME',`${smsText(ctx.orgName)}: Welcome, ${smsText(name,20)}. Saver ${ref}. Save ${smsMoney(input.dailyMinor)} daily. Each closed page has a one-day contribution fee. Keep your receipts.`);
+    await q.query('UPDATE susu_savers SET sms_enabled=$2, sms_auto_send=$3 WHERE id=$1',[row.id,input.smsEnabled ?? false,(input.smsEnabled ?? false) && (input.smsAutoSend ?? false)]);
+    await queueSusuSms(q,ctx,row.id,`welcome:${row.id}`,'WELCOME',`${smsBrand(ctx)}: Welcome, ${smsText(name,20)}. Saver ${ref}. Save ${smsMoney(input.dailyMinor)} daily. Each closed page has a one-day contribution fee. Keep your receipts.`);
     await appendAudit(q, { orgId: ctx.orgId, action: 'susu.saver_added', actor: actorOf(ctx), data: { saverId: row.id, ref, name, dailyMinor: input.dailyMinor } });
     return { id: row.id, dailyChange: null };
   });
@@ -275,22 +279,15 @@ async function collectInTx(q: Queryable, ctx: Ctx, input: { saverId: string; amo
     actor: actorOf(ctx),
     data: { saverId: saver.id, receivedMinor: input.amountMinor, days, changeMinor: remaining, pages: credited.map((c) => ({ period: c.page.period, days: c.days })) },
   });
-  const [held] = await q.query<{ total: string }>(`SELECT COALESCE(SUM(brought_forward_minor + days_paid*daily_minor),0) AS total FROM susu_pages WHERE saver_id=$1 AND status='OPEN'`,[saver.id]);
-  const change = remaining > 0 ? ` Change ${smsMoney(remaining,saver.currency)}.` : '';
-  const dayLabel = days === 1 ? 'day' : 'days';
-  await queueSusuSms(q,ctx,saver.id,`collection:${paymentId}`,'COLLECTION',`${smsText(ctx.orgName)}: Susu receipt. Saved ${smsMoney(input.amountMinor-remaining,saver.currency)} on ${smsDate(today)} (${days} ${dayLabel}). Total in your susu book: ${smsMoney(N(held.total),saver.currency)} before fee.${change} Ref ${paymentId.slice(0,8)}.`);
+  const [held] = await q.query<{ total: string; subtotal: string }>(
+    `SELECT
+       COALESCE(SUM(brought_forward_minor + days_paid*daily_minor),0) AS total,
+       COALESCE(SUM(brought_forward_minor + days_paid*daily_minor - CASE WHEN days_paid>0 THEN daily_minor ELSE 0 END),0) AS subtotal
+     FROM susu_pages WHERE saver_id=$1 AND status='OPEN'`,
+    [saver.id],
+  );
+  await queueSusuSms(q,ctx,saver.id,`collection:${paymentId}`,'COLLECTION',`${smsBrand(ctx)}: Receipt: ${smsMoney(input.amountMinor-remaining,saver.currency)}, ${smsDate(today)}, Total: ${smsMoney(N(held.total),saver.currency)}, Sub-total saving: ${smsMoney(N(held.subtotal),saver.currency)}.`);
   return { saverId: saver.id, name: saver.name, receivedMinor: input.amountMinor, days, changeMinor: remaining, pages: credited.map((c) => ({ period: c.page.period, days: c.days })) };
-}
-
-/** Several collections in one go (an end-of-round entry). All succeed or none do. */
-export async function recordCollections(db: Db, ctx: Ctx, rows: { saverId: string; amountMinor: number }[], requestId?: string): Promise<CollectionResult[]> {
-  requirePermission(ctx, 'trade');
-  if (!rows.length) fail('INVALID', 'Nothing to record.');
-  return db.tx((q) => oncePerRequest(q, ctx, requestId, { kind: 'round', rows }, async () => {
-    const out: CollectionResult[] = [];
-    for (const r of rows) out.push(await collectInTx(q, ctx, r));
-    return out;
-  }));
 }
 
 // ---------------------------------------------------------------- closing pages
@@ -305,13 +302,13 @@ export type CloseKind = 'PAYOUT' | 'ROLLOVER' | 'WITHDRAWAL';
 export async function closePage(
   db: Db,
   ctx: Ctx,
-  input: { pageId: string; kind: CloseKind; method?: string | null; reference?: string | null },
-): Promise<{ feeMinor: number; balanceMinor: number; kind: CloseKind; name: string; period: Period }> {
+  input: { pageId: string; kind: CloseKind; amountMinor?: number; method?: string | null; reference?: string | null },
+): Promise<{ feeMinor: number; balanceMinor: number; paidOutMinor: number; carriedMinor: number; kind: CloseKind; name: string; period: Period }> {
   requirePermission(ctx, 'trade');
   return db.tx((q) => closeInTx(q, ctx, input));
 }
 
-async function closeInTx(q: Queryable, ctx: Ctx, input: { pageId: string; kind: CloseKind; method?: string | null; reference?: string | null }) {
+async function closeInTx(q: Queryable, ctx: Ctx, input: { pageId: string; kind: CloseKind; amountMinor?: number; method?: string | null; reference?: string | null }) {
   // A rollover stays on the desk; a payout or withdrawal releases saver funds.
   if (input.kind !== 'ROLLOVER') requirePermission(ctx, 'approve');
   const [identity] = await q.query<{ saver_id: string }>('SELECT saver_id FROM susu_pages WHERE id = $1 AND org_id = $2', [input.pageId, ctx.orgId]);
@@ -331,8 +328,12 @@ async function closeInTx(q: Queryable, ctx: Ctx, input: { pageId: string; kind: 
   }
   const m = closeMath(page);
   if (input.kind === 'WITHDRAWAL' && m.balanceMinor <= 0) fail('CONFLICT', `${saver.name} has nothing to withdraw yet (one day is the fee).`);
-  const paidOut = input.kind === 'ROLLOVER' ? 0 : m.balanceMinor;
-  const carried = input.kind === 'ROLLOVER' ? m.balanceMinor : 0;
+  const requested = input.kind === 'WITHDRAWAL' ? input.amountMinor ?? m.balanceMinor : m.balanceMinor;
+  if (input.kind === 'WITHDRAWAL' && !(requested > 0)) fail('INVALID', 'Enter an amount to withdraw.');
+  if (input.kind === 'WITHDRAWAL' && requested > m.balanceMinor) fail('INVALID', `The most ${saver.name} can withdraw is ${formatMinor(m.balanceMinor, saver.currency)} after the collection fee.`);
+  if (input.kind === 'WITHDRAWAL' && saver.status === 'CLOSED' && requested < m.balanceMinor) fail('CONFLICT', `Withdraw the full ${formatMinor(m.balanceMinor, saver.currency)} balance because this booklet is closed.`);
+  const paidOut = input.kind === 'ROLLOVER' ? 0 : requested;
+  const carried = input.kind === 'ROLLOVER' ? m.balanceMinor : input.kind === 'WITHDRAWAL' ? m.balanceMinor - paidOut : 0;
 
   await q.query(
     `UPDATE susu_pages SET status = 'CLOSED', close_kind = $2, fee_minor = $3, paid_out_minor = $4, carried_minor = $5,
@@ -344,7 +345,16 @@ async function closeInTx(q: Queryable, ctx: Ctx, input: { pageId: string; kind: 
 
   if (input.kind === 'WITHDRAWAL') {
     const left = page.capacity - page.daysPaid;
-    if (left > 0 && saver.status !== 'CLOSED') await openPage(q, saver, { period: page.period, startDay: page.startDay + page.daysPaid, capacity: left });
+    if (left > 0 && saver.status !== 'CLOSED') {
+      await openPage(q, saver, { period: page.period, startDay: page.startDay + page.daysPaid, capacity: left, broughtForwardMinor: carried });
+    } else if (carried > 0) {
+      const [next] = await q.query<{ id: string }>(
+        `SELECT id FROM susu_pages WHERE saver_id=$1 AND status='OPEN' ORDER BY period,page_no LIMIT 1`,
+        [saver.id],
+      );
+      if (next) await q.query('UPDATE susu_pages SET brought_forward_minor=brought_forward_minor+$2 WHERE id=$1', [next.id, carried]);
+      else if (saver.status !== 'CLOSED') await openPage(q, saver, { ...fullMonth(nextPeriod(page.period)), broughtForwardMinor: carried });
+    }
   } else if (input.kind === 'ROLLOVER') {
     // Carry onto the saver's next page: one they've already prepaid into, or a fresh one for next month.
     const [next] = await q.query<{ id: string }>(
@@ -362,8 +372,9 @@ async function closeInTx(q: Queryable, ctx: Ctx, input: { pageId: string; kind: 
     data: { saverId: saver.id, pageId: page.id, period: page.period, kind: input.kind, daysPaid: page.daysPaid, feeMinor: m.feeMinor, paidOutMinor: paidOut, carriedMinor: carried },
   });
   const action = input.kind === 'ROLLOVER' ? 'Carried forward' : input.kind === 'WITHDRAWAL' ? 'Withdrawal recorded' : 'Payout recorded';
-  await queueSusuSms(q,ctx,saver.id,`close:${page.id}`,input.kind,`${smsText(ctx.orgName)}: ${page.period} page ${page.pageNo}. ${action}: ${smsMoney(m.balanceMinor,saver.currency)}. Fee: ${smsMoney(m.feeMinor,saver.currency)}.${input.kind === 'ROLLOVER' ? ' No cash paid out.' : ` Method: ${smsText(input.method?.trim() || 'Cash',20)}. Contact your collector if not received.`}`);
-  return { feeMinor: m.feeMinor, balanceMinor: m.balanceMinor, kind: input.kind, name: saver.name, period: page.period };
+  const remaining = input.kind === 'WITHDRAWAL' ? ` Remaining saved: ${smsMoney(carried,saver.currency)}.` : '';
+  await queueSusuSms(q,ctx,saver.id,`close:${page.id}`,input.kind,`${smsBrand(ctx)}: ${page.period} page ${page.pageNo}. ${action}: ${smsMoney(input.kind === 'ROLLOVER' ? carried : paidOut,saver.currency)}. Fee: ${smsMoney(m.feeMinor,saver.currency)}.${remaining}${input.kind === 'ROLLOVER' ? ' No cash paid out.' : ` Method: ${smsText(input.method?.trim() || 'Cash',20)}. Contact your collector if not received.`}`);
+  return { feeMinor: m.feeMinor, balanceMinor: m.balanceMinor, paidOutMinor: paidOut, carriedMinor: carried, kind: input.kind, name: saver.name, period: page.period };
 }
 
 /** Month end: close several pages at once. All succeed or none do. */
@@ -384,16 +395,22 @@ export async function closePages(db: Db, ctx: Ctx, rows: { pageId: string; kind:
   });
 }
 
-/** Withdraw everything now (mid-month): closes the saver's current page. */
-export async function withdraw(db: Db, ctx: Ctx, input: { saverId: string; method?: string | null; reference?: string | null }) {
+/** Withdraw some or all funds now: closes the current page and carries any remainder. */
+export async function withdraw(db: Db, ctx: Ctx, input: { saverId: string; amountMinor?: number; method?: string | null; reference?: string | null; requestId?: string }) {
   requirePermission(ctx, 'trade');
-  const today = await orgToday(db, ctx.orgId);
-  const [p] = await db.query<{ id: string }>(
-    `SELECT id FROM susu_pages WHERE saver_id = $1 AND org_id = $2 AND status = 'OPEN' AND period <= $3 ORDER BY period, page_no LIMIT 1`,
-    [input.saverId, ctx.orgId, periodOf(today)],
-  );
-  if (!p) fail('CONFLICT', 'There is no open page to withdraw from.');
-  return closePage(db, ctx, { pageId: p.id, kind: 'WITHDRAWAL', method: input.method, reference: input.reference });
+  requirePermission(ctx, 'approve');
+  return db.tx((q) => oncePerRequest(q, ctx, input.requestId, {
+    kind: 'withdrawal', saverId: input.saverId, amountMinor: input.amountMinor ?? null,
+    method: input.method?.trim() || 'Cash', reference: input.reference?.trim() || null,
+  }, async () => {
+    const today = await orgToday(q, ctx.orgId);
+    const [p] = await q.query<{ id: string }>(
+      `SELECT id FROM susu_pages WHERE saver_id = $1 AND org_id = $2 AND status = 'OPEN' AND period <= $3 ORDER BY period, page_no LIMIT 1`,
+      [input.saverId, ctx.orgId, periodOf(today)],
+    );
+    if (!p) fail('CONFLICT', 'There is no open page to withdraw from.');
+    return closeInTx(q, ctx, { pageId: p.id, kind: 'WITHDRAWAL', amountMinor: input.amountMinor, method: input.method, reference: input.reference });
+  }));
 }
 
 // ---------------------------------------------------------------- reads
@@ -419,6 +436,7 @@ async function summarise(db: Db, ctx: Ctx, where: string, params: unknown[]): Pr
       name: s.name as string,
       phone: (s.phone as string) ?? null,
       smsEnabled: s.sms_enabled === true,
+      smsAutoSend: s.sms_auto_send === true,
       notes: (s.notes as string) ?? null,
       currency: s.currency as Currency,
       dailyMinor: N(s.daily_minor),
@@ -476,6 +494,7 @@ export interface SusuOverview {
   period: Period;
   savers: { active: number; onTrack: number; behind: number; ahead: number };
   collectedTodayMinor: number;
+  expectedTodayMinor: number;
   paidTodayCount: number;
   collectedThisMonthMinor: number;
   heldMinor: number;
@@ -515,6 +534,7 @@ export async function susuOverview(db: Db, ctx: Ctx, savers?: SaverSummary[]): P
       ahead: active.filter((s) => s.page!.standing.kind === 'ahead').length,
     },
     collectedTodayMinor: N(r.today_in),
+    expectedTodayMinor: active.reduce((sum, saver) => sum + dueToday(saver.page!, today) * saver.page!.dailyMinor, 0),
     paidTodayCount: N(r.today_n),
     collectedThisMonthMinor: N(r.month_in),
     heldMinor: list.reduce((s, x) => s + x.heldMinor, 0),
@@ -543,63 +563,4 @@ export async function pagesToClose(db: Db, ctx: Ctx) {
       return { ...p, saver: { id: r.saver_id as string, name: r.name as string, ref: r.ref as string, phone: (r.phone as string) ?? null }, ...closeMath(p) };
     }),
   };
-}
-
-// ---------------------------------------------------------------- quick entry ("Ama 50, Kofi 30")
-
-export interface ParsedLine {
-  line: string;
-  amountMinor: number | null;
-  saverId: string | null;
-  saverName: string | null;
-  candidates: { id: string; name: string; ref: string; dailyMinor: number }[];
-  days: number;
-  changeMinor: number;
-  problem: string | null;
-}
-
-/** Reads a typed or pasted collection round and matches each line to a saver. Nothing is saved. */
-export async function parseCollections(db: Db, ctx: Ctx, text: string): Promise<ParsedLine[]> {
-  requirePermission(ctx, 'trade');
-  const savers = await listSavers(db, ctx);
-  const active = savers.filter((s) => s.status === 'ACTIVE');
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-  const lines = text.split(/\n|;|,(?![0-9]{3}\b)/).map((l) => l.trim()).filter(Boolean);
-  if (lines.length > 200) fail('INVALID', 'A collection round can have at most 200 lines. Split this round into smaller batches.');
-  return lines.map((line) => {
-    const amounts = [...line.matchAll(/(?:gh₵|ghs|ghc|₵|¢)?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?/gi)];
-    // A saver reference (S-0001), or a phone number before an amount, is an identifier rather than the cash.
-    const amt = amounts.find((m) => !/\bS-$/i.test(line.slice(0, m.index ?? 0).trimEnd()) && !(amounts.length > 1 && m[1].replace(/,/g, '').length >= 8)) ?? null;
-    const amountMinor = amt ? Math.round((Number(amt[1].replace(/,/g, '')) + (amt[2] ? Number(amt[2].padEnd(2, '0')) / 100 : 0)) * 100) : null;
-    const at = amt?.index ?? -1;
-    const withoutAmount = at < 0 ? line : `${line.slice(0, at)} ${line.slice(at + amt![0].length)}`;
-    const who = norm(withoutAmount.replace(/\b(gh₵|ghs|ghc|cedis?|paid|for|days?)\b/gi, ' '));
-    let matches = who ? active.filter((s) => norm(s.ref) === who || norm(s.name) === who) : [];
-    if (!matches.length && who) matches = active.filter((s) => norm(s.name).split(' ').some((w) => w === who) || norm(s.name).startsWith(who));
-    if (!matches.length && who) matches = active.filter((s) => norm(s.name).includes(who) || (s.phone ?? '').replace(/\D/g, '').endsWith(who.replace(/\D/g, '') || '#'));
-    const saver = matches.length === 1 ? matches[0] : null;
-    const daily = saver?.page?.dailyMinor ?? saver?.dailyMinor ?? 0;
-    const split = saver && amountMinor ? splitCash(amountMinor, daily) : { days: 0, changeMinor: 0 };
-    const problem = !amountMinor
-      ? 'No amount on this line.'
-      : !who
-        ? 'No name on this line.'
-        : !matches.length
-          ? `No saver called “${who}”.`
-          : matches.length > 1
-            ? 'More than one saver matches. Pick one.'
-            : split.days === 0
-              ? `Less than one day (${formatMinor(daily, 'GHS')}).`
-              : null;
-    return {
-      line,
-      amountMinor,
-      saverId: saver?.id ?? null,
-      saverName: saver?.name ?? null,
-      candidates: matches.length > 1 ? matches.slice(0, 5).map((m) => ({ id: m.id, name: m.name, ref: m.ref, dailyMinor: m.page?.dailyMinor ?? m.dailyMinor })) : [],
-      days: split.days,
-      changeMinor: split.changeMinor,
-      problem,
-    };
-  });
 }

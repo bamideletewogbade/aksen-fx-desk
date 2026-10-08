@@ -32,8 +32,6 @@
     "**/*.mts",
     "**/*.ts",
     "**/*.tsx",
-    ".audit/review-next/types/**/*.ts",
-    ".next-claude/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts"

@@ -11,6 +11,8 @@
 
 export type Currency = 'NGN' | 'GHS';
 export type Corridor = 'NGN_GHS' | 'GHS_NGN';
+/** Saved rates include the two tradable corridors plus desk-only benchmarks. */
+export type BoardRateKey = Corridor | 'USD_NGN' | 'NGN_USD' | 'USD_GHS' | 'GHS_USD';
 
 export const CURRENCIES: Record<Currency, { symbol: string; name: string; minor: number }> = {
   NGN: { symbol: '₦', name: 'Naira', minor: 100 },

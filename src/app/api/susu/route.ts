@@ -9,6 +9,6 @@ export const GET = deskRoute(async ({ req, db, ctx }) => {
 
 export const POST = deskRoute(async ({ req, db, ctx }) => {
   const i = await body(req, saverSchema);
-  const result = await saveSaver(db, ctx, { name: i.name, phone: i.phone, dailyMinor: i.daily, notes: i.notes, smsEnabled: i.smsEnabled });
+  const result = await saveSaver(db, ctx, { name: i.name, phone: i.phone, dailyMinor: i.daily, notes: i.notes, smsEnabled: i.smsEnabled, smsAutoSend: i.smsAutoSend });
   return result;
 });

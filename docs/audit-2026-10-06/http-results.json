@@ -1,0 +1,240 @@
+{
+  "date": "2026-10-06",
+  "environment": "Separate local PGlite audit database, integrations disabled",
+  "results": [
+    {
+      "name": "Unauthenticated trade API",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "Create isolated desk",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Persisted session",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Set NGN to GHS rate",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Add collection account",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Add payout account and float",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Reload accounts",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Create verified customer",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Reload customers",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Create quote",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Public customer quote",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Customer accepts payout details",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Reload before record_funds",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Record statement credit",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Read approval warnings",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Reload before approve",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Approve recorded payout",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Reload before record_payout",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Record external payout reference",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Customer sees completion",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Customer final status COMPLETED",
+      "passed": true
+    },
+    {
+      "name": "Read /api/reconcile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Read /api/insights",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Read /api/team",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Read /api/settings",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Read /api/desk/setup",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Read /api/channels",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Read /api/inbox",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Read /api/export/trades",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /desk",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /trades",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /trades/new",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /customers",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /accounts",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /rates",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /inbox",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /whatsapp",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /susu",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /susu/close",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /reconcile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /insights",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /team",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /settings",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Page /t/VU2HV9vbQsWwKDxWApEnQA.Uz5cKGkOcvdeYZAT9DLwm-IF",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Logout",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Revoked session rejected",
+      "passed": true,
+      "status": 401
+    }
+  ]
+}

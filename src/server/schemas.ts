@@ -13,6 +13,7 @@ export const money = z.union([z.string(), z.number()]).transform((v, ctx) => {
 export const optionalMoney = z.union([money, z.literal('').transform(() => null), z.null()]).optional();
 
 export const corridor = z.enum(['NGN_GHS', 'GHS_NGN']);
+export const boardRateKey = z.enum(['NGN_GHS', 'GHS_NGN', 'USD_NGN', 'NGN_USD', 'USD_GHS', 'GHS_USD']);
 export const currency = z.enum(['NGN', 'GHS']);
 export const rate = z.string().trim().regex(/^\d+(\.\d{1,6})?$/, 'Use a rate like 105.06');
 export const version = z.number().int().positive();
@@ -81,13 +82,8 @@ export const customerSchema = z.object({
 });
 
 export const rateSchema = z.object({
-  corridor,
+  corridor: boardRateKey,
   customerRate: rate,
-  referenceRate: rate.optional().nullable().or(z.literal('').transform(() => null)),
-  fee: optionalMoney,
-  minPay: optionalMoney,
-  maxPay: optionalMoney,
-  active: z.boolean().default(true),
 });
 
 export const railSchema = z.object({
@@ -163,6 +159,7 @@ export const simulateSchema = z.object({
 
 export const saverSchema = z.object({
   smsEnabled: z.boolean().optional(),
+  smsAutoSend: z.boolean().optional(),
   name: z.string().trim().min(2, 'Enter the saver’s name').max(80),
   phone: z.string().trim().max(30).optional().nullable(),
   daily: money,
@@ -172,8 +169,6 @@ export const saverSchema = z.object({
 
 export const collectSchema = z.object({ amount: money, note: z.string().trim().max(200).optional().nullable(), requestId: uuid });
 
-export const collectBulkSchema = z.object({ rows: z.array(z.object({ saverId: uuid, amount: money })).min(1).max(200), requestId: uuid });
-
 export const closePagesSchema = z.object({
   pages: z
     .array(z.object({ pageId: uuid, kind: z.enum(['PAYOUT', 'ROLLOVER', 'WITHDRAWAL']), method: z.string().trim().max(40).optional().nullable(), reference: z.string().trim().max(80).optional().nullable() }))
@@ -181,7 +176,12 @@ export const closePagesSchema = z.object({
     .max(500),
 });
 
-export const withdrawSchema = z.object({ method: z.string().trim().max(40).optional().nullable(), reference: z.string().trim().max(80).optional().nullable() });
+export const withdrawSchema = z.object({
+  amount: money,
+  method: z.string().trim().max(40).optional().nullable(),
+  reference: z.string().trim().max(80).optional().nullable(),
+  requestId: uuid,
+});
 
 export const leadSchema = z.object({
   name: z.string().trim().min(2).max(120),

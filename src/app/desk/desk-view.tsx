@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Activity as ActivityIcon, ArrowRight, Banknote, CheckCircle2, Circle, MessageSquare, RefreshCw, Sparkles } from 'lucide-react';
 import { api, useLoad } from '@/lib/api';
-import { CORRIDORS, formatMinor } from '@/lib/money';
+import { CORRIDORS, formatMinor, type Corridor } from '@/lib/money';
 import type { TradeStatus, TradeSummary } from '@/lib/trades';
 import { clock, remaining, timeAgo } from '@/lib/time';
 import { Button, Card, cx, Dialog, Empty, Notice, PageHeader, Skeleton } from '@/components/ui';
@@ -272,13 +272,16 @@ function RatesNow() {
         <p className="mt-2 text-xs text-amber">No active rates. The assistant can’t quote until you set one.</p>
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {rates.map((r) => (
-            <div key={r.corridor} className="rounded-xl bg-paper px-3 py-2">
-              <div className="text-[0.6875rem] text-muted">{CORRIDORS[r.corridor].label}</div>
-              <div className="font-mono text-base font-bold tabular text-ink">₦{Number(r.customerRate).toFixed(2)}</div>
-              <div className="text-[0.625rem] text-subtle" suppressHydrationWarning>per GH₵1 · set {timeAgo(r.updatedAt)}</div>
-            </div>
-          ))}
+          {rates.map((r) => {
+            const usd = r.corridor === 'USD_NGN';
+            return (
+              <div key={r.corridor} className="rounded-xl bg-paper px-3 py-2">
+                <div className="text-[0.6875rem] text-muted">{usd ? 'US dollar benchmark' : CORRIDORS[r.corridor as Corridor].label}</div>
+                <div className="font-mono text-base font-bold tabular text-ink">₦{Number(r.customerRate).toFixed(2)}</div>
+                <div className="text-[0.625rem] text-subtle" suppressHydrationWarning>per {usd ? '$1' : 'GH₵1'} · set {timeAgo(r.updatedAt)}</div>
+              </div>
+            );
+          })}
         </div>
       )}
     </Card>

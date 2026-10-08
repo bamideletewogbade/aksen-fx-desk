@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, type Db } from '@/server/db';
 import { acceptInvite, createInvite, login, resolveSession, signup, type Ctx } from '@/server/auth';
-import { closePage, closePages, getSaver, listSavers, parseCollections, recordCollection, recordCollections, saveSaver, susuOverview, withdraw } from '@/server/susu';
+import { closePage, closePages, getSaver, listSavers, recordCollection, saveSaver, susuOverview, withdraw } from '@/server/susu';
 import { todayIn } from '@/server/day-close';
 import { closeMath, daysInMonth, expectedByToday, nextPeriod, periodOf, splitCash, standing, streak } from '@/lib/susu';
 
@@ -121,6 +121,39 @@ describe('susu desk flows', () => {
     expect(after.daysPaid).toBe(0);
   });
 
+  it('withdraws a chosen amount, carries the remainder without another fee, and is retry-safe', async () => {
+    const saverId = (await saveSaver(db, owner, { name: 'Partial Withdrawal', dailyMinor: GHS(10) })).id;
+    await recordCollection(db, owner, { saverId, amountMinor: GHS(50) });
+    const requestId = randomUUID();
+    const first = await withdraw(db, owner, { saverId, amountMinor: GHS(15), method: 'MoMo', reference: 'MOMO-15', requestId });
+    expect(first).toMatchObject({ feeMinor: GHS(10), balanceMinor: GHS(40), paidOutMinor: GHS(15), carriedMinor: GHS(25) });
+    const retry = await withdraw(db, owner, { saverId, amountMinor: GHS(15), method: 'MoMo', reference: 'MOMO-15', requestId });
+    expect(retry).toEqual(first);
+    await expect(withdraw(db, owner, { saverId, amountMinor: GHS(20), method: 'MoMo', reference: 'MOMO-15', requestId })).rejects.toThrow(/different amount/);
+
+    const after = await getSaver(db, owner, saverId);
+    expect(after.saver.heldMinor).toBe(GHS(25));
+    expect(after.saver.page).toMatchObject({ broughtForwardMinor: GHS(25), daysPaid: 0, feeMinor: 0, balanceIfClosedMinor: GHS(25) });
+    const [closed] = await db.query<{ paid_out_minor: number; carried_minor: number; fee_minor: number }>("SELECT paid_out_minor,carried_minor,fee_minor FROM susu_pages WHERE saver_id=$1 AND status='CLOSED'", [saverId]);
+    expect(Number(closed.paid_out_minor)).toBe(GHS(15));
+    expect(Number(closed.carried_minor)).toBe(GHS(25));
+    expect(Number(closed.fee_minor)).toBe(GHS(10));
+
+    const rest = await withdraw(db, owner, { saverId, amountMinor: GHS(25), method: 'Cash', requestId: randomUUID() });
+    expect(rest).toMatchObject({ feeMinor: 0, paidOutMinor: GHS(25), carriedMinor: 0 });
+    expect((await getSaver(db, owner, saverId)).saver.heldMinor).toBe(0);
+  });
+
+  it('rejects zero and over-limit early withdrawals without changing the booklet', async () => {
+    const saverId = (await saveSaver(db, owner, { name: 'Withdrawal Limits', dailyMinor: GHS(10) })).id;
+    await recordCollection(db, owner, { saverId, amountMinor: GHS(30) });
+    await expect(withdraw(db, owner, { saverId, amountMinor: 0, requestId: randomUUID() })).rejects.toThrow(/amount to withdraw/i);
+    await expect(withdraw(db, owner, { saverId, amountMinor: GHS(21), requestId: randomUUID() })).rejects.toThrow(/most .* can withdraw/i);
+    const after = await getSaver(db, owner, saverId);
+    expect(after.saver.page).toMatchObject({ daysPaid: 3, balanceIfClosedMinor: GHS(20) });
+    expect(after.pages.filter((p) => p.status === 'CLOSED')).toHaveLength(0);
+  });
+
   it('month end: rolls the balance onto the next page without charging it again', async () => {
     const esi = (await saveSaver(db, owner, { name: 'Esi Boateng', dailyMinor: GHS(10) })).id;
     // Pretend her page belongs to a finished 31-day month that she filled completely.
@@ -147,22 +180,6 @@ describe('susu desk flows', () => {
     if (!lastDay) await expect(closePage(db, owner, { pageId: p.id, kind: 'PAYOUT' })).rejects.toThrow(/isn’t over yet/);
   });
 
-  it('reads a typed collection round', async () => {
-    const lines = await parseCollections(db, owner, 'Ama 50, kofi - 45\nNobody 10');
-    expect(lines[0]).toMatchObject({ saverName: 'Ama Owusu', amountMinor: GHS(50), days: 5, changeMinor: 0, problem: null });
-    expect(lines[1]).toMatchObject({ saverName: 'Kofi Mensah', amountMinor: GHS(45), days: 2, changeMinor: GHS(5), problem: null });
-    expect(lines[2].problem).toMatch(/No saver/);
-  });
-
-  it('reads a saver reference without treating its digits as the cash amount', async () => {
-    const [line] = await parseCollections(db, owner, 'S-0001 50');
-    expect(line).toMatchObject({ saverId: ama, amountMinor: GHS(50), days: 5, changeMinor: 0, problem: null });
-  });
-
-  it('does not silently drop collection lines beyond the round limit', async () => {
-    await expect(parseCollections(db, owner, Array.from({ length: 201 }, () => 'Ama 10').join('\n'))).rejects.toThrow(/at most 200 lines/);
-  });
-
   it('lets a queued daily amount change be cancelled before the next page', async () => {
     const k = (await saveSaver(db, owner, { name: 'Kweku Darko', dailyMinor: GHS(10) })).id;
     await recordCollection(db, owner, { saverId: k, amountMinor: GHS(10) });
@@ -181,16 +198,6 @@ describe('susu desk flows', () => {
     expect(paid.balanceMinor).toBe(GHS(20));
     await saveSaver(db, owner, { id: k, name: 'Abena Appiah', dailyMinor: GHS(10), status: 'ACTIVE' });
     expect((await getSaver(db, owner, k)).saver.status).toBe('ACTIVE');
-  });
-
-  it('saves a collection round atomically if any saver is unavailable', async () => {
-    const k = (await saveSaver(db, owner, { name: 'Kojo Arthur', dailyMinor: GHS(10) })).id;
-    const p = (await saveSaver(db, owner, { name: 'Paa Mensah', dailyMinor: GHS(10) })).id;
-    await saveSaver(db, owner, { id: p, name: 'Paa Mensah', dailyMinor: GHS(10), status: 'PAUSED' });
-    await expect(recordCollections(db, owner, [
-      { saverId: k, amountMinor: GHS(20) }, { saverId: p, amountMinor: GHS(20) },
-    ])).rejects.toThrow(/paused/);
-    expect((await getSaver(db, owner, k)).saver.page?.daysPaid).toBe(0);
   });
 
   it('returns the original collection on retry without filling boxes twice', async () => {

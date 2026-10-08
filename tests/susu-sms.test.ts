@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import { createTestDb, type Db } from '@/server/db';
 import { signup, login, resolveSession, type Ctx } from '@/server/auth';
-import { saveSaver, recordCollection, recordCollections, getSaver, closePage, withdraw } from '@/server/susu';
-import { dispatchSusuSms, manageSusuSms, refreshSusuSmsDelivery, retrySusuSms, saverSusuSms, setSusuSmsEnabled, smsPhone, susuSmsOverview } from '@/server/susu-sms';
+import { saveSaver, recordCollection, getSaver, closePage, withdraw } from '@/server/susu';
+import { dispatchSusuSms, manageSusuSms, refreshSusuSmsDelivery, retrySusuSms, saverSusuSms, setSusuSmsEnabled, smsConfig, smsPhone, susuSmsOverview } from '@/server/susu-sms';
 
 describe('Susu transactional SMS', () => {
   let db:Db, owner:Ctx;
@@ -33,6 +33,11 @@ describe('Susu transactional SMS', () => {
     for (const p of ['123','+2330244123456','++233244123456','0244abc123456']) expect(smsPhone(p)).toBeNull();
     expect(smsPhone('+2348012345678')).toBe('2348012345678');
   });
+  it('accepts the approved Dinero-Yard sender name',() => {
+    vi.stubEnv('ARKESEL_SENDER_ID','Dinero-Yard');
+    expect(smsConfig()).toMatchObject({configured:true,sender:'Dinero-Yard'});
+    vi.stubEnv('ARKESEL_SENDER_ID','TestDesk');
+  });
   it('queues welcome and one accurate receipt across collection retries',async () => {
     const {id} = await saved();
     const requestId = randomUUID();
@@ -41,9 +46,7 @@ describe('Susu transactional SMS', () => {
     const rows=await queue(id);
     expect(rows.map(r=>r.kind)).toEqual(['WELCOME','COLLECTION']);
     expect(rows.map(r=>r.status)).toEqual(['DRAFT','DRAFT']);
-    expect(rows[1].message).toMatch(/Susu receipt\. Saved GHS 20\.00 on \d{1,2} [A-Z][a-z]{2} \d{4} \(2 days\)\./);
-    expect(rows[1].message).toContain('Total in your susu book: GHS 20.00 before fee.');
-    expect(rows[1].message).toContain('Change GHS 5.00.');
+    expect(rows[1].message).toMatch(/TestDesk: Receipt: GHS 20\.00, \d{1,2} [A-Z][a-z]{2} \d{4}, Total: GHS 20\.00, Sub-total saving: GHS 10\.00\./);
     expect(accepted).not.toHaveBeenCalled();
   });
   it('requires review and allows editing before a draft can be sent',async () => {
@@ -62,23 +65,26 @@ describe('Susu transactional SMS', () => {
     await dispatchSusuSms(db,owner.orgId,accepted,1);
     expect((await queue(id))[0]).toMatchObject({status:'SANDBOX',message:edited});
   });
+  it('queues new messages immediately when auto-send is enabled for the saver',async () => {
+    await db.query("UPDATE susu_sms SET status='CANCELLED' WHERE status IN ('DRAFT','QUEUED')");
+    accepted.mockClear();
+    const s=await saveSaver(db,owner,{name:'Automatic Saver',phone,dailyMinor:1000,smsEnabled:true,smsAutoSend:true});
+    expect((await getSaver(db,owner,s.id)).saver.smsAutoSend).toBe(true);
+    expect((await queue(s.id))[0].status).toBe('QUEUED');
+    await dispatchSusuSms(db,owner.orgId,accepted,1);
+    expect(accepted).toHaveBeenCalledTimes(1);
+    expect((await queue(s.id))[0].status).toBe('SANDBOX');
+  });
   it('shows the saver an up-to-date running susu total',async () => {
     const {id} = await saved();
     await recordCollection(db,owner,{saverId:id,amountMinor:2000});
     await recordCollection(db,owner,{saverId:id,amountMinor:1000});
     const receipts=(await queue(id)).filter(r=>r.kind==='COLLECTION');
     expect(receipts).toHaveLength(2);
-    expect(receipts[0].message).toContain('Saved GHS 20.00');
-    expect(receipts[0].message).toContain('Total in your susu book: GHS 20.00 before fee.');
-    expect(receipts[0].message).not.toContain('Change');
-    expect(receipts[1].message).toContain('Saved GHS 10.00');
-    expect(receipts[1].message).toContain('Total in your susu book: GHS 30.00 before fee.');
-  });
-  it('rolls back all queued receipts with a failed bulk collection',async () => {
-    const {id} = await saved();
-    await expect(recordCollections(db,owner,[{saverId:id,amountMinor:2000},{saverId:randomUUID(),amountMinor:2000}],randomUUID())).rejects.toThrow();
-    expect((await queue(id)).map(r=>r.kind)).toEqual(['WELCOME']);
-    expect((await getSaver(db,owner,id)).saver.heldMinor).toBe(0);
+    expect(receipts[0].message).toContain('Receipt: GHS 20.00');
+    expect(receipts[0].message).toContain('Total: GHS 20.00, Sub-total saving: GHS 10.00.');
+    expect(receipts[1].message).toContain('Receipt: GHS 10.00');
+    expect(receipts[1].message).toContain('Total: GHS 30.00, Sub-total saving: GHS 20.00.');
   });
   it('queues withdrawals, payouts, rollover and material account changes',async () => {
     const {id}=await saved();

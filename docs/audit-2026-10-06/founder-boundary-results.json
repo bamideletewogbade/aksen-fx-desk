@@ -1,0 +1,99 @@
+{
+  "environment": "Isolated local PGlite, original app source, Clerk test configuration; no bank or messaging calls",
+  "results": [
+    {
+      "name": "Synthetic signup",
+      "passed": true
+    },
+    {
+      "name": "Session cookie is HttpOnly and SameSite=Lax",
+      "passed": true
+    },
+    {
+      "name": "Create saver",
+      "passed": true
+    },
+    {
+      "name": "Collect three days",
+      "passed": true,
+      "detail": {
+        "saverId": "21f83e3e-abed-4687-9df1-f059464c26b3",
+        "name": "Synthetic Saver",
+        "receivedMinor": 15000,
+        "days": 3,
+        "changeMinor": 0,
+        "pages": [
+          {
+            "period": "2026-10",
+            "days": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "Retry preserves collection result",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "result": {
+          "days": 3,
+          "name": "Synthetic Saver",
+          "pages": [
+            {
+              "days": 3,
+              "period": "2026-10"
+            }
+          ],
+          "saverId": "21f83e3e-abed-4687-9df1-f059464c26b3",
+          "changeMinor": 0,
+          "receivedMinor": 15000
+        }
+      }
+    },
+    {
+      "name": "Changed payload with reused request ID is blocked",
+      "passed": true
+    },
+    {
+      "name": "Negative collection is rejected",
+      "passed": true
+    },
+    {
+      "name": "Cross-origin write is blocked",
+      "passed": true
+    },
+    {
+      "name": "Desk brief falls back to computed facts without model",
+      "passed": true
+    },
+    {
+      "name": "Retired ticket endpoint returns 410",
+      "passed": true
+    },
+    {
+      "name": "Disabled Twilio rejects processing",
+      "passed": true
+    },
+    {
+      "name": "Invalid customer link does not expose a trade",
+      "passed": true
+    },
+    {
+      "name": "Other tenant cannot read saver",
+      "passed": true
+    },
+    {
+      "name": "Admin can record synthetic withdrawal",
+      "passed": true
+    },
+    {
+      "name": "Audit chain verifies",
+      "passed": true,
+      "detail": {
+        "ok": true,
+        "events": 4,
+        "head": "cc059b6932b2190a2e6591de0cf319f256d5d4de833b42c5760e2030d4ccf3e9"
+      }
+    }
+  ]
+}

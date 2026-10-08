@@ -4,7 +4,7 @@ import { appendAudit } from './audit';
 import { fail } from './errors';
 import { post, railAccount, railBalances } from './ledger';
 import { assertRailDayOpen } from './day-close';
-import { CORRIDORS, parseRate, rateToString, type Corridor, type Currency } from '@/lib/money';
+import { CORRIDORS, parseRate, rateToString, type BoardRateKey, type Corridor, type Currency } from '@/lib/money';
 
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
@@ -80,7 +80,7 @@ export async function updateSettings(
 // ---------------- Rate board ----------------
 
 export interface RateRow {
-  corridor: Corridor;
+  corridor: BoardRateKey;
   customerRate: string;
   referenceRate: string | null;
   feeMinor: number;
@@ -98,7 +98,7 @@ export async function getRates(db: Db, ctx: Ctx): Promise<RateRow[]> {
     [ctx.orgId],
   );
   return rows.map((r) => ({
-    corridor: r.corridor as Corridor,
+    corridor: r.corridor as BoardRateKey,
     customerRate: rateToString(parseRate(String(r.customer_rate))),
     referenceRate: r.reference_rate ? rateToString(parseRate(String(r.reference_rate))) : null,
     feeMinor: Number(r.fee_minor),
@@ -113,16 +113,10 @@ export async function getRates(db: Db, ctx: Ctx): Promise<RateRow[]> {
 export async function setRate(
   db: Db,
   ctx: Ctx,
-  input: { corridor: Corridor; customerRate: string; referenceRate?: string | null; feeMinor?: number; minPayMinor?: number; maxPayMinor?: number | null; active?: boolean },
+  input: { corridor: BoardRateKey; customerRate: string; referenceRate?: string | null; feeMinor?: number; minPayMinor?: number; maxPayMinor?: number | null; active?: boolean },
 ) {
   requirePermission(ctx, 'configure');
   const customer = parseRate(input.customerRate);
-  const reference = input.referenceRate ? parseRate(input.referenceRate) : null;
-  if (reference) {
-    // Sanity check: a desk sells GHS above market (NGN_GHS) and buys below it (GHS_NGN).
-    const drift = Number(((customer - reference) * 10000n) / reference) / 100;
-    if (Math.abs(drift) > 15) fail('INVALID', `Customer rate is ${drift.toFixed(1)}% away from the reference rate. Check for a typo.`);
-  }
   await db.tx(async (q) => {
     const [prev] = await q.query<{ customer_rate: string }>('SELECT customer_rate FROM rate_board WHERE org_id = $1 AND corridor = $2', [ctx.orgId, input.corridor]);
     await q.query(
@@ -131,13 +125,13 @@ export async function setRate(
        ON CONFLICT (org_id, corridor) DO UPDATE SET customer_rate = EXCLUDED.customer_rate, reference_rate = EXCLUDED.reference_rate,
          fee_minor = EXCLUDED.fee_minor, min_pay_minor = EXCLUDED.min_pay_minor, max_pay_minor = EXCLUDED.max_pay_minor,
          active = EXCLUDED.active, updated_by = EXCLUDED.updated_by, updated_at = now()`,
-      [ctx.orgId, input.corridor, rateToString(customer), reference ? rateToString(reference) : null, input.feeMinor ?? 0, input.minPayMinor ?? 0, input.maxPayMinor ?? null, input.active ?? true, ctx.userId],
+      [ctx.orgId, input.corridor, rateToString(customer), null, 0, 0, null, true, ctx.userId],
     );
     await appendAudit(q, {
       orgId: ctx.orgId,
       action: 'rates.changed',
       actor: actorOf(ctx),
-      data: { corridor: input.corridor, from: prev ? rateToString(parseRate(String(prev.customer_rate))) : null, to: rateToString(customer), reference: reference ? rateToString(reference) : null, feeMinor: input.feeMinor ?? 0, active: input.active ?? true },
+      data: { corridor: input.corridor, from: prev ? rateToString(parseRate(String(prev.customer_rate))) : null, to: rateToString(customer) },
     });
   });
 }

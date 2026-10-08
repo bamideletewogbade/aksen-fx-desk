@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRef, useState } from 'react';
-import { ArrowLeft, Flame, HandCoins, MessageSquareText, Pencil, Phone, Send, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Flame, HandCoins, MessageSquareText, Pencil, Phone, Send, X } from 'lucide-react';
 import { api, ApiError, useLoad } from '@/lib/api';
 import { canApprove, canTrade } from '@/lib/auth';
 import { cedis, closeMath, daysInMonth, periodLabel, splitCash } from '@/lib/susu';
@@ -17,9 +17,9 @@ type Payment = { id: string; at: string; receivedMinor: number; changeMinor: num
 type Data = { saver: SaverSummary; pages: SusuPage[]; payments: Payment[]; sms: SusuSmsView[]; smsDeskEnabled: boolean; today: string };
 
 const smsStatus: Record<SusuSmsView['status'], { label: string; tone: 'neutral' | 'waiting' | 'good' | 'risk' | 'done' }> = {
-  DRAFT: { label: 'Needs your review', tone: 'waiting' }, QUEUED: { label: 'Waiting to send', tone: 'waiting' }, SENDING: { label: 'Sending', tone: 'waiting' },
-  ACCEPTED: { label: 'Accepted by Arkesel', tone: 'neutral' }, SANDBOX: { label: 'Test only', tone: 'neutral' }, DELIVERED: { label: 'Delivered', tone: 'good' },
-  NOT_DELIVERED: { label: 'Not delivered', tone: 'risk' }, FAILED: { label: 'Rejected', tone: 'risk' }, UNKNOWN: { label: 'Check Arkesel', tone: 'risk' }, CANCELLED: { label: 'Skipped', tone: 'done' },
+  DRAFT: { label: 'Not sent', tone: 'waiting' }, QUEUED: { label: 'Sending', tone: 'waiting' }, SENDING: { label: 'Sending', tone: 'waiting' },
+  ACCEPTED: { label: 'Sent', tone: 'good' }, SANDBOX: { label: 'Test only', tone: 'neutral' }, DELIVERED: { label: 'Delivered', tone: 'good' },
+  NOT_DELIVERED: { label: 'Not delivered', tone: 'risk' }, FAILED: { label: 'Not sent', tone: 'risk' }, UNKNOWN: { label: 'Not confirmed', tone: 'waiting' }, CANCELLED: { label: 'Not sent', tone: 'done' },
 };
 
 function SmsDraft({ saverId, sms, onChanged }: { saverId: string; sms: SusuSmsView; onChanged: (data: Data) => void }) {
@@ -48,19 +48,44 @@ function SmsDraft({ saverId, sms, onChanged }: { saverId: string; sms: SusuSmsVi
 }
 
 function SaverSms({ data, allowed, onChanged }: { data: Data; allowed: boolean; onChanged: (data: Data) => void }) {
+  const [open, setOpen] = useState(false);
   const drafts = data.sms.filter((m) => m.status === 'DRAFT');
   const history = data.sms.filter((m) => m.status !== 'DRAFT').slice(0, 8);
-  return <Card className="space-y-4 p-5">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><h2 className="flex items-center gap-2 text-sm font-bold text-ink"><MessageSquareText size={16} /> Saver SMS</h2><p className="mt-1 text-xs text-muted">Review the words, then send. Saving money never depends on SMS delivery.</p></div>
-      <Pill tone={data.smsDeskEnabled && data.saver.smsEnabled ? 'good' : 'done'}>{!data.smsDeskEnabled ? 'SMS off in Settings' : data.saver.smsEnabled ? 'Receipts on' : 'Receipts off'}</Pill>
-    </div>
-    {!data.smsDeskEnabled ? <p className="text-sm text-subtle">Turn on Susu SMS receipts in Settings before creating new drafts.</p> : !data.saver.smsEnabled ? <p className="text-sm text-subtle">Turn receipts on under Edit after confirming the phone number.</p> : !data.sms.length ? <p className="text-sm text-subtle">No SMS drafts or delivery history yet.</p> : null}
-    {allowed && drafts.map((m) => <SmsDraft key={m.id} saverId={data.saver.id} sms={m} onChanged={onChanged} />)}
-    {!allowed && drafts.length > 0 && <Notice tone="info">{drafts.length} SMS draft{drafts.length === 1 ? '' : 's'} waiting for an operator to review.</Notice>}
-    {history.length > 0 && <div><h3 className="mb-1 text-xs font-semibold text-ink">Recent messages</h3><ul className="divide-y divide-line">
-      {history.map((m) => <li key={m.id} className="py-2 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-subtle" suppressHydrationWarning>{dateTime(m.createdAt)} · +{m.recipient}</span><Pill tone={smsStatus[m.status].tone}>{smsStatus[m.status].label}</Pill></div><p className="mt-1 line-clamp-2 text-xs text-muted">{m.message}</p></li>)}
-    </ul></div>}
+  const latest = data.sms[0];
+  const summary = drafts.length > 0
+    ? `${drafts.length} message${drafts.length === 1 ? '' : 's'} ready to review`
+    : latest
+      ? `Latest message: ${smsStatus[latest.status].label}`
+      : 'No messages yet';
+
+  return <Card className="overflow-hidden p-0">
+    <button
+      type="button"
+      className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-paper/70"
+      aria-expanded={open}
+      aria-controls="saver-messages"
+      onClick={() => setOpen((value) => !value)}
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper text-brand"><MessageSquareText size={17} /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold text-ink">Messages</span>
+        <span className="block truncate text-xs text-muted">{summary}</span>
+      </span>
+      {drafts.length > 0 && <Pill tone="waiting">{drafts.length} to review</Pill>}
+      <ChevronDown size={17} className={cx('shrink-0 text-subtle transition-transform', open && 'rotate-180')} />
+    </button>
+    {open && <div id="saver-messages" className="space-y-4 border-t border-line px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="max-w-2xl text-xs text-muted">Review messages before sending. A saving is recorded even when a message is not sent.</p>
+        <Pill tone={data.smsDeskEnabled && data.saver.smsEnabled ? 'good' : 'done'}>{!data.smsDeskEnabled ? 'Messages off in Settings' : data.saver.smsEnabled ? data.saver.smsAutoSend ? 'Auto-send on' : 'Review before sending' : 'Receipts off'}</Pill>
+      </div>
+      {!data.smsDeskEnabled ? <p className="text-sm text-subtle">Turn on Susu SMS receipts in Settings before creating new drafts.</p> : !data.saver.smsEnabled ? <p className="text-sm text-subtle">Turn receipts on under Edit after confirming the phone number.</p> : !data.sms.length ? <p className="text-sm text-subtle">No messages yet.</p> : null}
+      {allowed && drafts.map((m) => <SmsDraft key={m.id} saverId={data.saver.id} sms={m} onChanged={onChanged} />)}
+      {!allowed && drafts.length > 0 && <Notice tone="info">{drafts.length} message{drafts.length === 1 ? '' : 's'} waiting for an operator to review.</Notice>}
+      {history.length > 0 && <div><h3 className="mb-1 text-xs font-semibold text-ink">Recent messages</h3><ul className="divide-y divide-line">
+        {history.map((m) => <li key={m.id} className="py-2 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-subtle" suppressHydrationWarning>{dateTime(m.createdAt)} · +{m.recipient}</span><Pill tone={smsStatus[m.status].tone}>{smsStatus[m.status].label}</Pill></div><p className="mt-1 line-clamp-2 text-xs text-muted">{m.message}</p></li>)}
+      </ul></div>}
+    </div>}
   </Card>;
 }
 
@@ -109,6 +134,7 @@ function EditSaver({ s, onClose, onSaved }: { s: SaverSummary; onClose: () => vo
   const [name, setName] = useState(s.name);
   const [phone, setPhone] = useState(s.phone ?? '');
   const [smsEnabled, setSmsEnabled] = useState(s.smsEnabled);
+  const [smsAutoSend, setSmsAutoSend] = useState(s.smsAutoSend);
   const [daily, setDaily] = useState(String((s.nextDailyMinor ?? s.dailyMinor) / 100));
   const [notes, setNotes] = useState(s.notes ?? '');
   const [status, setStatus] = useState(s.status);
@@ -118,7 +144,7 @@ function EditSaver({ s, onClose, onSaved }: { s: SaverSummary; onClose: () => vo
     setBusy(true);
     setError(null);
     try {
-      const d = await api<Data & { dailyChange: 'now' | 'next_page' | null }>(`/api/susu/${s.id}`, { method: 'PUT', json: { name, phone: phone || null, daily, notes: notes || null, status, smsEnabled: !!phone && smsEnabled } });
+      const d = await api<Data & { dailyChange: 'now' | 'next_page' | null }>(`/api/susu/${s.id}`, { method: 'PUT', json: { name, phone: phone || null, daily, notes: notes || null, status, smsEnabled: !!phone && smsEnabled, smsAutoSend: !!phone && smsEnabled && smsAutoSend } });
       onSaved(d);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save.');
@@ -135,7 +161,11 @@ function EditSaver({ s, onClose, onSaved }: { s: SaverSummary; onClose: () => vo
           <Field label="Phone" htmlFor="e-phone" optional><Input id="e-phone" mono value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
         </div>
         <Field label="Notes" htmlFor="e-notes" optional><Input id="e-notes" value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
-        <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" className="mt-1" checked={smsEnabled} disabled={!phone} onChange={e => setSmsEnabled(e.target.checked)} /><span>Send savings receipts to this number. Confirm it belongs to the saver. SMS must also be enabled in Settings.</span></label>
+        <div className="space-y-3 rounded-xl border border-line p-3">
+          <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" className="mt-1" checked={smsEnabled} disabled={!phone} onChange={e => { setSmsEnabled(e.target.checked); if (!e.target.checked) setSmsAutoSend(false); }} /><span><strong className="font-semibold text-ink">Send SMS receipts</strong><span className="mt-0.5 block text-xs text-subtle">Send savings receipts to this number.</span></span></label>
+          <label className="ml-6 flex items-start gap-2 border-t border-line pt-3 text-sm text-muted"><input type="checkbox" className="mt-1" checked={smsAutoSend} disabled={!phone || !smsEnabled} onChange={e => setSmsAutoSend(e.target.checked)} /><span><strong className="font-semibold text-ink">Send automatically</strong><span className="mt-0.5 block text-xs text-subtle">Skip review and send each new message as soon as it is created.</span></span></label>
+          <p className="ml-6 text-xs text-subtle">Confirm the number belongs to the saver. SMS must also be enabled in Settings.</p>
+        </div>
         <Field label="Booklet" htmlFor="e-status">
           <Select id="e-status" value={status} onChange={(e) => setStatus(e.target.value as SaverSummary['status'])}>
             <option value="ACTIVE">Active: collecting</option>
@@ -151,15 +181,22 @@ function EditSaver({ s, onClose, onSaved }: { s: SaverSummary; onClose: () => vo
 
 function Withdraw({ s, page, onClose, onDone }: { s: SaverSummary; page: SusuPage; onClose: () => void; onDone: (d: Data) => void }) {
   const desk = useSession().orgName;
+  const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('Cash');
   const [reference, setReference] = useState('');
   const [busy, setBusy] = useState(false);
+  const requestId = useRef<string | null>(null);
   const m = closeMath(page);
+  const otherPagesMinor = Math.max(0, s.heldMinor - page.broughtForwardMinor - m.savedMinor);
+  const amountMinor = Math.round((Number(amount.replace(/[^\d.]/g, '')) || 0) * 100);
+  const validAmount = amountMinor > 0 && amountMinor <= m.balanceMinor;
+  const remainingMinor = validAmount ? m.balanceMinor - amountMinor : m.balanceMinor;
   const go = async () => {
     setBusy(true);
     try {
-      const d = await api<Data & { result: { balanceMinor: number } }>(`/api/susu/${s.id}`, { method: 'POST', json: { action: 'withdraw', method, reference: reference || null } });
-      toast(`Withdrawal recorded for ${s.name.split(' ')[0]} · ${cedis(d.result.balanceMinor)}${s.smsEnabled ? ' · SMS draft ready below' : ''}`);
+      requestId.current ??= crypto.randomUUID();
+      const d = await api<Data & { result: { paidOutMinor: number; carriedMinor: number } }>(`/api/susu/${s.id}`, { method: 'POST', json: { action: 'withdraw', amount, method, reference: reference || null, requestId: requestId.current } });
+      toast(`Withdrawal recorded for ${s.name.split(' ')[0]} · ${cedis(d.result.paidOutMinor)} paid · ${cedis(d.result.carriedMinor)} still saved${s.smsEnabled ? s.smsAutoSend ? ' · SMS queued automatically' : ' · SMS draft ready in Messages' : ''}`);
       onDone(d);
       onClose();
     } catch (e) {
@@ -169,15 +206,21 @@ function Withdraw({ s, page, onClose, onDone }: { s: SaverSummary; page: SusuPag
     }
   };
   return (
-    <Dialog open onClose={onClose} title={`Withdrawal for ${s.name}`} footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={m.balanceMinor <= 0} onClick={go}>Record withdrawal and close page</Button></>}>
+    <Dialog open onClose={onClose} title={`Early withdrawal for ${s.name}`} footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!validAmount} onClick={go}>Record {validAmount ? cedis(amountMinor) : ''} withdrawal</Button></>}>
       <div className="space-y-4 text-sm">
         <div className="space-y-1.5 rounded-xl bg-paper p-4">
           {page.broughtForwardMinor > 0 && <Row label="Brought forward" value={cedis(page.broughtForwardMinor)} />}
           <Row label={`Contributed this page (${page.daysPaid} day${page.daysPaid === 1 ? '' : 's'})`} value={cedis(m.savedMinor)} />
           <Row label={`${desk} collection fee (1 day)`} value={`− ${cedis(m.feeMinor)}`} />
-          <div className="border-t border-line pt-1.5"><Row label={<strong>They receive</strong>} value={<strong>{cedis(m.balanceMinor)}</strong>} /></div>
+          <div className="border-t border-line pt-1.5"><Row label={<strong>Available from this page</strong>} value={<strong>{cedis(m.balanceMinor)}</strong>} /></div>
+          {otherPagesMinor > 0 && <Row label="Paid ahead on later pages" value={cedis(otherPagesMinor)} />}
         </div>
-        <p className="text-xs text-muted">Complete the payout before recording it here. The page closes now. The {page.capacity - page.daysPaid} remaining day{page.capacity - page.daysPaid === 1 ? '' : 's'} of {periodLabel(page.period)} continue on a fresh page, which will have its own one-day fee when it closes.</p>
+        <Field label="Amount to withdraw (GH₵)" htmlFor="w-amount" hint="Enter any amount up to the available balance.">
+          <div className="flex gap-2"><Input id="w-amount" mono inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={String(m.balanceMinor / 100)} autoFocus /><Button type="button" variant="secondary" size="sm" onClick={() => setAmount(String(m.balanceMinor / 100))}>All</Button></div>
+        </Field>
+        {amountMinor > m.balanceMinor && <Notice tone="risk">The most available after the collection fee is {cedis(m.balanceMinor)}.</Notice>}
+        {validAmount && <div className="space-y-1.5 rounded-xl border border-line p-4"><Row label="Pay to saver" value={cedis(amountMinor)} /><Row label="Stays in savings" value={cedis(remainingMinor)} /></div>}
+        <p className="text-xs text-muted">Complete the payout before recording it here. This closes the current page and charges its one-day collection fee. Any amount left stays saved and is not charged again. The {page.capacity - page.daysPaid} remaining day{page.capacity - page.daysPaid === 1 ? '' : 's'} of {periodLabel(page.period)} continue on a fresh page.{otherPagesMinor > 0 ? ' Paid-ahead pages remain unchanged.' : ''}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Payout method" htmlFor="w-method"><Select id="w-method" value={method} onChange={(e) => setMethod(e.target.value)}><option>Cash</option><option>MoMo</option><option>Bank</option></Select></Field>
           <Field label="Reference" htmlFor="w-ref" optional><Input id="w-ref" mono value={reference} onChange={(e) => setReference(e.target.value)} placeholder={method === 'Cash' ? 'e.g. receipt no.' : 'Transaction ID'} /></Field>
@@ -219,7 +262,7 @@ export function SaverView({ id }: { id: string }) {
       setData(d);
       setAmount('');
       collectionRequestId.current = null;
-      toast(`${d.result.days} day${d.result.days === 1 ? '' : 's'} recorded${d.result.changeMinor ? ` · give back ${cedis(d.result.changeMinor)}` : ''}${s.smsEnabled ? ' · SMS draft ready below' : ''}`);
+      toast(`${d.result.days} day${d.result.days === 1 ? '' : 's'} recorded${d.result.changeMinor ? ` · give back ${cedis(d.result.changeMinor)}` : ''}${s.smsEnabled ? s.smsAutoSend ? ' · SMS queued automatically' : ' · SMS draft ready in Messages' : ''}`);
     } catch (e) {
       toast(e instanceof ApiError ? e.message : 'Could not record.', 'risk');
     } finally {
@@ -270,8 +313,6 @@ export function SaverView({ id }: { id: string }) {
         )}
       </Card>
 
-      <SaverSms data={data} allowed={allowed} onChanged={setData} />
-
       {page && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <Card className="p-5">
@@ -298,6 +339,8 @@ export function SaverView({ id }: { id: string }) {
           </Card>
         </div>
       )}
+
+      <SaverSms data={data} allowed={allowed} onChanged={setData} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">
@@ -327,7 +370,7 @@ export function SaverView({ id }: { id: string }) {
                     <span className="block text-xs text-subtle" suppressHydrationWarning>{p.closedAt ? dateTime(p.closedAt) : ''}{p.payoutReference ? ` · ref ${p.payoutReference}` : ''}</span>
                   </span>
                   <Pill tone={p.closeKind === 'ROLLOVER' ? 'neutral' : 'good'}>
-                    {p.closeKind === 'ROLLOVER' ? `Rolled over ${cedis(p.carriedMinor ?? 0)}` : `${p.closeKind === 'WITHDRAWAL' ? 'Withdrew' : 'Paid out'} ${cedis(p.paidOutMinor ?? 0)}`}
+                    {p.closeKind === 'ROLLOVER' ? `Rolled over ${cedis(p.carriedMinor ?? 0)}` : p.closeKind === 'WITHDRAWAL' ? `Withdrew ${cedis(p.paidOutMinor ?? 0)}${p.carriedMinor ? ` · kept ${cedis(p.carriedMinor)}` : ''}` : `Paid out ${cedis(p.paidOutMinor ?? 0)}`}
                   </Pill>
                 </li>
               ))}

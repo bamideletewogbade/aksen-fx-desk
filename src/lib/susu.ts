@@ -12,8 +12,9 @@
  *   however many boxes were filled. One box filled means nothing is left.
  * - At close the saver cashes out, or rolls over: the balance becomes the
  *   "brought forward" line of the next page and is never charged again.
- * - Withdrawing mid-month closes the page early (same one-day fee); the
- *   month's remaining boxes continue on a fresh page.
+ * - Withdrawing mid-month closes the page early (same one-day fee). The saver
+ *   can take some or all of the available balance; any remainder is brought
+ *   forward without another fee, and the month's empty boxes continue.
  */
 
 export type Period = string; // 'YYYY-MM'

@@ -30,18 +30,18 @@ export function smsDate(value: string) {
 
 export function smsConfig() {
   const sender = process.env.ARKESEL_SENDER_ID?.trim() ?? '';
-  return { configured: !!process.env.ARKESEL_API_KEY && /^[a-zA-Z0-9 ]{1,11}$/.test(sender), sender, sandbox: process.env.ARKESEL_SANDBOX !== 'false' };
+  return { configured: !!process.env.ARKESEL_API_KEY && /^[a-zA-Z0-9 -]{1,11}$/.test(sender), sender, sandbox: process.env.ARKESEL_SANDBOX !== 'false' };
 }
 
 /** Called inside the savings transaction. Never calls a provider here. */
 export async function queueSusuSms(q: Queryable, ctx: Ctx, saverId: string, eventKey: string, kind: string, message: string) {
   if (ctx.isDemo) return;
-  const [s] = await q.query<{ phone: string | null; sms_enabled: boolean; susu_sms_enabled: boolean }>(
-    `SELECT s.phone, s.sms_enabled, o.susu_sms_enabled FROM susu_savers s JOIN organizations o ON o.id = s.org_id WHERE s.id = $1 AND s.org_id = $2`, [saverId, ctx.orgId]);
+  const [s] = await q.query<{ phone: string | null; sms_enabled: boolean; sms_auto_send: boolean; susu_sms_enabled: boolean }>(
+    `SELECT s.phone, s.sms_enabled, s.sms_auto_send, o.susu_sms_enabled FROM susu_savers s JOIN organizations o ON o.id = s.org_id WHERE s.id = $1 AND s.org_id = $2`, [saverId, ctx.orgId]);
   const phone = smsPhone(s?.phone);
   if (!s?.sms_enabled || !s.susu_sms_enabled || !phone) return;
-  await q.query(`INSERT INTO susu_sms (org_id,saver_id,event_key,kind,recipient,message,status) VALUES ($1,$2,$3,$4,$5,$6,'DRAFT') ON CONFLICT (org_id,event_key) DO NOTHING`,
-    [ctx.orgId, saverId, eventKey, kind, phone, message]);
+  await q.query(`INSERT INTO susu_sms (org_id,saver_id,event_key,kind,recipient,message,status) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (org_id,event_key) DO NOTHING`,
+    [ctx.orgId, saverId, eventKey, kind, phone, message, s.sms_auto_send ? 'QUEUED' : 'DRAFT']);
 }
 
 function smsView(row: Record<string, unknown>): SusuSmsView {

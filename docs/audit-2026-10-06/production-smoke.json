@@ -1,0 +1,110 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "location": "",
+    "contentType": "text/html; charset=utf-8",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": ""
+  },
+  {
+    "path": "/login",
+    "status": 200,
+    "location": "",
+    "contentType": "text/html; charset=utf-8",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": ""
+  },
+  {
+    "path": "/signup",
+    "status": 200,
+    "location": "",
+    "contentType": "text/html; charset=utf-8",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": ""
+  },
+  {
+    "path": "/desk",
+    "status": 200,
+    "location": "",
+    "contentType": "text/html; charset=utf-8",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": ""
+  },
+  {
+    "path": "/api/auth/session",
+    "status": 401,
+    "location": "",
+    "contentType": "application/json",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": "{\"session\":null}"
+  },
+  {
+    "path": "/api/trades",
+    "status": 401,
+    "location": "",
+    "contentType": "application/json",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": "{\"error\":{\"code\":\"UNAUTHENTICATED\",\"message\":\"Your session has ended. Sign in again.\",\"details\":null}}"
+  },
+  {
+    "path": "/api/customers",
+    "status": 401,
+    "location": "",
+    "contentType": "application/json",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": "{\"error\":{\"code\":\"UNAUTHENTICATED\",\"message\":\"Your session has ended. Sign in again.\",\"details\":null}}"
+  },
+  {
+    "path": "/api/susu",
+    "status": 401,
+    "location": "",
+    "contentType": "application/json",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": "{\"error\":{\"code\":\"UNAUTHENTICATED\",\"message\":\"Your session has ended. Sign in again.\",\"details\":null}}"
+  },
+  {
+    "path": "/api/settings",
+    "status": 401,
+    "location": "",
+    "contentType": "application/json",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": "{\"error\":{\"code\":\"UNAUTHENTICATED\",\"message\":\"Your session has ended. Sign in again.\",\"details\":null}}"
+  },
+  {
+    "path": "/api/ai/health",
+    "status": 401,
+    "location": "",
+    "contentType": "application/json",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": "{\"error\":{\"code\":\"UNAUTHENTICATED\",\"message\":\"Sign in first.\"}}"
+  },
+  {
+    "path": "/api/tickets",
+    "status": 410,
+    "location": "",
+    "contentType": "application/json",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": "{\"error\":{\"code\":\"GONE\",\"message\":\"This endpoint was retired. Use /api/trades with an operator session.\"}}"
+  },
+  {
+    "path": "/api/portal/not-a-real-token",
+    "status": 404,
+    "location": "",
+    "contentType": "application/json",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "frame": "DENY",
+    "bodyPreview": "{\"error\":{\"code\":\"NOT_FOUND\",\"message\":\"This trade link is not valid. Ask the desk to send it again.\",\"details\":null}}"
+  }
+]

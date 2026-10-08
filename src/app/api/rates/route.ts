@@ -9,11 +9,6 @@ export const PUT = deskRoute(async ({ req, db, ctx }) => {
   await setRate(db, ctx, {
     corridor: input.corridor,
     customerRate: input.customerRate,
-    referenceRate: input.referenceRate ?? null,
-    feeMinor: input.fee ?? 0,
-    minPayMinor: input.minPay ?? 0,
-    maxPayMinor: input.maxPay ?? null,
-    active: input.active,
   });
   return { rates: await getRates(db, ctx), history: await rateHistory(db, ctx) };
 });

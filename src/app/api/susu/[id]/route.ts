@@ -9,11 +9,11 @@ export const GET = deskRoute<P>(async ({ db, ctx, params }) => getSaver(db, ctx,
 
 export const PUT = deskRoute<P>(async ({ req, db, ctx, params }) => {
   const i = await body(req, saverSchema);
-  const res = await saveSaver(db, ctx, { id: params.id, name: i.name, phone: i.phone, dailyMinor: i.daily, notes: i.notes, status: i.status, smsEnabled: i.smsEnabled });
+  const res = await saveSaver(db, ctx, { id: params.id, name: i.name, phone: i.phone, dailyMinor: i.daily, notes: i.notes, status: i.status, smsEnabled: i.smsEnabled, smsAutoSend: i.smsAutoSend });
   return { ...(await getSaver(db, ctx, params.id)), dailyChange: res.dailyChange };
 });
 
-/** Booklet actions: record a collection, or withdraw everything now. */
+/** Booklet actions: record a contribution or an early withdrawal. */
 const action = z.discriminatedUnion('action', [
   collectSchema.extend({ action: z.literal('collect') }),
   withdrawSchema.extend({ action: z.literal('withdraw') }),
@@ -23,6 +23,6 @@ export const POST = deskRoute<P>(async ({ req, db, ctx, params }) => {
   const a = await body(req, action);
   const result = a.action === 'collect'
     ? await recordCollection(db, ctx, { saverId: params.id, amountMinor: a.amount, note: a.note, requestId: a.requestId })
-    : await withdraw(db, ctx, { saverId: params.id, method: a.method, reference: a.reference });
+    : await withdraw(db, ctx, { saverId: params.id, amountMinor: a.amount, method: a.method, reference: a.reference, requestId: a.requestId });
   return { result, ...(await getSaver(db, ctx, params.id)) };
 });

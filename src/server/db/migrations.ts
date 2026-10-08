@@ -498,4 +498,30 @@ ALTER TABLE susu_sms ALTER COLUMN status SET DEFAULT 'DRAFT';
 ALTER TABLE susu_sms ADD CONSTRAINT susu_sms_status_check CHECK (status IN ('DRAFT','QUEUED','SENDING','ACCEPTED','SANDBOX','DELIVERED','NOT_DELIVERED','FAILED','UNKNOWN','CANCELLED'))
 `,
   },
+  {
+    // The rate board is intentionally one number per route. Clear the retired
+    // quote modifiers and add a USD/NGN benchmark without enabling USD trades.
+    id: '009_simple_rate_board',
+    sql: `
+UPDATE rate_board SET reference_rate = NULL, fee_minor = 0, min_pay_minor = 0, max_pay_minor = NULL, active = true;
+ALTER TABLE rate_board DROP CONSTRAINT rate_board_corridor_check;
+ALTER TABLE rate_board ADD CONSTRAINT rate_board_corridor_check CHECK (corridor IN ('NGN_GHS','GHS_NGN','USD_NGN'))
+`,
+  },
+  {
+    // Separate buy and sell benchmarks for USD against both local currencies.
+    id: '010_usd_rate_directions',
+    sql: `
+ALTER TABLE rate_board DROP CONSTRAINT rate_board_corridor_check;
+ALTER TABLE rate_board ADD CONSTRAINT rate_board_corridor_check CHECK (corridor IN ('NGN_GHS','GHS_NGN','USD_NGN','NGN_USD','USD_GHS','GHS_USD'))
+`,
+  },
+  {
+    // Each saver can opt into immediate SMS delivery. Review remains the
+    // default, and the desk-wide SMS switch still controls all sending.
+    id: '011_susu_sms_auto_send',
+    sql: `
+ALTER TABLE susu_savers ADD COLUMN sms_auto_send boolean NOT NULL DEFAULT false
+`,
+  },
 ];
