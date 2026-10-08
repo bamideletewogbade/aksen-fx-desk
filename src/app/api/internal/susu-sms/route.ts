@@ -3,7 +3,7 @@ import { getDb } from '@/server/db';
 import { dispatchSusuSms, refreshSusuSmsDelivery } from '@/server/susu-sms';
 
 export async function POST(req: Request) {
-  const secret = process.env.SUSU_SMS_CRON_SECRET;
+  const secret = process.env.CRON_SECRET || process.env.SUSU_SMS_CRON_SECRET;
   const supplied = req.headers.get('authorization') ?? '';
   const expected = `Bearer ${secret}`;
   if (!secret || Buffer.byteLength(supplied) !== Buffer.byteLength(expected) || !timingSafeEqual(Buffer.from(supplied),Buffer.from(expected))) return new Response('Unauthorized',{status:401});
