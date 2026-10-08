@@ -89,12 +89,18 @@ function SaverSms({ data, allowed, onChanged }: { data: Data; allowed: boolean; 
   </Card>;
 }
 
-/** The page as the saver would see it in their booklet: a box per day of the month. */
-function Booklet({ page, today }: { page: SusuPage; today: string }) {
+/**
+ * The open page as the saver would see it in their booklet. Earlier withdrawal
+ * pages stay visible so opening a fresh page does not make recorded days appear
+ * to vanish. The X describes the page event, not how much of any one day was
+ * withdrawn; the exact cash split lives in the closed-page history.
+ */
+function Booklet({ page, pages, today }: { page: SusuPage; pages: SusuPage[]; today: string }) {
   const dim = daysInMonth(page.period);
   const todayDay = page.period === today.slice(0, 7) ? Number(today.slice(8, 10)) : page.period < today.slice(0, 7) ? dim + 1 : 0;
   const lastBox = page.startDay + page.capacity - 1;
   const filledTo = page.startDay + page.daysPaid - 1;
+  const earlierPages = pages.filter((candidate) => candidate.id !== page.id && candidate.period === page.period && candidate.status === 'CLOSED' && candidate.daysPaid > 0);
   const boxes = Array.from({ length: dim }, (_, i) => i + 1);
   const firstWeekday = new Date(`${page.period}-01T12:00:00Z`).getUTCDay();
   return (
@@ -108,20 +114,30 @@ function Booklet({ page, today }: { page: SusuPage; today: string }) {
           const onPage = d >= page.startDay && d <= lastBox;
           const filled = onPage && d <= filledTo;
           const due = onPage && !filled && d < todayDay;
+          const earlierPage = earlierPages.find((candidate) => d >= candidate.startDay && d < candidate.startDay + candidate.daysPaid);
+          const withdrawnPage = earlierPage?.closeKind === 'WITHDRAWAL';
+          const earlierTitle = withdrawnPage
+            ? 'Saved on an earlier page that was later closed for a withdrawal. See Closed pages for the exact amount withdrawn and kept.'
+            : earlierPage
+              ? `Saved on an earlier page that was closed as ${earlierPage.closeKind?.toLowerCase() ?? 'complete'}.`
+              : null;
           return (
             <span
               key={d}
-              title={!onPage ? 'Not on this page' : filled ? 'Paid' : due ? 'Missed so far (can still be caught up this month)' : d === todayDay ? 'Due today' : 'Coming up'}
+              title={earlierTitle ?? (!onPage ? 'Not part of this open page' : filled ? 'Paid on this open page' : due ? 'Missed so far (can still be caught up this month)' : d === todayDay ? 'Due today' : 'Coming up')}
               className={cx(
-                'flex aspect-square items-center justify-center rounded-lg text-xs font-semibold',
-                !onPage && 'text-[#c9d3c6]',
+                'relative flex aspect-square items-center justify-center rounded-lg border text-xs font-semibold',
+                !onPage && !earlierPage && 'border-[#edf1eb] bg-[#fafbf9] text-[#89998f]',
+                earlierPage && !withdrawnPage && 'border-[#b9d1bf] bg-[#e5f0e7] text-[#245d3c]',
+                withdrawnPage && 'border-[#dfa59d] bg-[#fff0ed] text-[#8a2b21]',
                 filled && 'bg-brand text-white',
-                due && 'border border-dashed border-[#e8b4ad] bg-risk-bg text-risk',
-                onPage && !filled && !due && 'bg-paper text-subtle',
+                due && 'border-dashed border-[#d98f85] bg-[#fff0ed] text-[#8a2b21]',
+                onPage && !filled && !due && 'border-[#d8e1d5] bg-[#eef3ec] text-[#52675b]',
                 d === todayDay && 'ring-2 ring-ink ring-offset-1',
               )}
             >
               {d}
+              {withdrawnPage && <X size={13} strokeWidth={2.5} aria-hidden className="absolute right-1 top-1" />}
             </span>
           );
         })}
@@ -320,13 +336,16 @@ export function SaverView({ id }: { id: string }) {
               <h2 className="text-sm font-bold text-ink">{periodLabel(page.period)} · page {page.pageNo}</h2>
               <span className="text-xs text-muted">{page.daysPaid} of {page.capacity} days</span>
             </div>
-            <Booklet page={page} today={data.today} />
-            <div className="mt-4 flex flex-wrap gap-4 text-[0.6875rem] text-muted">
-              <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-brand" /> Paid</span>
-              <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded border border-dashed border-[#e8b4ad] bg-risk-bg" /> Missed so far</span>
-              <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-paper ring-2 ring-ink" /> Today</span>
-              <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-paper" /> Coming up</span>
+            {page.broughtForwardMinor > 0 && <Notice tone="good" className="mb-4"><strong>{cedis(page.broughtForwardMinor)} remains saved.</strong> It was brought forward from an earlier page, so future dates turn green only when a new {cedis(page.dailyMinor)} contribution is recorded.</Notice>}
+            <Booklet page={page} pages={data.pages} today={data.today} />
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[0.6875rem] font-medium text-muted">
+              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-brand" /> Paid on this page</span>
+              {closed.some((p) => p.period === page.period && p.closeKind === 'WITHDRAWAL' && p.daysPaid > 0) && <span className="inline-flex items-center gap-1.5"><span className="relative flex h-3.5 w-3.5 items-center justify-center rounded border border-[#dfa59d] bg-[#fff0ed] text-[#8a2b21]"><X size={9} strokeWidth={3} /></span> Earlier page closed for withdrawal</span>}
+              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded border border-dashed border-[#d98f85] bg-[#fff0ed]" /> Missed so far</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded border border-[#819087] bg-[#eef3ec] ring-2 ring-ink" /> Today</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded border border-[#d8e1d5] bg-[#eef3ec]" /> Coming up</span>
             </div>
+            <p className="mt-3 text-xs leading-5 text-muted">Green tracks newly recorded contribution days. An X keeps an earlier withdrawal page visible; it does not mean the whole daily amount was withdrawn. The exact amount paid out and kept is shown under Closed pages.</p>
           </Card>
           <Card className="space-y-2 p-5 text-sm">
             <h2 className="mb-2 text-sm font-bold text-ink">If this page closed today</h2>
@@ -366,7 +385,7 @@ export function SaverView({ id }: { id: string }) {
               {closed.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-3 py-2">
                   <span className="min-w-0">
-                    <span className="block font-semibold text-ink">{periodLabel(p.period)} <span className="font-normal text-muted">· {p.daysPaid}/{p.capacity} days · fee {cedis(p.feeMinor ?? 0)}</span></span>
+                    <span className="block font-semibold text-ink">{periodLabel(p.period)} <span className="font-normal text-muted">· {p.daysPaid ? `${p.daysPaid} saved day${p.daysPaid === 1 ? '' : 's'}` : 'no new contributions'} · {(p.feeMinor ?? 0) > 0 ? `fee ${cedis(p.feeMinor ?? 0)}` : 'no additional fee'}</span></span>
                     <span className="block text-xs text-subtle" suppressHydrationWarning>{p.closedAt ? dateTime(p.closedAt) : ''}{p.payoutReference ? ` · ref ${p.payoutReference}` : ''}</span>
                   </span>
                   <Pill tone={p.closeKind === 'ROLLOVER' ? 'neutral' : 'good'}>
