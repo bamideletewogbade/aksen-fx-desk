@@ -15,7 +15,6 @@ import {
   Loader2,
   Menu,
   MessageSquare,
-  Plus,
   Search,
   Settings,
   SlidersHorizontal,
@@ -23,13 +22,13 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useClerk, UserButton } from '@clerk/nextjs';
 import { ROLE_LABEL, initialsOf, type Session } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { cx, StatusBadge, Toaster } from './ui';
 import type { TradeSummary } from '@/lib/trades';
 import { formatMinor } from '@/lib/money';
 import { OperatorPageSkeleton } from './operator-page-skeleton';
+import { OptionalUserButton, useOptionalClerk } from './optional-clerk';
 
 const SessionCtx = createContext<Session | null>(null);
 export const useSession = () => {
@@ -140,10 +139,10 @@ function NavLinks({ onNavigate, badges = {}, pendingHref }: { onNavigate?: (href
 
 /** Ends the built-in session (if any) and the Clerk session (if any). */
 function useSignOut() {
-  const clerk = useClerk();
+  const clerk = useOptionalClerk();
   return async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
-    if (clerk.isSignedIn) await clerk.signOut({ redirectUrl: '/login' });
+    if (clerk.isSignedIn) await clerk.signOut();
     else window.location.href = '/login';
   };
 }
@@ -256,7 +255,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
   const pathname = usePathname();
   const badges = useInboxBadge();
   const signOut = useSignOut();
-  const clerkUser = useClerk().isSignedIn;
+  const clerkUser = useOptionalClerk().isSignedIn;
 
   useEffect(() => { setPendingHref(null); }, [pathname]);
   const navigate = (href: string) => {
@@ -320,7 +319,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
           </div>
           <div className="space-y-2 border-t border-[#1c382b] p-3">
             <div className="flex items-center gap-2.5 rounded-xl bg-[#0c1f17] p-2">
-              {clerkUser ? <UserButton /> : <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand font-mono text-[0.6875rem] font-bold text-lime">{initialsOf(session)}</div>}
+              {clerkUser ? <OptionalUserButton /> : <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand font-mono text-[0.6875rem] font-bold text-lime">{initialsOf(session)}</div>}
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-bold text-white">{session.userName}</div>
                 <div className="truncate text-[0.6875rem] text-[#a3b8ac]">{ROLE_LABEL[session.role]}</div>

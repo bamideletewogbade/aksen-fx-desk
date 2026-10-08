@@ -155,10 +155,43 @@ export async function refreshSusuSmsDelivery(db: Db, orgId?: string, fetcher: Fe
 
 export async function susuSmsOverview(db: Db, ctx: Ctx) {
   requirePermission(ctx,'configure');
-  const [org] = await db.query<{ susu_sms_enabled: boolean }>('SELECT susu_sms_enabled FROM organizations WHERE id=$1',[ctx.orgId]);
+  const [org] = await db.query<{ susu_sms_enabled: boolean; susu_sms_auto_send: boolean }>(
+    'SELECT susu_sms_enabled, COALESCE(susu_sms_auto_send, false) AS susu_sms_auto_send FROM organizations WHERE id=$1',
+    [ctx.orgId]
+  );
   const messages = await db.query(`SELECT m.id,m.kind,m.status,m.error_code,m.created_at,m.message,s.name AS saver_name, m.recipient FROM susu_sms m JOIN susu_savers s ON s.id=m.saver_id WHERE m.org_id=$1 ORDER BY m.created_at DESC LIMIT 50`,[ctx.orgId]);
   const counts = await db.query<{ status: string; count: number }>('SELECT status,count(*)::int AS count FROM susu_sms WHERE org_id=$1 GROUP BY status',[ctx.orgId]);
-  return { ...smsConfig(), enabled:org.susu_sms_enabled, messages, counts };
+  return { ...smsConfig(), enabled: org.susu_sms_enabled, autoSend: org.susu_sms_auto_send === true, messages, counts };
+}
+
+export async function susuSmsPolicy(db: Db, ctx: Ctx) {
+  requirePermission(ctx, 'read');
+  const [org] = await db.query<{ susu_sms_enabled: boolean; susu_sms_auto_send: boolean }>(
+    'SELECT susu_sms_enabled, COALESCE(susu_sms_auto_send,false) AS susu_sms_auto_send FROM organizations WHERE id=$1',
+    [ctx.orgId],
+  );
+  return { enabled: org?.susu_sms_enabled === true, autoSendDefault: org?.susu_sms_auto_send === true };
+}
+
+export async function setSusuSmsAutoSend(db: Db, ctx: Ctx, autoSend: boolean, applyToAllSavers = false) {
+  requirePermission(ctx, 'configure');
+  await db.tx(async (q) => {
+    await q.query('UPDATE organizations SET susu_sms_auto_send=$2 WHERE id=$1', [ctx.orgId, autoSend]);
+    let affectedSavers = 0;
+    if (applyToAllSavers) {
+      const res = await q.query(
+        'UPDATE susu_savers SET sms_auto_send=$2 WHERE org_id=$1 AND phone IS NOT NULL AND sms_enabled=true RETURNING id',
+        [ctx.orgId, autoSend]
+      );
+      affectedSavers = res.length;
+    }
+    await appendAudit(q, {
+      orgId: ctx.orgId,
+      actor: actorOf(ctx),
+      action: 'susu.sms_auto_send_policy',
+      data: { autoSend, applyToAllSavers, affectedSavers },
+    });
+  });
 }
 
 export async function setSusuSmsEnabled(db: Db, ctx: Ctx, enabled: boolean) {

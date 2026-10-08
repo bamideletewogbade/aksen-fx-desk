@@ -524,4 +524,12 @@ ALTER TABLE rate_board ADD CONSTRAINT rate_board_corridor_check CHECK (corridor 
 ALTER TABLE susu_savers ADD COLUMN sms_auto_send boolean NOT NULL DEFAULT false
 `,
   },
+  {
+    // Desk-wide SMS dispatch policy: when true, contributions send immediately
+    // to savers by default. Review remains available as an explicit preference.
+    id: '012_susu_sms_desk_policy',
+    sql: `
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS susu_sms_auto_send boolean NOT NULL DEFAULT false
+`,
+  },
 ];

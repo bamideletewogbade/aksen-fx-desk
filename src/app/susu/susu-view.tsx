@@ -12,7 +12,11 @@ import { Button, Card, cx, Dialog, Empty, Field, Input, Notice, PageHeader, Pill
 import type { SaverSummary, SusuOverview } from '@/server/susu';
 import type { Nudge } from '@/server/susu-ai';
 
-type Data = { savers: SaverSummary[]; overview: SusuOverview };
+type Data = {
+  savers: SaverSummary[];
+  overview: SusuOverview;
+  smsPolicy: { enabled: boolean; autoSendDefault: boolean };
+};
 
 /** "Ama 50" → whole numbers of cedis; accepts 50, 50.00, GH₵50. */
 function toMinor(v: string): number | null {
@@ -57,11 +61,11 @@ function Tile({ label, value, sub, icon, tone }: { label: string; value: string;
   );
 }
 
-function AddSaver({ today, onClose, onSaved }: { today: string; onClose: () => void; onSaved: (id: string) => void }) {
+function AddSaver({ today, defaultAutoSend = false, onClose, onSaved }: { today: string; defaultAutoSend?: boolean; onClose: () => void; onSaved: (id: string) => void }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [smsEnabled, setSmsEnabled] = useState(true);
-  const [smsAutoSend, setSmsAutoSend] = useState(false);
+  const [smsAutoSend, setSmsAutoSend] = useState(defaultAutoSend);
   const [daily, setDaily] = useState('');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
@@ -123,12 +127,13 @@ function OneCollection({ savers, onSaved }: { savers: SaverSummary[]; onSaved: (
   const minor = toMinor(amount);
   const daily = saver?.page?.dailyMinor ?? saver?.dailyMinor ?? 0;
   const split = saver && minor ? splitCash(minor, daily) : null;
+
   const save = async () => {
     setBusy(true);
     try {
       requestId.current ??= crypto.randomUUID();
       const r = await api<{ result: { days: number; changeMinor: number; name: string } }>(`/api/susu/${saverId}`, { method: 'POST', json: { action: 'collect', amount, requestId: requestId.current } });
-      toast(`${r.result.name.split(' ')[0]}: ${r.result.days} day${r.result.days === 1 ? '' : 's'} recorded${r.result.changeMinor ? ` · give back ${cedis(r.result.changeMinor)}` : ''}${saver?.smsEnabled ? saver.smsAutoSend ? ' · SMS queued automatically' : ' · SMS draft ready on their page' : ''}`);
+      toast(`${r.result.name.split(' ')[0]}: ${r.result.days} day${r.result.days === 1 ? '' : 's'} recorded${r.result.changeMinor ? ` · give back ${cedis(r.result.changeMinor)}` : ''}${saver?.smsEnabled ? saver.smsAutoSend ? ' · receipt sending' : ' · receipt ready to review' : ''}`);
       requestId.current = null;
       setAmount('');
       onSaved();
@@ -150,6 +155,7 @@ function OneCollection({ savers, onSaved }: { savers: SaverSummary[]; onSaved: (
         <Field label="Cash received" htmlFor="c-amt"><Input id="c-amt" mono inputMode="decimal" value={amount} onChange={(e) => { requestId.current = null; setAmount(e.target.value); }} placeholder="GH₵" onKeyDown={(e) => e.key === 'Enter' && split?.days && save()} /></Field>
         <Button busy={busy} disabled={!saver || !split?.days} onClick={save}>Record</Button>
       </div>
+      {saver && <p className="text-xs text-subtle"><span className="font-mono">{saver.ref}{saver.phone ? ` · ${saver.phone}` : ''}</span>{saver.phone ? ` · ${saver.smsEnabled ? saver.smsAutoSend ? 'Receipts send automatically' : 'Receipts wait for review' : 'SMS receipts off'}` : ''}</p>}
       {saver && minor && split && (
         <p className={cx('text-xs', split.days ? 'text-muted' : 'text-risk')}>
           {split.days
@@ -318,7 +324,7 @@ export function SusuView() {
           </Card>
         </div>
       </div>
-      {adding && o && <AddSaver today={o.today} onClose={() => setAdding(false)} onSaved={(id) => { setAdding(false); window.location.href = `/susu/${id}`; }} />}
+      {adding && o && <AddSaver today={o.today} defaultAutoSend={data?.smsPolicy.autoSendDefault ?? false} onClose={() => setAdding(false)} onSaved={(id) => { setAdding(false); window.location.href = `/susu/${id}`; }} />}
     </div>
   );
 }

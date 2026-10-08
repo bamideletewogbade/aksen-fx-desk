@@ -1,7 +1,7 @@
-import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { OptionalClerkProvider } from "@/components/optional-clerk";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,9 +26,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const content = process.env.CLERK_SECRET_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-    ? <ClerkProvider>{children}</ClerkProvider>
-    : children;
+  const clerkEnabled = Boolean(process.env.CLERK_SECRET_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
   return (
     <html
       lang="en"
@@ -36,7 +34,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
-        {content}
+        <OptionalClerkProvider enabled={clerkEnabled}>{children}</OptionalClerkProvider>
       </body>
     </html>
   );

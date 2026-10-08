@@ -125,6 +125,7 @@ export function ReconcileView() {
         }
       />
       {!canApprove(session) && <Notice tone="info">Only admins can close a day. You can review the movements.</Notice>}
+      <Notice tone="info">Susu cash collections and withdrawals are not included in these account totals yet. Reconcile the Susu cashbook separately until each Susu movement can be assigned to a desk account.</Notice>
       {day && <div className="text-xs text-muted">{done} of {day.rails.length} accounts closed for {day.date} ({day.timezone.replace('Africa/', '')} time).</div>}
       {loading && !data ? <Skeleton className="h-64" /> : !day?.rails.length ? (
         <Card><Empty icon={<BookCheck size={20} />} title="No accounts to close">Add accounts on the Accounts page first.</Empty></Card>

@@ -6,7 +6,7 @@ import { fail } from './errors';
 import { todayIn } from './day-close';
 import { closeMath, daysInMonth, dueToday, expectedByToday, nextPeriod, periodLabel, periodOf, splitCash, standing, streak, type Period, type Standing } from '@/lib/susu';
 import { formatMinor, type Currency } from '@/lib/money';
-import { queueSusuSms, saverSusuSms, smsConfig, smsDate, smsMoney, smsPhone, smsText } from './susu-sms';
+import { queueSusuSms, saverSusuSms, smsDate, smsMoney, smsPhone, smsText } from './susu-sms';
 
 /**
  * Susu (daily savings) for a desk. Desk staff record cash they collect; the
@@ -16,7 +16,7 @@ import { queueSusuSms, saverSusuSms, smsConfig, smsDate, smsMoney, smsPhone, sms
 const N = (v: unknown) => Number(v ?? 0);
 const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
 const MAX_PAGES_AHEAD = 24;
-const smsBrand = (ctx: Ctx) => smsText(smsConfig().sender || ctx.orgName);
+const smsBrand = () => smsText(process.env.SUSU_SMS_BRAND?.trim() || 'Dinero-Yard');
 
 // ---------------------------------------------------------------- types
 
@@ -162,11 +162,14 @@ export async function saveSaver(
       await appendAudit(q, { orgId: ctx.orgId, action: 'susu.saver_updated', actor: actorOf(ctx), data: { saverId: s.id, name, dailyMinor: input.dailyMinor, dailyChange, status: input.status ?? null } });
       if (dailyChange || (input.status && input.status !== s.status)) {
         const changes = [dailyChange ? `Daily saving ${smsMoney(input.dailyMinor, s.currency)} ${dailyChange === 'next_page' ? 'from your next new page' : 'from now'}.` : '', input.status && input.status !== s.status ? `Booklet ${input.status.toLowerCase()}.` : ''].filter(Boolean).join(' ');
-        await queueSusuSms(q,ctx,s.id,`update:${randomUUID()}`,'ACCOUNT_UPDATE',`${smsBrand(ctx)}: ${changes} Contact your collector for questions.`);
+        await queueSusuSms(q,ctx,s.id,`update:${randomUUID()}`,'ACCOUNT_UPDATE',`${smsBrand()}: ${changes} Contact your collector for questions.`);
       }
       return { id: s.id, dailyChange };
     }
-    const [o] = await q.query<{ susu_seq: number }>('UPDATE organizations SET susu_seq = susu_seq + 1 WHERE id = $1 RETURNING susu_seq', [ctx.orgId]);
+    const [o] = await q.query<{ susu_seq: number; susu_sms_auto_send: boolean }>(
+      'UPDATE organizations SET susu_seq = susu_seq + 1 WHERE id = $1 RETURNING susu_seq, COALESCE(susu_sms_auto_send, false) AS susu_sms_auto_send',
+      [ctx.orgId],
+    );
     const ref = `S-${String(N(o.susu_seq)).padStart(4, '0')}`;
     const [row] = await q.query<SaverRow>(
       `INSERT INTO susu_savers (org_id, ref, name, phone, notes, daily_minor, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
@@ -176,8 +179,9 @@ export async function saveSaver(
     const period = periodOf(today);
     const day = Number(today.slice(8, 10));
     await openPage(q, row, { period, startDay: day, capacity: daysInMonth(period) - day + 1 });
-    await q.query('UPDATE susu_savers SET sms_enabled=$2, sms_auto_send=$3 WHERE id=$1',[row.id,input.smsEnabled ?? false,(input.smsEnabled ?? false) && (input.smsAutoSend ?? false)]);
-    await queueSusuSms(q,ctx,row.id,`welcome:${row.id}`,'WELCOME',`${smsBrand(ctx)}: Welcome, ${smsText(name,20)}. Saver ${ref}. Save ${smsMoney(input.dailyMinor)} daily. Each closed page has a one-day contribution fee. Keep your receipts.`);
+    const autoSend = input.smsAutoSend !== undefined ? input.smsAutoSend : o.susu_sms_auto_send;
+    await q.query('UPDATE susu_savers SET sms_enabled=$2, sms_auto_send=$3 WHERE id=$1',[row.id,input.smsEnabled ?? false,(input.smsEnabled ?? false) && autoSend]);
+    await queueSusuSms(q,ctx,row.id,`welcome:${row.id}`,'WELCOME',`${smsBrand()}: Welcome, ${smsText(name,20)}. Saver ${ref}. Save ${smsMoney(input.dailyMinor)} daily. Each closed page has a one-day contribution fee. Keep your receipts.`);
     await appendAudit(q, { orgId: ctx.orgId, action: 'susu.saver_added', actor: actorOf(ctx), data: { saverId: row.id, ref, name, dailyMinor: input.dailyMinor } });
     return { id: row.id, dailyChange: null };
   });
@@ -286,7 +290,7 @@ async function collectInTx(q: Queryable, ctx: Ctx, input: { saverId: string; amo
      FROM susu_pages WHERE saver_id=$1 AND status='OPEN'`,
     [saver.id],
   );
-  await queueSusuSms(q,ctx,saver.id,`collection:${paymentId}`,'COLLECTION',`${smsBrand(ctx)}: Receipt: ${smsMoney(input.amountMinor-remaining,saver.currency)}, ${smsDate(today)}, Total: ${smsMoney(N(held.total),saver.currency)}, Sub-total saving: ${smsMoney(N(held.subtotal),saver.currency)}.`);
+  await queueSusuSms(q,ctx,saver.id,`collection:${paymentId}`,'COLLECTION',`${smsBrand()}: Receipt: ${smsMoney(input.amountMinor-remaining,saver.currency)}, ${smsDate(today)}, Total: ${smsMoney(N(held.total),saver.currency)}, Sub-total saving: ${smsMoney(N(held.subtotal),saver.currency)}.`);
   return { saverId: saver.id, name: saver.name, receivedMinor: input.amountMinor, days, changeMinor: remaining, pages: credited.map((c) => ({ period: c.page.period, days: c.days })) };
 }
 
@@ -373,7 +377,7 @@ async function closeInTx(q: Queryable, ctx: Ctx, input: { pageId: string; kind: 
   });
   const action = input.kind === 'ROLLOVER' ? 'Carried forward' : input.kind === 'WITHDRAWAL' ? 'Withdrawal recorded' : 'Payout recorded';
   const remaining = input.kind === 'WITHDRAWAL' ? ` Remaining saved: ${smsMoney(carried,saver.currency)}.` : '';
-  await queueSusuSms(q,ctx,saver.id,`close:${page.id}`,input.kind,`${smsBrand(ctx)}: ${page.period} page ${page.pageNo}. ${action}: ${smsMoney(input.kind === 'ROLLOVER' ? carried : paidOut,saver.currency)}. Fee: ${smsMoney(m.feeMinor,saver.currency)}.${remaining}${input.kind === 'ROLLOVER' ? ' No cash paid out.' : ` Method: ${smsText(input.method?.trim() || 'Cash',20)}. Contact your collector if not received.`}`);
+  await queueSusuSms(q,ctx,saver.id,`close:${page.id}`,input.kind,`${smsBrand()}: ${page.period} page ${page.pageNo}. ${action}: ${smsMoney(input.kind === 'ROLLOVER' ? carried : paidOut,saver.currency)}. Fee: ${smsMoney(m.feeMinor,saver.currency)}.${remaining}${input.kind === 'ROLLOVER' ? ' No cash paid out.' : ` Method: ${smsText(input.method?.trim() || 'Cash',20)}. Contact your collector if not received.`}`);
   return { feeMinor: m.feeMinor, balanceMinor: m.balanceMinor, paidOutMinor: paidOut, carriedMinor: carried, kind: input.kind, name: saver.name, period: page.period };
 }
 

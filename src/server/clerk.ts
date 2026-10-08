@@ -34,7 +34,7 @@ export async function clerkPerson(db: Db): Promise<{ userId: string; email: stri
   const { currentUser } = await import('@clerk/nextjs/server');
   const u = await currentUser();
   if (!u) return null;
-  const primary = u.emailAddresses.find((e) => e.id === u.primaryEmailAddressId) ?? u.emailAddresses[0];
+  const primary = u.emailAddresses.find((e: { id: string }) => e.id === u.primaryEmailAddressId) ?? u.emailAddresses[0];
   const linked = await linkClerkUser(db, {
     clerkUserId: a.userId,
     email: primary?.emailAddress ?? null,

@@ -3,7 +3,7 @@ import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import { createTestDb, type Db } from '@/server/db';
 import { signup, login, resolveSession, type Ctx } from '@/server/auth';
 import { saveSaver, recordCollection, getSaver, closePage, withdraw } from '@/server/susu';
-import { dispatchSusuSms, manageSusuSms, refreshSusuSmsDelivery, retrySusuSms, saverSusuSms, setSusuSmsEnabled, smsConfig, smsPhone, susuSmsOverview } from '@/server/susu-sms';
+import { dispatchSusuSms, manageSusuSms, refreshSusuSmsDelivery, retrySusuSms, saverSusuSms, setSusuSmsAutoSend, setSusuSmsEnabled, smsConfig, smsPhone, susuSmsOverview } from '@/server/susu-sms';
 
 describe('Susu transactional SMS', () => {
   let db:Db, owner:Ctx;
@@ -38,6 +38,17 @@ describe('Susu transactional SMS', () => {
     expect(smsConfig()).toMatchObject({configured:true,sender:'Dinero-Yard'});
     vi.stubEnv('ARKESEL_SENDER_ID','TestDesk');
   });
+  it('stores the desk default, applies it to existing SMS savers and gives it to new savers',async () => {
+    const existing = await saved();
+    expect((await getSaver(db,owner,existing.id)).saver.smsAutoSend).toBe(false);
+    await setSusuSmsAutoSend(db,owner,true,true);
+    expect((await getSaver(db,owner,existing.id)).saver.smsAutoSend).toBe(true);
+    const inherited = await saveSaver(db,owner,{name:'Inherited policy',phone,dailyMinor:1000,smsEnabled:true});
+    expect((await getSaver(db,owner,inherited.id)).saver.smsAutoSend).toBe(true);
+    expect((await queue(inherited.id))[0].status).toBe('QUEUED');
+    await setSusuSmsAutoSend(db,owner,false,false);
+    await db.query("UPDATE susu_sms SET status='CANCELLED' WHERE saver_id IN ($1,$2) AND status IN ('DRAFT','QUEUED')",[existing.id,inherited.id]);
+  });
   it('queues welcome and one accurate receipt across collection retries',async () => {
     const {id} = await saved();
     const requestId = randomUUID();
@@ -46,7 +57,7 @@ describe('Susu transactional SMS', () => {
     const rows=await queue(id);
     expect(rows.map(r=>r.kind)).toEqual(['WELCOME','COLLECTION']);
     expect(rows.map(r=>r.status)).toEqual(['DRAFT','DRAFT']);
-    expect(rows[1].message).toMatch(/TestDesk: Receipt: GHS 20\.00, \d{1,2} [A-Z][a-z]{2} \d{4}, Total: GHS 20\.00, Sub-total saving: GHS 10\.00\./);
+    expect(rows[1].message).toMatch(/Dinero-Yard: Receipt: GHS 20\.00, \d{1,2} [A-Z][a-z]{2} \d{4}, Total: GHS 20\.00, Sub-total saving: GHS 10\.00\./);
     expect(accepted).not.toHaveBeenCalled();
   });
   it('requires review and allows editing before a draft can be sent',async () => {
