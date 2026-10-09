@@ -455,7 +455,6 @@ export async function withdraw(db: Db, ctx: Ctx, input: { saverId: string; amoun
 /** Cash temporarily taken against savings. Calendar boxes remain unchanged. */
 export async function recordAdvance(db: Db, ctx: Ctx, input: { saverId: string; amountMinor: number; method?: string | null; reference?: string | null; note?: string | null; requestId?: string }) {
   requirePermission(ctx, 'trade');
-  requirePermission(ctx, 'approve');
   return db.tx((q) => oncePerRequest(q, ctx, input.requestId, {
     kind: 'advance', saverId: input.saverId, amountMinor: input.amountMinor,
     method: input.method?.trim() || 'Cash', reference: input.reference?.trim() || null, note: input.note?.trim() || null,

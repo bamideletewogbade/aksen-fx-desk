@@ -61,11 +61,14 @@ describe('susu desk flows', () => {
     ama = (await saveSaver(db, owner, { name: 'Ama Owusu', phone: '0244123456', dailyMinor: GHS(10) })).id;
   });
 
-  it('lets a dealer collect and roll over, but blocks cash-outs including a mixed batch', async () => {
+  it('lets a dealer collect, lend from savings and roll over, but blocks cash-outs including a mixed batch', async () => {
     const { token } = await createInvite(db, owner, { email: 'dealer-susu@dinero.test', role: 'DEALER' });
     const dealer = (await resolveSession(db, (await acceptInvite(db, { token, name: 'Susu collector', password: 'dinero-yard-2026' })).token))!;
     const cashSaver = (await saveSaver(db, owner, { name: 'Cash-out check', dailyMinor: GHS(10) })).id;
     await recordCollection(db, dealer, { saverId: cashSaver, amountMinor: GHS(20) });
+    const borrowed = await recordAdvance(db, dealer, { saverId: cashSaver, amountMinor: GHS(10), method: 'Cash', requestId: randomUUID() });
+    expect(borrowed.transactionRef).toBe('220069');
+    expect((await getSaver(db, owner, cashSaver)).advances[0]).toMatchObject({ kind: 'ADVANCE', by: 'Susu collector' });
     await expect(withdraw(db, dealer, { saverId: cashSaver, method: 'Cash' })).rejects.toThrow(/cannot do this/);
     const rollSaver = (await saveSaver(db, owner, { name: 'Rollover check', dailyMinor: GHS(10) })).id;
     await recordCollection(db, dealer, { saverId: rollSaver, amountMinor: GHS(20) });
@@ -152,7 +155,7 @@ describe('susu desk flows', () => {
 
     const advanceRequestId = randomUUID();
     const advance = await recordAdvance(db, owner, { saverId, amountMinor: GHS(30), method: 'Cash', note: 'School fees', requestId: advanceRequestId });
-    expect(advance).toMatchObject({ transactionRef: '220069', amountMinor: GHS(30), outstandingMinor: GHS(30) });
+    expect(advance).toMatchObject({ transactionRef: '220070', amountMinor: GHS(30), outstandingMinor: GHS(30) });
     expect(await recordAdvance(db, owner, { saverId, amountMinor: GHS(30), method: 'Cash', note: 'School fees', requestId: advanceRequestId })).toEqual(advance);
     await expect(recordAdvance(db, owner, { saverId, amountMinor: GHS(30), method: 'Cash', note: 'Different reason', requestId: advanceRequestId })).rejects.toThrow(/different details/);
     const during = await getSaver(db, owner, saverId);
@@ -162,7 +165,7 @@ describe('susu desk flows', () => {
     expect(during.advances[0]).toMatchObject({ kind: 'ADVANCE', amountMinor: GHS(30) });
 
     const firstRepayment = await repayAdvance(db, owner, { saverId, amountMinor: GHS(20), method: 'Cash', requestId: randomUUID() });
-    expect(firstRepayment.transactionRef).toBe('220070');
+    expect(firstRepayment.transactionRef).toBe('220071');
     const partial = await getSaver(db, owner, saverId);
     expect(partial.saver.page).toMatchObject({ daysPaid: 10, availableIfClosedMinor: GHS(80) });
     expect(partial.saver.advanceOutstandingMinor).toBe(GHS(10));
@@ -173,7 +176,7 @@ describe('susu desk flows', () => {
     expect(repaid.saver.advanceOutstandingMinor).toBe(0);
     expect(repaid.payments).toHaveLength(before.payments.length);
     expect(repaid.advances.map((a) => a.kind)).toEqual(['REPAYMENT', 'REPAYMENT', 'ADVANCE']);
-    expect(repaid.advances.map((a) => a.transactionRef)).toEqual(['220071', '220070', '220069']);
+    expect(repaid.advances.map((a) => a.transactionRef)).toEqual(['220072', '220071', '220070']);
   });
 
   it('deducts an unpaid advance at permanent page close without double-paying it', async () => {

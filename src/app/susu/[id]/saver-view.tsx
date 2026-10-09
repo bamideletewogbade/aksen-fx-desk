@@ -236,6 +236,7 @@ function Withdraw({ s, page, onClose, onDone }: { s: SaverSummary; page: SusuPag
 }
 
 function AdvanceDialog({ mode, s, page, onClose, onDone }: { mode: 'advance' | 'repay_advance'; s: SaverSummary; page: SaverSummary['page']; onClose: () => void; onDone: (d: Data) => void }) {
+  const officer = useSession().userName;
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('Cash');
   const [reference, setReference] = useState('');
@@ -267,7 +268,7 @@ function AdvanceDialog({ mode, s, page, onClose, onDone }: { mode: 'advance' | '
           {taking ? `The ${page?.daysPaid ?? 0} paid calendar days do not change. The amount the saver can collect goes down until this money is paid back.` : 'This reduces the borrowed amount left. It does not fill another calendar day or add another fee.'}
         </Notice>
         <Notice tone="warn" title={taking ? 'Pay first, then record' : 'Receive first, then record'}>
-          {taking ? 'Complete the cash, MoMo or bank payment before saving this entry. Dinero-Yard assigns the next transaction reference automatically.' : 'Confirm the repayment has been received before saving. Dinero-Yard assigns the next transaction reference automatically.'}
+          {taking ? 'Complete the cash, MoMo or bank payment before saving this entry.' : 'Confirm the repayment has been received before saving.'} Dinero-Yard assigns the next transaction reference and records <strong>{officer}</strong> as the desk officer.
         </Notice>
         <div className="space-y-1.5 rounded-xl bg-paper p-4">
           {page && <Row label="Saved on this page" value={cedis(page.broughtForwardMinor + page.savedMinor)} />}
@@ -278,7 +279,7 @@ function AdvanceDialog({ mode, s, page, onClose, onDone }: { mode: 'advance' | '
         <Field label={taking ? 'Amount to borrow (GH₵)' : 'Amount paid back (GH₵)'} htmlFor="a-amount"><div className="flex gap-2"><Input id="a-amount" mono inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus /><Button type="button" variant="secondary" size="sm" onClick={() => setAmount(String(max / 100))}>All</Button></div></Field>
         {amountMinor > max && <Notice tone="risk">The maximum is {cedis(max)}.</Notice>}
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={taking ? 'Paid by' : 'Received by'} htmlFor="a-method"><Select id="a-method" value={method} onChange={(e) => setMethod(e.target.value)}><option>Cash</option><option>MoMo</option><option>Bank</option></Select></Field>
+          <Field label={taking ? 'Money given through' : 'Repayment received through'} htmlFor="a-method"><Select id="a-method" value={method} onChange={(e) => setMethod(e.target.value)}><option>Cash</option><option>MoMo</option><option>Bank</option></Select></Field>
           <Field label="MoMo / bank reference" htmlFor="a-ref" optional hint="Provider reference, separate from the Dinero-Yard reference."><Input id="a-ref" mono value={reference} onChange={(e) => setReference(e.target.value)} /></Field>
         </div>
         <Field label="Note" htmlFor="a-note" optional><Input id="a-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder={taking ? 'Why the saver borrowed the money' : 'Payment details'} /></Field>
@@ -369,8 +370,8 @@ export function SaverView({ id }: { id: string }) {
             </>}
             <div className="ml-auto flex gap-2">
               <Button variant="ghost" size="sm" icon={<Pencil size={13} />} onClick={() => setEditing(true)}>Edit</Button>
-              {canApprove(session) && s.status === 'ACTIVE' && page && page.availableIfClosedMinor > 0 && <Button variant="secondary" size="sm" icon={<HandCoins size={14} />} onClick={() => setAdvanceMode('advance')}>Borrow from savings</Button>}
-              {s.advanceOutstandingMinor > 0 && <Button variant="secondary" size="sm" onClick={() => setAdvanceMode('repay_advance')}>Record repayment</Button>}
+              {s.status === 'ACTIVE' && page && page.availableIfClosedMinor > 0 && <Button variant="secondary" size="sm" icon={<HandCoins size={14} />} onClick={() => setAdvanceMode('advance')}>Borrow from savings</Button>}
+              {s.advanceOutstandingMinor > 0 && <Button variant="secondary" size="sm" onClick={() => setAdvanceMode('repay_advance')}>Record borrowed money repayment</Button>}
               {canApprove(session) && page && page.availableIfClosedMinor > 0 && <Button variant="secondary" size="sm" onClick={() => setWithdrawing(true)}>Take money out</Button>}
             </div>
           </div>
@@ -429,7 +430,7 @@ export function SaverView({ id }: { id: string }) {
           <ul className="divide-y divide-line text-sm">
             {data.advances.map((a) => (
               <li key={a.id} className="flex items-center justify-between gap-3 py-2">
-                <span className="min-w-0"><span className="block font-semibold text-ink">{a.kind === 'ADVANCE' ? 'Money given early' : a.kind === 'REPAYMENT' ? 'Money paid back' : 'Taken from savings when the page ended'} · <span className="font-mono">{a.transactionRef}</span></span><span className="block truncate text-xs text-subtle" suppressHydrationWarning>{dateTime(a.at)}{a.method ? ` · ${a.method}` : ''}{a.reference ? ` · payment ref ${a.reference}` : ''}{a.by ? ` · ${a.by}` : ''}</span></span>
+                <span className="min-w-0"><span className="block font-semibold text-ink">{a.kind === 'ADVANCE' ? 'Money borrowed' : a.kind === 'REPAYMENT' ? 'Borrowed money repaid' : 'Borrowed money taken from savings'} · <span className="font-mono">{a.transactionRef}</span></span><span className="block truncate text-xs text-subtle" suppressHydrationWarning>{dateTime(a.at)}{a.method ? ` · ${a.method}` : ''}{a.reference ? ` · payment ref ${a.reference}` : ''}{a.by ? ` · recorded by ${a.by}` : ''}</span></span>
                 <Pill tone={a.kind === 'ADVANCE' ? 'waiting' : 'good'}>{a.kind === 'ADVANCE' ? '− ' : '+ '}{cedis(a.amountMinor)}</Pill>
               </li>
             ))}
@@ -446,7 +447,7 @@ export function SaverView({ id }: { id: string }) {
                 <li key={p.id} className="flex items-center justify-between gap-3 py-2">
                   <span className="min-w-0">
                     <span className="block font-semibold text-ink">{cedis(p.receivedMinor)} <span className="font-normal text-muted">= {p.days} day{p.days === 1 ? '' : 's'}</span></span>
-                    <span className="block truncate text-xs text-subtle" suppressHydrationWarning>{dateTime(p.at)}{p.by ? ` · ${p.by}` : ''}{p.periods.length > 1 ? ` · spread over ${p.periods.map(periodLabel).join(' and ')}` : ''}</span>
+                    <span className="block truncate text-xs text-subtle" suppressHydrationWarning>{dateTime(p.at)}{p.by ? ` · recorded by ${p.by}` : ''}{p.periods.length > 1 ? ` · spread over ${p.periods.map(periodLabel).join(' and ')}` : ''}</span>
                   </span>
                   {p.changeMinor > 0 && <Pill tone="waiting">change {cedis(p.changeMinor)}</Pill>}
                 </li>
