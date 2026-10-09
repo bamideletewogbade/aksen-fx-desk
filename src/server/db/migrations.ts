@@ -532,4 +532,29 @@ ALTER TABLE susu_savers ADD COLUMN sms_auto_send boolean NOT NULL DEFAULT false
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS susu_sms_auto_send boolean NOT NULL DEFAULT false
 `,
   },
+  {
+    // A repayable advance is not a contribution and must never colour a new
+    // booklet day. Keep advances, repayments and close-time settlements in a
+    // separate append-only history so the calendar remains truthful.
+    id: '013_susu_advances',
+    sql: `
+ALTER TABLE channels DROP CONSTRAINT channels_provider_check;
+ALTER TABLE channels ADD CONSTRAINT channels_provider_check CHECK (provider IN ('TWILIO','TEST'));
+
+CREATE TABLE susu_advance_transactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  saver_id uuid NOT NULL REFERENCES susu_savers(id) ON DELETE CASCADE,
+  kind text NOT NULL CHECK (kind IN ('ADVANCE','REPAYMENT','SETTLEMENT')),
+  amount_minor bigint NOT NULL CHECK (amount_minor > 0),
+  method text,
+  reference text,
+  note text,
+  recorded_by uuid REFERENCES users(id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX susu_advance_saver_idx ON susu_advance_transactions (saver_id, created_at DESC);
+CREATE INDEX susu_advance_org_idx ON susu_advance_transactions (org_id, created_at DESC)
+`,
+  },
 ];

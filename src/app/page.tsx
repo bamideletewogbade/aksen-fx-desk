@@ -7,6 +7,7 @@ import { ForensicLab } from '@/components/marketing/forensic-lab';
 import { DemoChat } from '@/components/marketing/demo-chat';
 import { Reveal } from '@/components/marketing/reveal';
 import { Pebbles } from '@/components/marketing/pebbles';
+import { DayOnDesk } from '@/components/marketing/day-on-desk';
 
 export const metadata = {
   title: 'Aksen OTC · Desk software for licensed currency operators',
@@ -124,6 +125,8 @@ export default function LandingPage() {
           <Reveal delay={150}><DemoChat /></Reveal>
         </div>
       </section>
+
+      <DayOnDesk />
 
       <footer className="border-t border-line bg-paper px-4 py-10 sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">

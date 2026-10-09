@@ -52,9 +52,11 @@ export interface SaverSummary {
   nextDailyMinor: number | null;
   status: 'ACTIVE' | 'PAUSED' | 'CLOSED';
   createdAt: string;
-  page: (SusuPage & { expected: number; standing: Standing; balanceIfClosedMinor: number; feeMinor: number; savedMinor: number }) | null;
+  page: (SusuPage & { expected: number; standing: Standing; balanceIfClosedMinor: number; availableIfClosedMinor: number; feeMinor: number; savedMinor: number }) | null;
   /** Everything held for this saver right now: brought forward plus all boxes on open pages. */
   heldMinor: number;
+  /** Repayable cash taken against savings. It never creates or removes calendar days. */
+  advanceOutstandingMinor: number;
   prepaidDays: number;
   streak: number;
   lastPaidAt: string | null;
@@ -94,6 +96,15 @@ async function lockSaver(q: Queryable, orgId: string, id: string): Promise<Saver
   const [s] = await q.query<SaverRow>('SELECT * FROM susu_savers WHERE id = $1 AND org_id = $2 FOR UPDATE', [id, orgId]);
   if (!s) fail('NOT_FOUND', 'Saver not found.');
   return s;
+}
+
+async function advanceOutstanding(q: Queryable, orgId: string, saverId: string): Promise<number> {
+  const [r] = await q.query<{ total: string | number }>(
+    `SELECT COALESCE(SUM(CASE WHEN kind='ADVANCE' THEN amount_minor ELSE -amount_minor END),0) AS total
+       FROM susu_advance_transactions WHERE org_id=$1 AND saver_id=$2`,
+    [orgId, saverId],
+  );
+  return Math.max(0, N(r?.total));
 }
 
 /** Opens a new page. The saver's pending daily-amount change (if any) takes effect here. */
@@ -331,13 +342,24 @@ async function closeInTx(q: Queryable, ctx: Ctx, input: { pageId: string; kind: 
     fail('CONFLICT', `${periodLabel(page.period)} isn’t over yet. To pay out before month end, record a withdrawal.`);
   }
   const m = closeMath(page);
-  if (input.kind === 'WITHDRAWAL' && m.balanceMinor <= 0) fail('CONFLICT', `${saver.name} has nothing to withdraw yet (one day is the fee).`);
-  const requested = input.kind === 'WITHDRAWAL' ? input.amountMinor ?? m.balanceMinor : m.balanceMinor;
+  const advanceBefore = await advanceOutstanding(q, ctx.orgId, saver.id);
+  const advanceSettled = Math.min(advanceBefore, m.balanceMinor);
+  const availableBalance = m.balanceMinor - advanceSettled;
+  if (input.kind === 'WITHDRAWAL' && availableBalance <= 0) fail('CONFLICT', `${saver.name} has nothing to withdraw after the collection fee and outstanding advance.`);
+  const requested = input.kind === 'WITHDRAWAL' ? input.amountMinor ?? availableBalance : availableBalance;
   if (input.kind === 'WITHDRAWAL' && !(requested > 0)) fail('INVALID', 'Enter an amount to withdraw.');
-  if (input.kind === 'WITHDRAWAL' && requested > m.balanceMinor) fail('INVALID', `The most ${saver.name} can withdraw is ${formatMinor(m.balanceMinor, saver.currency)} after the collection fee.`);
-  if (input.kind === 'WITHDRAWAL' && saver.status === 'CLOSED' && requested < m.balanceMinor) fail('CONFLICT', `Withdraw the full ${formatMinor(m.balanceMinor, saver.currency)} balance because this booklet is closed.`);
+  if (input.kind === 'WITHDRAWAL' && requested > availableBalance) fail('INVALID', `The most ${saver.name} can withdraw is ${formatMinor(availableBalance, saver.currency)} after the collection fee and outstanding advance.`);
+  if (input.kind === 'WITHDRAWAL' && saver.status === 'CLOSED' && requested < availableBalance) fail('CONFLICT', `Withdraw the full ${formatMinor(availableBalance, saver.currency)} balance because this booklet is closed.`);
   const paidOut = input.kind === 'ROLLOVER' ? 0 : requested;
-  const carried = input.kind === 'ROLLOVER' ? m.balanceMinor : input.kind === 'WITHDRAWAL' ? m.balanceMinor - paidOut : 0;
+  const carried = input.kind === 'ROLLOVER' ? availableBalance : input.kind === 'WITHDRAWAL' ? availableBalance - paidOut : 0;
+
+  if (advanceSettled > 0) {
+    await q.query(
+      `INSERT INTO susu_advance_transactions (org_id,saver_id,kind,amount_minor,note,recorded_by)
+       VALUES ($1,$2,'SETTLEMENT',$3,$4,$5)`,
+      [ctx.orgId, saver.id, advanceSettled, `Deducted when ${page.period} page ${page.pageNo} closed`, ctx.userId],
+    );
+  }
 
   await q.query(
     `UPDATE susu_pages SET status = 'CLOSED', close_kind = $2, fee_minor = $3, paid_out_minor = $4, carried_minor = $5,
@@ -373,12 +395,12 @@ async function closeInTx(q: Queryable, ctx: Ctx, input: { pageId: string; kind: 
     orgId: ctx.orgId,
     action: 'susu.page_closed',
     actor: actorOf(ctx),
-    data: { saverId: saver.id, pageId: page.id, period: page.period, kind: input.kind, daysPaid: page.daysPaid, feeMinor: m.feeMinor, paidOutMinor: paidOut, carriedMinor: carried },
+    data: { saverId: saver.id, pageId: page.id, period: page.period, kind: input.kind, daysPaid: page.daysPaid, feeMinor: m.feeMinor, advanceSettledMinor: advanceSettled, paidOutMinor: paidOut, carriedMinor: carried },
   });
   const action = input.kind === 'ROLLOVER' ? 'Carried forward' : input.kind === 'WITHDRAWAL' ? 'Withdrawal recorded' : 'Payout recorded';
   const remaining = input.kind === 'WITHDRAWAL' ? ` Remaining saved: ${smsMoney(carried,saver.currency)}.` : '';
   await queueSusuSms(q,ctx,saver.id,`close:${page.id}`,input.kind,`${smsBrand()}: ${page.period} page ${page.pageNo}. ${action}: ${smsMoney(input.kind === 'ROLLOVER' ? carried : paidOut,saver.currency)}. Fee: ${smsMoney(m.feeMinor,saver.currency)}.${remaining}${input.kind === 'ROLLOVER' ? ' No cash paid out.' : ` Method: ${smsText(input.method?.trim() || 'Cash',20)}. Contact your collector if not received.`}`);
-  return { feeMinor: m.feeMinor, balanceMinor: m.balanceMinor, paidOutMinor: paidOut, carriedMinor: carried, kind: input.kind, name: saver.name, period: page.period };
+  return { feeMinor: m.feeMinor, balanceMinor: m.balanceMinor, advanceSettledMinor: advanceSettled, paidOutMinor: paidOut, carriedMinor: carried, kind: input.kind, name: saver.name, period: page.period };
 }
 
 /** Month end: close several pages at once. All succeed or none do. */
@@ -417,6 +439,61 @@ export async function withdraw(db: Db, ctx: Ctx, input: { saverId: string; amoun
   }));
 }
 
+/** Cash temporarily taken against savings. Calendar boxes remain unchanged. */
+export async function recordAdvance(db: Db, ctx: Ctx, input: { saverId: string; amountMinor: number; method?: string | null; reference?: string | null; note?: string | null; requestId?: string }) {
+  requirePermission(ctx, 'trade');
+  requirePermission(ctx, 'approve');
+  return db.tx((q) => oncePerRequest(q, ctx, input.requestId, {
+    kind: 'advance', saverId: input.saverId, amountMinor: input.amountMinor,
+    method: input.method?.trim() || 'Cash', reference: input.reference?.trim() || null,
+  }, async () => {
+    const saver = await lockSaver(q, ctx.orgId, input.saverId);
+    if (!(input.amountMinor > 0)) fail('INVALID', 'Enter the advance amount.');
+    const today = await orgToday(q, ctx.orgId);
+    const pages = (await q.query<Record<string, unknown>>(
+      `SELECT * FROM susu_pages WHERE saver_id=$1 AND org_id=$2 AND status='OPEN' AND period <= $3 ORDER BY period,page_no`,
+      [saver.id, ctx.orgId, periodOf(today)],
+    )).map(mapPage);
+    const netSavings = pages.reduce((sum, page) => sum + closeMath(page).balanceMinor, 0);
+    const outstanding = await advanceOutstanding(q, ctx.orgId, saver.id);
+    const available = Math.max(0, netSavings - outstanding);
+    if (input.amountMinor > available) fail('INVALID', `The most ${saver.name} can take as an advance is ${formatMinor(available, saver.currency)} after collection fees and earlier advances.`);
+    const [row] = await q.query<{ id: string; created_at: string }>(
+      `INSERT INTO susu_advance_transactions (org_id,saver_id,kind,amount_minor,method,reference,note,recorded_by)
+       VALUES ($1,$2,'ADVANCE',$3,$4,$5,$6,$7) RETURNING id,created_at`,
+      [ctx.orgId, saver.id, input.amountMinor, input.method?.trim() || 'Cash', input.reference?.trim() || null, input.note?.trim() || null, ctx.userId],
+    );
+    const after = outstanding + input.amountMinor;
+    await appendAudit(q, { orgId: ctx.orgId, action: 'susu.advance_taken', actor: actorOf(ctx), data: { saverId: saver.id, amountMinor: input.amountMinor, outstandingMinor: after, method: input.method?.trim() || 'Cash' } });
+    await queueSusuSms(q, ctx, saver.id, `advance:${row.id}`, 'WITHDRAWAL', `${smsBrand()}: Savings advance: ${smsMoney(input.amountMinor,saver.currency)} paid to you. Amount to repay: ${smsMoney(after,saver.currency)}. Your paid calendar days did not change.`);
+    return { id: row.id, kind: 'ADVANCE' as const, amountMinor: input.amountMinor, outstandingMinor: after, at: iso(row.created_at)! };
+  }));
+}
+
+/** Repays an advance without filling a contribution day. */
+export async function repayAdvance(db: Db, ctx: Ctx, input: { saverId: string; amountMinor: number; method?: string | null; reference?: string | null; note?: string | null; requestId?: string }) {
+  requirePermission(ctx, 'trade');
+  return db.tx((q) => oncePerRequest(q, ctx, input.requestId, {
+    kind: 'advance_repayment', saverId: input.saverId, amountMinor: input.amountMinor,
+    method: input.method?.trim() || 'Cash', reference: input.reference?.trim() || null,
+  }, async () => {
+    const saver = await lockSaver(q, ctx.orgId, input.saverId);
+    if (!(input.amountMinor > 0)) fail('INVALID', 'Enter the repayment amount.');
+    const outstanding = await advanceOutstanding(q, ctx.orgId, saver.id);
+    if (outstanding <= 0) fail('CONFLICT', `${saver.name} has no advance to repay.`);
+    if (input.amountMinor > outstanding) fail('INVALID', `The most ${saver.name} can repay is ${formatMinor(outstanding, saver.currency)}.`);
+    const [row] = await q.query<{ id: string; created_at: string }>(
+      `INSERT INTO susu_advance_transactions (org_id,saver_id,kind,amount_minor,method,reference,note,recorded_by)
+       VALUES ($1,$2,'REPAYMENT',$3,$4,$5,$6,$7) RETURNING id,created_at`,
+      [ctx.orgId, saver.id, input.amountMinor, input.method?.trim() || 'Cash', input.reference?.trim() || null, input.note?.trim() || null, ctx.userId],
+    );
+    const after = outstanding - input.amountMinor;
+    await appendAudit(q, { orgId: ctx.orgId, action: 'susu.advance_repaid', actor: actorOf(ctx), data: { saverId: saver.id, amountMinor: input.amountMinor, outstandingMinor: after, method: input.method?.trim() || 'Cash' } });
+    await queueSusuSms(q, ctx, saver.id, `advance-repayment:${row.id}`, 'COLLECTION', `${smsBrand()}: Advance repayment received: ${smsMoney(input.amountMinor,saver.currency)}. Advance still due: ${smsMoney(after,saver.currency)}. No new calendar day was added.`);
+    return { id: row.id, kind: 'REPAYMENT' as const, amountMinor: input.amountMinor, outstandingMinor: after, at: iso(row.created_at)! };
+  }));
+}
+
 // ---------------------------------------------------------------- reads
 
 async function summarise(db: Db, ctx: Ctx, where: string, params: unknown[]): Promise<SaverSummary[]> {
@@ -427,6 +504,11 @@ async function summarise(db: Db, ctx: Ctx, where: string, params: unknown[]): Pr
   const ids = savers.map((s) => s.id as string);
   const pages = (await db.query<Record<string, unknown>>('SELECT * FROM susu_pages WHERE saver_id = ANY($1::uuid[]) ORDER BY period DESC, page_no DESC', [ids])).map((r) => ({ ...mapPage(r), saverId: r.saver_id as string }));
   const last = await db.query<{ saver_id: string; at: string }>('SELECT saver_id, MAX(created_at) AS at FROM susu_collections WHERE saver_id = ANY($1::uuid[]) GROUP BY saver_id', [ids]);
+  const advanceRows = await db.query<{ saver_id: string; total: string | number }>(
+    `SELECT saver_id, COALESCE(SUM(CASE WHEN kind='ADVANCE' THEN amount_minor ELSE -amount_minor END),0) AS total
+       FROM susu_advance_transactions WHERE saver_id = ANY($1::uuid[]) GROUP BY saver_id`,
+    [ids],
+  );
   return savers.map((s) => {
     const mine = pages.filter((p) => p.saverId === s.id);
     const open = mine.filter((p) => p.status === 'OPEN');
@@ -434,6 +516,7 @@ async function summarise(db: Db, ctx: Ctx, where: string, params: unknown[]): Pr
     const cur = [...open].reverse().find((p) => p.period <= current) ?? [...open].reverse()[0] ?? null;
     const expected = cur ? expectedByToday(cur, today) : 0;
     const m = cur ? closeMath(cur) : null;
+    const outstanding = Math.max(0, N(advanceRows.find((r) => r.saver_id === s.id)?.total));
     return {
       id: s.id as string,
       ref: s.ref as string,
@@ -447,8 +530,9 @@ async function summarise(db: Db, ctx: Ctx, where: string, params: unknown[]): Pr
       nextDailyMinor: s.next_daily_minor === null ? null : N(s.next_daily_minor),
       status: s.status as SaverSummary['status'],
       createdAt: iso(s.created_at)!,
-      page: cur && m ? { ...cur, expected, standing: standing(cur.daysPaid, expected, dueToday(cur, today)), balanceIfClosedMinor: m.balanceMinor, feeMinor: m.feeMinor, savedMinor: m.savedMinor } : null,
+      page: cur && m ? { ...cur, expected, standing: standing(cur.daysPaid, expected, dueToday(cur, today)), balanceIfClosedMinor: m.balanceMinor, availableIfClosedMinor: Math.max(0, m.balanceMinor - outstanding), feeMinor: m.feeMinor, savedMinor: m.savedMinor } : null,
       heldMinor: open.reduce((sum, p) => sum + p.broughtForwardMinor + p.daysPaid * p.dailyMinor, 0),
+      advanceOutstandingMinor: outstanding,
       prepaidDays: open.filter((p) => p.period > current).reduce((sum, p) => sum + p.daysPaid, 0),
       streak: streak(mine.map((p) => ({ status: p.status, daysPaid: p.daysPaid, capacity: p.capacity }))),
       lastPaidAt: iso(last.find((l) => l.saver_id === s.id)?.at),
@@ -490,7 +574,22 @@ export async function getSaver(db: Db, ctx: Ctx, id: string) {
   }
   // Both halves of a spilled payment share a timestamp, so row order alone can't be trusted: list months oldest first.
   for (const p of payments.values()) p.periods.sort();
-  return { saver: summary, pages, payments: [...payments.values()], sms: await saverSusuSms(db, ctx, id), smsDeskEnabled: smsDesk?.susu_sms_enabled === true, today: await orgToday(db, ctx.orgId) };
+  const advanceRows = await db.query<Record<string, unknown>>(
+    `SELECT a.*,u.name AS recorded_by_name FROM susu_advance_transactions a LEFT JOIN users u ON u.id=a.recorded_by
+      WHERE a.saver_id=$1 AND a.org_id=$2 ORDER BY a.created_at DESC,a.id DESC`,
+    [id, ctx.orgId],
+  );
+  const advances = advanceRows.map((a) => ({
+    id: a.id as string,
+    kind: a.kind as 'ADVANCE' | 'REPAYMENT' | 'SETTLEMENT',
+    amountMinor: N(a.amount_minor),
+    method: (a.method as string) ?? null,
+    reference: (a.reference as string) ?? null,
+    note: (a.note as string) ?? null,
+    by: (a.recorded_by_name as string) ?? null,
+    at: iso(a.created_at)!,
+  }));
+  return { saver: summary, pages, payments: [...payments.values()], advances, sms: await saverSusuSms(db, ctx, id), smsDeskEnabled: smsDesk?.susu_sms_enabled === true, today: await orgToday(db, ctx.orgId) };
 }
 
 export interface SusuOverview {

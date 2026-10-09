@@ -14,7 +14,8 @@ import type { SusuSmsView } from '@/server/susu-sms';
 import { StandingPill } from '../susu-view';
 
 type Payment = { id: string; at: string; receivedMinor: number; changeMinor: number; days: number; periods: string[]; note: string | null; by: string | null };
-type Data = { saver: SaverSummary; pages: SusuPage[]; payments: Payment[]; sms: SusuSmsView[]; smsDeskEnabled: boolean; today: string };
+type AdvanceEntry = { id: string; kind: 'ADVANCE' | 'REPAYMENT' | 'SETTLEMENT'; amountMinor: number; method: string | null; reference: string | null; note: string | null; by: string | null; at: string };
+type Data = { saver: SaverSummary; pages: SusuPage[]; payments: Payment[]; advances: AdvanceEntry[]; sms: SusuSmsView[]; smsDeskEnabled: boolean; today: string };
 
 const smsStatus: Record<SusuSmsView['status'], { label: string; tone: 'neutral' | 'waiting' | 'good' | 'risk' | 'done' }> = {
   DRAFT: { label: 'Not sent', tone: 'waiting' }, QUEUED: { label: 'Sending', tone: 'waiting' }, SENDING: { label: 'Sending', tone: 'waiting' },
@@ -205,8 +206,9 @@ function Withdraw({ s, page, onClose, onDone }: { s: SaverSummary; page: SusuPag
   const m = closeMath(page);
   const otherPagesMinor = Math.max(0, s.heldMinor - page.broughtForwardMinor - m.savedMinor);
   const amountMinor = Math.round((Number(amount.replace(/[^\d.]/g, '')) || 0) * 100);
-  const validAmount = amountMinor > 0 && amountMinor <= m.balanceMinor;
-  const remainingMinor = validAmount ? m.balanceMinor - amountMinor : m.balanceMinor;
+  const availableMinor = Math.max(0, m.balanceMinor - s.advanceOutstandingMinor);
+  const validAmount = amountMinor > 0 && amountMinor <= availableMinor;
+  const remainingMinor = validAmount ? availableMinor - amountMinor : availableMinor;
   const go = async () => {
     setBusy(true);
     try {
@@ -228,19 +230,69 @@ function Withdraw({ s, page, onClose, onDone }: { s: SaverSummary; page: SusuPag
           {page.broughtForwardMinor > 0 && <Row label="Brought forward" value={cedis(page.broughtForwardMinor)} />}
           <Row label={`Contributed this page (${page.daysPaid} day${page.daysPaid === 1 ? '' : 's'})`} value={cedis(m.savedMinor)} />
           <Row label={`${desk} collection fee (1 day)`} value={`− ${cedis(m.feeMinor)}`} />
-          <div className="border-t border-line pt-1.5"><Row label={<strong>Available from this page</strong>} value={<strong>{cedis(m.balanceMinor)}</strong>} /></div>
+          {s.advanceOutstandingMinor > 0 && <Row label="Advance settled first" value={`− ${cedis(Math.min(s.advanceOutstandingMinor, m.balanceMinor))}`} />}
+          <div className="border-t border-line pt-1.5"><Row label={<strong>Available from this page</strong>} value={<strong>{cedis(availableMinor)}</strong>} /></div>
           {otherPagesMinor > 0 && <Row label="Paid ahead on later pages" value={cedis(otherPagesMinor)} />}
         </div>
         <Field label="Amount to withdraw (GH₵)" htmlFor="w-amount" hint="Enter any amount up to the available balance.">
           <div className="flex gap-2"><Input id="w-amount" mono inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={String(m.balanceMinor / 100)} autoFocus /><Button type="button" variant="secondary" size="sm" onClick={() => setAmount(String(m.balanceMinor / 100))}>All</Button></div>
         </Field>
-        {amountMinor > m.balanceMinor && <Notice tone="risk">The most available after the collection fee is {cedis(m.balanceMinor)}.</Notice>}
+        {amountMinor > availableMinor && <Notice tone="risk">The most available after the collection fee and advance is {cedis(availableMinor)}.</Notice>}
         {validAmount && <div className="space-y-1.5 rounded-xl border border-line p-4"><Row label="Pay to saver" value={cedis(amountMinor)} /><Row label="Stays in savings" value={cedis(remainingMinor)} /></div>}
         <p className="text-xs text-muted">Complete the payout before recording it here. This closes the current page and charges its one-day collection fee. Any amount left stays saved and is not charged again. The {page.capacity - page.daysPaid} remaining day{page.capacity - page.daysPaid === 1 ? '' : 's'} of {periodLabel(page.period)} continue on a fresh page.{otherPagesMinor > 0 ? ' Paid-ahead pages remain unchanged.' : ''}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Payout method" htmlFor="w-method"><Select id="w-method" value={method} onChange={(e) => setMethod(e.target.value)}><option>Cash</option><option>MoMo</option><option>Bank</option></Select></Field>
           <Field label="Reference" htmlFor="w-ref" optional><Input id="w-ref" mono value={reference} onChange={(e) => setReference(e.target.value)} placeholder={method === 'Cash' ? 'e.g. receipt no.' : 'Transaction ID'} /></Field>
         </div>
+      </div>
+    </Dialog>
+  );
+}
+
+function AdvanceDialog({ mode, s, page, onClose, onDone }: { mode: 'advance' | 'repay_advance'; s: SaverSummary; page: SaverSummary['page']; onClose: () => void; onDone: (d: Data) => void }) {
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('Cash');
+  const [reference, setReference] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const requestId = useRef<string | null>(null);
+  const amountMinor = Math.round((Number(amount.replace(/[^\d.]/g, '')) || 0) * 100);
+  const max = mode === 'advance' ? (page?.availableIfClosedMinor ?? 0) : s.advanceOutstandingMinor;
+  const valid = amountMinor > 0 && amountMinor <= max;
+  const go = async () => {
+    setBusy(true);
+    try {
+      requestId.current ??= crypto.randomUUID();
+      const d = await api<Data>(`/api/susu/${s.id}`, { method: 'POST', json: { action: mode, amount, method, reference: reference || null, note: note || null, requestId: requestId.current } });
+      toast(mode === 'advance' ? `${cedis(amountMinor)} advance recorded. Paid calendar days did not change.` : `${cedis(amountMinor)} repayment recorded. No new calendar day was added.`);
+      onDone(d);
+      onClose();
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : 'Could not record this advance movement.', 'risk');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const taking = mode === 'advance';
+  return (
+    <Dialog open onClose={onClose} title={taking ? `Advance from savings for ${s.name}` : `Repay ${s.name}’s advance`} footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!valid} onClick={go}>{taking ? 'Record advance' : 'Record repayment'}</Button></>}>
+      <div className="space-y-4 text-sm">
+        <Notice tone="info" title={taking ? 'This is repayable, not a withdrawal' : 'A repayment is not a new contribution'}>
+          {taking ? `The ${page?.daysPaid ?? 0} paid calendar days stay exactly as they are. The advance reduces what is available until it is repaid or deducted when the page closes.` : 'This reduces the outstanding advance. It does not fill another calendar box or charge another collection fee.'}
+        </Notice>
+        <div className="space-y-1.5 rounded-xl bg-paper p-4">
+          {page && <Row label="Saved on this page" value={cedis(page.broughtForwardMinor + page.savedMinor)} />}
+          {page && <Row label="Collection fee if closed" value={`− ${cedis(page.feeMinor)}`} />}
+          <Row label={taking ? 'Already advanced' : 'Outstanding before repayment'} value={cedis(s.advanceOutstandingMinor)} />
+          <div className="border-t border-line pt-1.5"><Row label={<strong>{taking ? 'Available for an advance' : 'Most that can be repaid'}</strong>} value={<strong>{cedis(max)}</strong>} /></div>
+        </div>
+        <Field label={taking ? 'Advance amount (GH₵)' : 'Repayment received (GH₵)'} htmlFor="a-amount"><div className="flex gap-2"><Input id="a-amount" mono inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus /><Button type="button" variant="secondary" size="sm" onClick={() => setAmount(String(max / 100))}>All</Button></div></Field>
+        {amountMinor > max && <Notice tone="risk">The maximum is {cedis(max)}.</Notice>}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={taking ? 'Paid by' : 'Received by'} htmlFor="a-method"><Select id="a-method" value={method} onChange={(e) => setMethod(e.target.value)}><option>Cash</option><option>MoMo</option><option>Bank</option></Select></Field>
+          <Field label="Reference" htmlFor="a-ref" optional><Input id="a-ref" mono value={reference} onChange={(e) => setReference(e.target.value)} /></Field>
+        </div>
+        <Field label="Note" htmlFor="a-note" optional><Input id="a-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder={taking ? 'Why the saver needed the advance' : 'Repayment details'} /></Field>
       </div>
     </Dialog>
   );
@@ -258,6 +310,7 @@ export function SaverView({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [advanceMode, setAdvanceMode] = useState<'advance' | 'repay_advance' | null>(null);
   const allowed = canTrade(session);
 
   if (error) return <Notice tone="risk">{error.message}</Notice>;
@@ -305,7 +358,8 @@ export function SaverView({ id }: { id: string }) {
             {s.notes && <p className="mt-2 text-xs text-subtle">{s.notes}</p>}
           </div>
           <div className="flex flex-wrap gap-4 sm:gap-6 sm:text-right">
-            <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Held for saver</div><div className="font-mono text-2xl font-bold tabular text-ink">{cedis(s.heldMinor)}</div></div>
+            <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Saved on record</div><div className="font-mono text-2xl font-bold tabular text-ink">{cedis(s.heldMinor)}</div></div>
+            {s.advanceOutstandingMinor > 0 && <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Advance due</div><div className="font-mono text-2xl font-bold tabular text-risk">{cedis(s.advanceOutstandingMinor)}</div></div>}
             <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Streak</div><div className="inline-flex items-center gap-1 font-mono text-2xl font-bold tabular text-amber"><Flame size={18} />{s.streak}</div></div>
           </div>
         </div>
@@ -323,7 +377,9 @@ export function SaverView({ id }: { id: string }) {
             </>}
             <div className="ml-auto flex gap-2">
               <Button variant="ghost" size="sm" icon={<Pencil size={13} />} onClick={() => setEditing(true)}>Edit</Button>
-              {canApprove(session) && page && page.balanceIfClosedMinor > 0 && <Button variant="secondary" size="sm" icon={<HandCoins size={14} />} onClick={() => setWithdrawing(true)}>Record withdrawal</Button>}
+              {canApprove(session) && page && page.availableIfClosedMinor > 0 && <Button variant="secondary" size="sm" icon={<HandCoins size={14} />} onClick={() => setAdvanceMode('advance')}>Give advance</Button>}
+              {s.advanceOutstandingMinor > 0 && <Button variant="secondary" size="sm" onClick={() => setAdvanceMode('repay_advance')}>Record repayment</Button>}
+              {canApprove(session) && page && page.availableIfClosedMinor > 0 && <Button variant="secondary" size="sm" onClick={() => setWithdrawing(true)}>Permanent withdrawal</Button>}
             </div>
           </div>
         )}
@@ -352,7 +408,8 @@ export function SaverView({ id }: { id: string }) {
             {page.broughtForwardMinor > 0 && <Row label="Brought forward" value={cedis(page.broughtForwardMinor)} />}
             <Row label={`Contributed (${page.daysPaid} × ${cedis(page.dailyMinor)})`} value={cedis(page.savedMinor)} />
             <Row label="Collection fee (1 day)" value={`− ${cedis(page.feeMinor)}`} />
-            <div className="border-t border-line pt-2"><Row label={<strong className="text-ink">{s.name.split(' ')[0]} would get</strong>} value={<strong>{cedis(page.balanceIfClosedMinor)}</strong>} /></div>
+            {s.advanceOutstandingMinor > 0 && <Row label="Advance still due" value={`− ${cedis(Math.min(s.advanceOutstandingMinor, page.balanceIfClosedMinor))}`} />}
+            <div className="border-t border-line pt-2"><Row label={<strong className="text-ink">{s.name.split(' ')[0]} could receive now</strong>} value={<strong>{cedis(page.availableIfClosedMinor)}</strong>} /></div>
             {future.length > 0 && <Notice tone="good" className="!mt-4">Paid ahead: {future.map((p) => `${p.daysPaid} day${p.daysPaid === 1 ? '' : 's'} in ${periodLabel(p.period)}`).join(', ')}.</Notice>}
             <p className="pt-2 text-xs text-subtle">At month end, record a payout or roll the balance over. Rolled-over money is not charged again.</p>
           </Card>
@@ -360,6 +417,21 @@ export function SaverView({ id }: { id: string }) {
       )}
 
       <SaverSms data={data} allowed={allowed} onChanged={setData} />
+
+      <Card className="p-5">
+        <h2 className="mb-1 text-sm font-bold text-ink">Advances and repayments</h2>
+        <p className="mb-3 text-xs text-muted">These never fill or erase calendar days. An unpaid advance is deducted before a page is paid out or rolled over.</p>
+        {!data.advances.length ? <p className="text-sm text-subtle">No advances recorded.</p> : (
+          <ul className="divide-y divide-line text-sm">
+            {data.advances.map((a) => (
+              <li key={a.id} className="flex items-center justify-between gap-3 py-2">
+                <span className="min-w-0"><span className="block font-semibold text-ink">{a.kind === 'ADVANCE' ? 'Advance paid' : a.kind === 'REPAYMENT' ? 'Repayment received' : 'Deducted at page close'}</span><span className="block truncate text-xs text-subtle" suppressHydrationWarning>{dateTime(a.at)}{a.method ? ` · ${a.method}` : ''}{a.reference ? ` · ref ${a.reference}` : ''}{a.by ? ` · ${a.by}` : ''}</span></span>
+                <Pill tone={a.kind === 'ADVANCE' ? 'waiting' : 'good'}>{a.kind === 'ADVANCE' ? '− ' : '+ '}{cedis(a.amountMinor)}</Pill>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">
@@ -400,6 +472,7 @@ export function SaverView({ id }: { id: string }) {
 
       {editing && <EditSaver s={s} onClose={() => setEditing(false)} onSaved={(d) => { setData(d); setEditing(false); toast(d.dailyChange === 'next_page' ? 'Saved. The new daily amount starts when the next new page opens.' : 'Saved'); }} />}
       {withdrawing && page && <Withdraw s={s} page={page} onClose={() => setWithdrawing(false)} onDone={setData} />}
+      {advanceMode && <AdvanceDialog mode={advanceMode} s={s} page={page} onClose={() => setAdvanceMode(null)} onDone={setData} />}
     </div>
   );
 }

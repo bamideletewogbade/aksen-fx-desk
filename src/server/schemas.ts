@@ -183,6 +183,14 @@ export const withdrawSchema = z.object({
   requestId: uuid,
 });
 
+export const advanceSchema = z.object({
+  amount: money,
+  method: z.string().trim().max(40).optional().nullable(),
+  reference: z.string().trim().max(80).optional().nullable(),
+  note: z.string().trim().max(200).optional().nullable(),
+  requestId: uuid,
+});
+
 export const leadSchema = z.object({
   name: z.string().trim().min(2).max(120),
   business: z.string().trim().max(200).optional().nullable(),

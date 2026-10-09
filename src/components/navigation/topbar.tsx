@@ -8,6 +8,7 @@ const LINKS = [
   { href: '#how', label: 'How it works' },
   { href: '#controls', label: 'Controls' },
   { href: '#pricing', label: 'Pilot' },
+  { href: '#day-on-the-desk', label: 'A day on the desk' },
 ];
 
 /** Public site navigation. */

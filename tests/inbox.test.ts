@@ -36,6 +36,17 @@ beforeAll(async () => {
   await saveChannel(db, owner, { kind: 'WHATSAPP', number: '+14155238886', label: 'WhatsApp Sandbox' });
 });
 
+it('gives a sample desk a provider-independent rehearsal channel on first test chat', async () => {
+  await signup(db, { deskName: 'Rehearsal Desk', name: 'Demo Owner', email: 'rehearsal@dineroyard.test', password: 'dinero-yard-2026', isDemo: true });
+  const demo = (await resolveSession(db, (await login(db, { email: 'rehearsal@dineroyard.test', password: 'dinero-yard-2026' })).token))!;
+  const result = await simulateInbound(db, demo, { phone: '+233245550101', name: 'Ama', text: 'Hello' });
+  expect(result.status).toBe('received');
+  const [channel] = await db.query<{ provider: string; address: string }>('SELECT provider,address FROM channels WHERE org_id=$1', [demo.orgId]);
+  expect(channel).toMatchObject({ provider: 'TEST', address: `test-desk:${demo.orgId}` });
+  const listed = await listConversations(db, demo);
+  expect(listed.conversations[0]).toMatchObject({ isTest: true });
+});
+
 describe('a WhatsApp customer, start to payout', () => {
   it('greets, quotes, collects name and payout, and issues payment instructions', async () => {
     await say('Good afternoon');

@@ -59,7 +59,7 @@ function AddChannel({ twilio, onSaved }: { twilio: TwilioStatus; onSaved: (d: Da
   );
 }
 
-function TestChat({ channels }: { channels: ChannelView[] }) {
+function TestChat({ channels, demo }: { channels: ChannelView[]; demo: boolean }) {
   const router = useRouter();
   const [channelId, setChannelId] = useState(channels.find((c) => c.active)?.id ?? '');
   const [phone, setPhone] = useState('+233 24 555 0101');
@@ -84,6 +84,7 @@ function TestChat({ channels }: { channels: ChannelView[] }) {
       <div className="grid gap-3 sm:grid-cols-3">
         <Field label="Number" htmlFor="t-ch">
           <Select id="t-ch" value={channelId} onChange={(e) => setChannelId(e.target.value)}>
+            {demo && !channels.length && <option value="">Rehearsal channel (no provider)</option>}
             {channels.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </Select>
         </Field>
@@ -91,7 +92,7 @@ function TestChat({ channels }: { channels: ChannelView[] }) {
         <Field label="WhatsApp name" htmlFor="t-name"><Input id="t-name" value={name} onChange={(e) => setName(e.target.value)} /></Field>
       </div>
       <Field label="First message" htmlFor="t-text"><Textarea id="t-text" rows={2} value={text} onChange={(e) => setText(e.target.value)} /></Field>
-      <Button busy={busy} onClick={start} disabled={!channelId} icon={<MessageSquare size={15} />}>Start test chat</Button>
+      <Button busy={busy} onClick={start} disabled={!demo && !channelId} icon={<MessageSquare size={15} />}>Start test chat</Button>
     </Card>
   );
 }
@@ -181,7 +182,7 @@ export function WhatsAppConsole() {
         </Notice>
       )}
 
-      {canTrade(session) && data.channels.some((c) => c.active) && <TestChat channels={data.channels.filter((c) => c.active)} />}
+      {canTrade(session) && (session.isDemo || data.channels.some((c) => c.active)) && <TestChat channels={data.channels.filter((c) => c.active)} demo={session.isDemo} />}
     </div>
   );
 }

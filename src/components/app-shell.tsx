@@ -152,6 +152,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
   const router = useRouter();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<TradeSummary[]>([]);
+  const [searching, setSearching] = useState(false);
   const [idx, setIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -159,6 +160,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
     if (open) {
       setQ('');
       setResults([]);
+      setSearching(false);
       setTimeout(() => inputRef.current?.focus(), 10);
     }
   }, [open]);
@@ -166,8 +168,10 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
   useEffect(() => {
     if (!open || q.trim().length < 2) {
       setResults([]);
+      setSearching(false);
       return;
     }
+    setSearching(true);
     const t = setTimeout(async () => {
       try {
         const d = await api<{ trades: TradeSummary[] }>(`/api/trades?q=${encodeURIComponent(q)}&limit=8`);
@@ -175,6 +179,8 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
         setIdx(0);
       } catch {
         setResults([]);
+      } finally {
+        setSearching(false);
       }
     }, 180);
     return () => clearTimeout(t);
@@ -229,7 +235,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
               </button>
             </li>
           ))}
-          {!items.length &&
+          {!items.length && q.trim().length < 2 &&
             actions.map((a) => (
               <li key={a.href}>
                 <button type="button" onClick={() => go(a.href)} className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-ink hover:bg-[#eef4ec] cursor-pointer">
@@ -237,7 +243,8 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
                 </button>
               </li>
             ))}
-          {q.trim().length >= 2 && !results.length && <li className="px-3 py-2 text-xs text-subtle">No trades match “{q}”.</li>}
+          {q.trim().length >= 2 && searching && <li className="px-3 py-2 text-xs text-subtle">Searching trades…</li>}
+          {q.trim().length >= 2 && !searching && !results.length && <li className="px-3 py-2 text-xs text-subtle">No trades match “{q}”.</li>}
         </ul>
       </div>
     </div>

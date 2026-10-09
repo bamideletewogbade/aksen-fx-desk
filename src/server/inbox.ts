@@ -1,6 +1,6 @@
 import 'server-only';
 import type { Db } from './db';
-import { requirePermission, type Ctx } from './auth';
+import { actorOf, requirePermission, type Ctx } from './auth';
 import { appendAudit } from './audit';
 import { DomainError, fail } from './errors';
 import { cancelFromChat, createChatQuote, MAX_EVIDENCE_BYTES, portalAccept, portalAddEvidence, portalToken, sweepExpired } from './trades';
@@ -765,10 +765,20 @@ const SAMPLE_RECEIPT = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEA
  */
 export async function simulateInbound(db: Db, ctx: Ctx, input: { phone: string; name?: string | null; text?: string | null; sampleReceipt?: boolean; channelId?: string | null }) {
   requirePermission(ctx, 'trade');
-  const [ch] = await db.query<{ address: string }>(
+  let [ch] = await db.query<{ address: string }>(
     `SELECT address FROM channels WHERE org_id = $1 AND active ${input.channelId ? 'AND id = $2' : ''} ORDER BY (kind = 'WHATSAPP') DESC, created_at LIMIT 1`,
     input.channelId ? [ctx.orgId, input.channelId] : [ctx.orgId],
   );
+  if (!ch && ctx.isDemo && !input.channelId) {
+    [ch] = await db.query<{ address: string }>(
+      `INSERT INTO channels (org_id,provider,kind,address,label)
+       VALUES ($1,'TEST','WHATSAPP',$2,'Rehearsal channel')
+       ON CONFLICT (address) DO UPDATE SET active=true
+       RETURNING address`,
+      [ctx.orgId, `test-desk:${ctx.orgId}`],
+    );
+    await db.tx((q) => appendAudit(q, { orgId: ctx.orgId, action: 'channel.test_ready', actor: actorOf(ctx), data: { provider: 'TEST' } }));
+  }
   if (!ch) fail('CONFLICT', 'Connect a WhatsApp or SMS number first.');
   const digits = input.phone.replace(/[^\d]/g, '');
   if (digits.length < 9) fail('INVALID', 'Enter a test phone number.');

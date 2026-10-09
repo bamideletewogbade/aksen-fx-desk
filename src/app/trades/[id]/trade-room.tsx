@@ -57,7 +57,7 @@ function Progress({ t }: { t: TradeDetail }) {
           <li key={s.key} className="min-w-0">
             <div className={cx('h-1.5 rounded-full', done ? 'bg-brand' : current ? (t.status === 'ON_HOLD' ? 'bg-risk' : 'bg-lime') : 'bg-[#e3ebe1]')} />
             <div className={cx('mt-1.5 truncate text-[0.6875rem] font-semibold', done ? 'text-ink' : current ? 'text-brand' : 'text-subtle')}>{s.label}</div>
-            <div className="truncate font-mono text-[0.625rem] text-subtle" suppressHydrationWarning>{at[i] ? clock(at[i]!) : current ? 'now' : ''}</div>
+            <div className="truncate font-mono text-[0.625rem] text-subtle" suppressHydrationWarning>{at[i] ? clock(at[i]!) : current ? (t.status === 'ON_HOLD' ? 'paused before this step' : 'next') : ''}</div>
           </li>
         );
       })}

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Activity as ActivityIcon, ArrowRight, Banknote, CheckCircle2, Circle, MessageSquare, RefreshCw, Sparkles } from 'lucide-react';
 import { api, useLoad } from '@/lib/api';
 import { CORRIDORS, formatMinor, type Corridor } from '@/lib/money';
@@ -48,16 +48,25 @@ function BriefButton() {
   const [busy, setBusy] = useState(false);
   const [brief, setBrief] = useState<{ text: string; facts: string[]; source: 'model' | 'facts'; model?: string; generatedAt: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [phase, setPhase] = useState<'facts' | 'writing' | 'slow'>('facts');
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const run = async () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
     setOpen(true);
     setBusy(true);
     setError(null);
+    setPhase('facts');
+    timers.current.push(setTimeout(() => setPhase('writing'), 900));
+    timers.current.push(setTimeout(() => setPhase('slow'), 8_000));
     try {
       const d = await api<{ brief: NonNullable<typeof brief> }>('/api/desk/report', { method: 'POST' });
       setBrief(d.brief);
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      timers.current.forEach(clearTimeout);
+      timers.current = [];
       setBusy(false);
     }
   };
@@ -65,8 +74,13 @@ function BriefButton() {
     <>
       <Button variant="secondary" icon={<Sparkles size={15} />} onClick={run}>Brief me</Button>
       <Dialog open={open} onClose={() => setOpen(false)} title="Desk brief" wide footer={<Button variant="secondary" onClick={run} busy={busy} icon={<RefreshCw size={14} />}>Refresh</Button>}>
+        {busy && (
+          <Notice tone="info" title={phase === 'facts' ? 'Gathering desk facts…' : phase === 'writing' ? 'Writing the summary…' : 'The AI wording is taking longer than usual…'}>
+            {phase === 'facts' ? 'Reading open trades, recent activity and today’s totals. Nothing is being changed.' : phase === 'writing' ? 'The facts are being turned into a short operator brief. Nothing will be sent.' : 'Keep this dialog open, or close it and retry. Your desk records are safe and unchanged.'}
+          </Notice>
+        )}
         {busy && !brief && <div className="space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>}
-        {error && <Notice tone="risk">{error}</Notice>}
+        {error && <Notice tone="risk" title="The brief could not be generated">{error} No records were changed. Use Refresh to try again.</Notice>}
         {brief && (
           <div className="space-y-4">
             <div className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{brief.text}</div>
