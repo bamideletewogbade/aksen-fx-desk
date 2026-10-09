@@ -1,6 +1,6 @@
 import { body, deskRoute } from '@/server/http';
 import { advanceSchema, collectSchema, saverSchema, withdrawSchema } from '@/server/schemas';
-import { getSaver, recordAdvance, recordCollection, repayAdvance, saveSaver, withdraw } from '@/server/susu';
+import { getSaver, recordAdvance, recordCollection, saveSaver, withdraw } from '@/server/susu';
 import { sendSusuSmsAfterResponse } from '@/server/susu-sms-after';
 import { z } from 'zod';
 
@@ -20,7 +20,6 @@ const action = z.discriminatedUnion('action', [
   collectSchema.extend({ action: z.literal('collect') }),
   withdrawSchema.extend({ action: z.literal('withdraw') }),
   advanceSchema.extend({ action: z.literal('advance') }),
-  advanceSchema.extend({ action: z.literal('repay_advance') }),
 ]);
 
 export const POST = deskRoute<P>(async ({ req, db, ctx, params }) => {
@@ -32,11 +31,8 @@ export const POST = deskRoute<P>(async ({ req, db, ctx, params }) => {
   } else if (a.action === 'withdraw') {
     result = await withdraw(db, ctx, { saverId: params.id, amountMinor: a.amount, method: a.method, reference: a.reference, requestId: a.requestId });
     sendSusuSmsAfterResponse(db, ctx.orgId);
-  } else if (a.action === 'advance') {
-    result = await recordAdvance(db, ctx, { saverId: params.id, amountMinor: a.amount, method: a.method, reference: a.reference, note: a.note, requestId: a.requestId });
-    sendSusuSmsAfterResponse(db, ctx.orgId);
   } else {
-    result = await repayAdvance(db, ctx, { saverId: params.id, amountMinor: a.amount, method: a.method, reference: a.reference, note: a.note, requestId: a.requestId });
+    result = await recordAdvance(db, ctx, { saverId: params.id, amountMinor: a.amount, method: a.method, reference: a.reference, note: a.note, requestId: a.requestId });
     sendSusuSmsAfterResponse(db, ctx.orgId);
   }
   return { result, ...(await getSaver(db, ctx, params.id)) };

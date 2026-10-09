@@ -256,7 +256,7 @@ export function SusuView() {
       {!o ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((k) => <Skeleton key={k} className="h-24" />)}</div> : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Tile label="Money added today" value={cedis(o.collectedTodayMinor)} sub={o.paidTodayCount ? `from ${o.paidTodayCount} saver${o.paidTodayCount === 1 ? '' : 's'}` : 'No payments yet today'} icon={<PiggyBank size={15} />} tone={o.collectedTodayMinor ? 'good' : undefined} />
-          <Tile label="Savings after borrowed money" value={cedis(o.netHeldMinor)} sub={`${cedis(o.heldMinor)} saved · ${cedis(o.advancesOutstandingMinor)} borrowed`} icon={<PiggyBank size={15} />} />
+          <Tile label="Savings available" value={cedis(o.netHeldMinor)} sub={`${cedis(o.heldMinor)} saved · ${cedis(o.advancesOutstandingMinor)} already taken`} icon={<PiggyBank size={15} />} />
           <Tile label="Our fees" value={cedis(o.feesThisMonthMinor)} sub={`received this month · about ${cedis(o.feesDueMinor)} when open pages end`} icon={<CalendarCheck size={15} />} />
           <Tile label="Expected today" value={cedis(o.expectedTodayMinor)} sub={o.savers.active ? `across ${o.savers.active} active saver${o.savers.active === 1 ? '' : 's'}` : 'Add an active saver to set today’s target'} icon={<CalendarCheck size={15} />} />
         </div>

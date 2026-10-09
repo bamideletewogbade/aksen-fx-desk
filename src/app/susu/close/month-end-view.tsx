@@ -85,9 +85,9 @@ export function MonthEndView() {
                     <li key={p.id} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-center">
                       <div className="min-w-0">
                         <Link href={`/susu/${p.saver.id}`} className="font-semibold text-ink hover:text-brand">{p.saver.name}</Link>
-                        <div className="text-xs text-muted">{p.daysPaid} of {p.capacity} days paid · added {cedis(p.savedMinor)}{p.broughtForwardMinor ? ` + ${cedis(p.broughtForwardMinor)} saved from before` : ''} · our fee {cedis(p.feeMinor)}{p.advanceSettledMinor ? ` · ${cedis(p.advanceSettledMinor)} already borrowed` : ''}</div>
+                        <div className="text-xs text-muted">{p.daysPaid} of {p.capacity} days paid · added {cedis(p.savedMinor)}{p.broughtForwardMinor ? ` + ${cedis(p.broughtForwardMinor)} saved from before` : ''} · our fee {cedis(p.feeMinor)}{p.advanceSettledMinor ? ` · ${cedis(p.advanceSettledMinor)} already taken early` : ''}</div>
                       </div>
-                      <div><div className={cx('font-mono text-lg font-bold tabular', p.availableBalanceMinor ? 'text-ink' : 'text-subtle')}>{cedis(p.availableBalanceMinor)}</div>{p.advanceSettledMinor > 0 && <div className="text-xs text-risk">after {cedis(p.advanceSettledMinor)} borrowed</div>}</div>
+                      <div><div className={cx('font-mono text-lg font-bold tabular', p.availableBalanceMinor ? 'text-ink' : 'text-subtle')}>{cedis(p.availableBalanceMinor)}</div>{p.advanceSettledMinor > 0 && <div className="text-xs text-risk">after {cedis(p.advanceSettledMinor)} already taken</div>}</div>
                       <div className="flex flex-wrap items-center gap-2">
                         <Segmented size="sm" value={c.kind} onChange={(kind) => set(p.id, { kind })} options={approver ? [{ value: 'ROLLOVER', label: 'Keep saved' }, { value: 'PAYOUT', label: 'Pay out' }] : [{ value: 'ROLLOVER', label: 'Keep saved' }]} />
                         {c.kind === 'PAYOUT' && p.availableBalanceMinor > 0 && (

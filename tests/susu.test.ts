@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, type Db } from '@/server/db';
 import { acceptInvite, createInvite, login, resolveSession, signup, type Ctx } from '@/server/auth';
-import { closePage, closePages, getSaver, listSavers, pagesToClose, recordAdvance, recordCollection, repayAdvance, saveSaver, susuOverview, withdraw } from '@/server/susu';
+import { closePage, closePages, getSaver, listSavers, pagesToClose, recordAdvance, recordCollection, saveSaver, susuOverview, withdraw } from '@/server/susu';
 import { todayIn } from '@/server/day-close';
 import { closeMath, daysInMonth, expectedByToday, nextPeriod, periodOf, splitCash, standing, streak } from '@/lib/susu';
 
@@ -147,8 +147,8 @@ describe('susu desk flows', () => {
     expect((await getSaver(db, owner, saverId)).saver.heldMinor).toBe(0);
   });
 
-  it('keeps a repayable advance separate from the calendar and restores availability on repayment', async () => {
-    const saverId = (await saveSaver(db, owner, { name: 'Advance Scenario', dailyMinor: GHS(10) })).id;
+  it('keeps money taken early separate while later payments continue filling calendar days', async () => {
+    const saverId = (await saveSaver(db, owner, { name: 'Early Money Scenario', dailyMinor: GHS(10) })).id;
     await recordCollection(db, owner, { saverId, amountMinor: GHS(100) });
     const before = await getSaver(db, owner, saverId);
     expect(before.saver.page).toMatchObject({ daysPaid: 10, savedMinor: GHS(100), feeMinor: GHS(10), balanceIfClosedMinor: GHS(90), availableIfClosedMinor: GHS(90) });
@@ -164,19 +164,13 @@ describe('susu desk flows', () => {
     expect(during.payments).toHaveLength(before.payments.length);
     expect(during.advances[0]).toMatchObject({ kind: 'ADVANCE', amountMinor: GHS(30) });
 
-    const firstRepayment = await repayAdvance(db, owner, { saverId, amountMinor: GHS(20), method: 'Cash', requestId: randomUUID() });
-    expect(firstRepayment.transactionRef).toBe('220071');
-    const partial = await getSaver(db, owner, saverId);
-    expect(partial.saver.page).toMatchObject({ daysPaid: 10, availableIfClosedMinor: GHS(80) });
-    expect(partial.saver.advanceOutstandingMinor).toBe(GHS(10));
-
-    await repayAdvance(db, owner, { saverId, amountMinor: GHS(10), method: 'Cash', requestId: randomUUID() });
-    const repaid = await getSaver(db, owner, saverId);
-    expect(repaid.saver.page).toMatchObject({ daysPaid: 10, savedMinor: GHS(100), availableIfClosedMinor: GHS(90) });
-    expect(repaid.saver.advanceOutstandingMinor).toBe(0);
-    expect(repaid.payments).toHaveLength(before.payments.length);
-    expect(repaid.advances.map((a) => a.kind)).toEqual(['REPAYMENT', 'REPAYMENT', 'ADVANCE']);
-    expect(repaid.advances.map((a) => a.transactionRef)).toEqual(['220072', '220071', '220070']);
+    await recordCollection(db, owner, { saverId, amountMinor: GHS(20) });
+    const continued = await getSaver(db, owner, saverId);
+    expect(continued.saver.page).toMatchObject({ daysPaid: 12, savedMinor: GHS(120), balanceIfClosedMinor: GHS(110), availableIfClosedMinor: GHS(80) });
+    expect(continued.saver.advanceOutstandingMinor).toBe(GHS(30));
+    expect(continued.payments).toHaveLength(before.payments.length + 1);
+    expect(continued.advances.map((a) => a.kind)).toEqual(['ADVANCE']);
+    expect(continued.advances.map((a) => a.transactionRef)).toEqual(['220070']);
   });
 
   it('deducts an unpaid advance at permanent page close without double-paying it', async () => {
