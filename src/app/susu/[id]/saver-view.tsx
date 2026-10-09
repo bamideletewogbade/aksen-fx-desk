@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRef, useState } from 'react';
-import { ArrowLeft, ChevronDown, Flame, HandCoins, MessageSquareText, Pencil, Phone, Send, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Flame, HandCoins, MessageSquareText, Pencil, Phone, Send, X } from 'lucide-react';
 import { api, ApiError, useLoad } from '@/lib/api';
 import { canApprove, canTrade } from '@/lib/auth';
 import { cedis, closeMath, daysInMonth, periodLabel, splitCash } from '@/lib/susu';
@@ -14,7 +14,7 @@ import type { SusuSmsView } from '@/server/susu-sms';
 import { StandingPill } from '../susu-view';
 
 type Payment = { id: string; at: string; receivedMinor: number; changeMinor: number; days: number; periods: string[]; note: string | null; by: string | null };
-type AdvanceEntry = { id: string; kind: 'ADVANCE' | 'REPAYMENT' | 'SETTLEMENT'; amountMinor: number; method: string | null; reference: string | null; note: string | null; by: string | null; at: string };
+type AdvanceEntry = { id: string; transactionRef: string; kind: 'ADVANCE' | 'REPAYMENT' | 'SETTLEMENT'; amountMinor: number; method: string | null; reference: string | null; note: string | null; by: string | null; at: string };
 type Data = { saver: SaverSummary; pages: SusuPage[]; payments: Payment[]; advances: AdvanceEntry[]; sms: SusuSmsView[]; smsDeskEnabled: boolean; today: string };
 
 const smsStatus: Record<SusuSmsView['status'], { label: string; tone: 'neutral' | 'waiting' | 'good' | 'risk' | 'done' }> = {
@@ -90,18 +90,12 @@ function SaverSms({ data, allowed, onChanged }: { data: Data; allowed: boolean; 
   </Card>;
 }
 
-/**
- * The open page as the saver would see it in their booklet. Earlier withdrawal
- * pages stay visible so opening a fresh page does not make recorded days appear
- * to vanish. The X describes the page event, not how much of any one day was
- * withdrawn; the exact cash split lives in the closed-page history.
- */
-function Booklet({ page, pages, today }: { page: SusuPage; pages: SusuPage[]; today: string }) {
+/** Keep this calendar about one thing: payments on the current saving page. */
+function Booklet({ page, today }: { page: SusuPage; today: string }) {
   const dim = daysInMonth(page.period);
   const todayDay = page.period === today.slice(0, 7) ? Number(today.slice(8, 10)) : page.period < today.slice(0, 7) ? dim + 1 : 0;
   const lastBox = page.startDay + page.capacity - 1;
   const filledTo = page.startDay + page.daysPaid - 1;
-  const earlierPages = pages.filter((candidate) => candidate.id !== page.id && candidate.period === page.period && candidate.status === 'CLOSED' && candidate.daysPaid > 0);
   const boxes = Array.from({ length: dim }, (_, i) => i + 1);
   const firstWeekday = new Date(`${page.period}-01T12:00:00Z`).getUTCDay();
   return (
@@ -115,30 +109,22 @@ function Booklet({ page, pages, today }: { page: SusuPage; pages: SusuPage[]; to
           const onPage = d >= page.startDay && d <= lastBox;
           const filled = onPage && d <= filledTo;
           const due = onPage && !filled && d < todayDay;
-          const earlierPage = earlierPages.find((candidate) => d >= candidate.startDay && d < candidate.startDay + candidate.daysPaid);
-          const withdrawnPage = earlierPage?.closeKind === 'WITHDRAWAL';
-          const earlierTitle = withdrawnPage
-            ? 'Saved on an earlier page that was later closed for a withdrawal. See Closed pages for the exact amount withdrawn and kept.'
-            : earlierPage
-              ? `Saved on an earlier page that was closed as ${earlierPage.closeKind?.toLowerCase() ?? 'complete'}.`
-              : null;
+          const isToday = onPage && d === todayDay;
           return (
             <span
               key={d}
-              title={earlierTitle ?? (!onPage ? 'Not part of this open page' : filled ? 'Paid on this open page' : due ? 'Missed so far (can still be caught up this month)' : d === todayDay ? 'Due today' : 'Coming up')}
+              title={!onPage ? 'Not part of this saving page' : filled ? 'Paid' : due ? 'Needs payment' : isToday ? 'Today — not paid yet' : 'Later'}
               className={cx(
-                'relative flex aspect-square items-center justify-center rounded-lg border text-xs font-semibold',
-                !onPage && !earlierPage && 'border-[#edf1eb] bg-[#fafbf9] text-[#89998f]',
-                earlierPage && !withdrawnPage && 'border-[#b9d1bf] bg-[#e5f0e7] text-[#245d3c]',
-                withdrawnPage && 'border-[#dfa59d] bg-[#fff0ed] text-[#8a2b21]',
-                filled && 'bg-brand text-white',
-                due && 'border-dashed border-[#d98f85] bg-[#fff0ed] text-[#8a2b21]',
+                'relative flex h-10 items-center justify-center rounded-lg border text-xs font-semibold sm:h-12',
+                !onPage && 'border-transparent bg-[#fafbf9] text-[#9aa79f]',
+                filled && 'border-brand bg-brand text-white',
+                due && 'border-amber/40 bg-amber-bg text-amber',
                 onPage && !filled && !due && 'border-[#d8e1d5] bg-[#eef3ec] text-[#52675b]',
-                d === todayDay && 'ring-2 ring-ink ring-offset-1',
+                isToday && 'ring-2 ring-ink ring-offset-1',
               )}
             >
               {d}
-              {withdrawnPage && <X size={13} strokeWidth={2.5} aria-hidden className="absolute right-1 top-1" />}
+              {filled && <Check size={10} strokeWidth={3} aria-hidden className="absolute right-1 top-1" />}
             </span>
           );
         })}
@@ -224,22 +210,22 @@ function Withdraw({ s, page, onClose, onDone }: { s: SaverSummary; page: SusuPag
     }
   };
   return (
-    <Dialog open onClose={onClose} title={`Early withdrawal for ${s.name}`} footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!validAmount} onClick={go}>Record {validAmount ? cedis(amountMinor) : ''} withdrawal</Button></>}>
+    <Dialog open onClose={onClose} title={`Take money out for ${s.name}`} footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!validAmount} onClick={go}>Record {validAmount ? cedis(amountMinor) : ''} payout</Button></>}>
       <div className="space-y-4 text-sm">
         <div className="space-y-1.5 rounded-xl bg-paper p-4">
-          {page.broughtForwardMinor > 0 && <Row label="Brought forward" value={cedis(page.broughtForwardMinor)} />}
-          <Row label={`Contributed this page (${page.daysPaid} day${page.daysPaid === 1 ? '' : 's'})`} value={cedis(m.savedMinor)} />
-          <Row label={`${desk} collection fee (1 day)`} value={`− ${cedis(m.feeMinor)}`} />
-          {s.advanceOutstandingMinor > 0 && <Row label="Advance settled first" value={`− ${cedis(Math.min(s.advanceOutstandingMinor, m.balanceMinor))}`} />}
-          <div className="border-t border-line pt-1.5"><Row label={<strong>Available from this page</strong>} value={<strong>{cedis(availableMinor)}</strong>} /></div>
+          {page.broughtForwardMinor > 0 && <Row label="Saved from before" value={cedis(page.broughtForwardMinor)} />}
+          <Row label={`Added on this page (${page.daysPaid} day${page.daysPaid === 1 ? '' : 's'})`} value={cedis(m.savedMinor)} />
+          <Row label={`${desk} fee (1 day)`} value={`− ${cedis(m.feeMinor)}`} />
+          {s.advanceOutstandingMinor > 0 && <Row label="Money already taken early" value={`− ${cedis(Math.min(s.advanceOutstandingMinor, m.balanceMinor))}`} />}
+          <div className="border-t border-line pt-1.5"><Row label={<strong>Available now</strong>} value={<strong>{cedis(availableMinor)}</strong>} /></div>
           {otherPagesMinor > 0 && <Row label="Paid ahead on later pages" value={cedis(otherPagesMinor)} />}
         </div>
-        <Field label="Amount to withdraw (GH₵)" htmlFor="w-amount" hint="Enter any amount up to the available balance.">
+        <Field label="Amount to pay out (GH₵)" htmlFor="w-amount" hint="Enter any amount up to the amount available now.">
           <div className="flex gap-2"><Input id="w-amount" mono inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={String(m.balanceMinor / 100)} autoFocus /><Button type="button" variant="secondary" size="sm" onClick={() => setAmount(String(m.balanceMinor / 100))}>All</Button></div>
         </Field>
-        {amountMinor > availableMinor && <Notice tone="risk">The most available after the collection fee and advance is {cedis(availableMinor)}.</Notice>}
+        {amountMinor > availableMinor && <Notice tone="risk">The most available after our fee and money already taken is {cedis(availableMinor)}.</Notice>}
         {validAmount && <div className="space-y-1.5 rounded-xl border border-line p-4"><Row label="Pay to saver" value={cedis(amountMinor)} /><Row label="Stays in savings" value={cedis(remainingMinor)} /></div>}
-        <p className="text-xs text-muted">Complete the payout before recording it here. This closes the current page and charges its one-day collection fee. Any amount left stays saved and is not charged again. The {page.capacity - page.daysPaid} remaining day{page.capacity - page.daysPaid === 1 ? '' : 's'} of {periodLabel(page.period)} continue on a fresh page.{otherPagesMinor > 0 ? ' Paid-ahead pages remain unchanged.' : ''}</p>
+        <p className="text-xs text-muted">Pay the saver before recording this. We take one daily amount as our fee. Any money left stays saved without another fee. The remaining {page.capacity - page.daysPaid} day{page.capacity - page.daysPaid === 1 ? '' : 's'} continue on a fresh calendar.{otherPagesMinor > 0 ? ' Payments already made for later months do not change.' : ''}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Payout method" htmlFor="w-method"><Select id="w-method" value={method} onChange={(e) => setMethod(e.target.value)}><option>Cash</option><option>MoMo</option><option>Bank</option></Select></Field>
           <Field label="Reference" htmlFor="w-ref" optional><Input id="w-ref" mono value={reference} onChange={(e) => setReference(e.target.value)} placeholder={method === 'Cash' ? 'e.g. receipt no.' : 'Transaction ID'} /></Field>
@@ -263,36 +249,39 @@ function AdvanceDialog({ mode, s, page, onClose, onDone }: { mode: 'advance' | '
     setBusy(true);
     try {
       requestId.current ??= crypto.randomUUID();
-      const d = await api<Data>(`/api/susu/${s.id}`, { method: 'POST', json: { action: mode, amount, method, reference: reference || null, note: note || null, requestId: requestId.current } });
-      toast(mode === 'advance' ? `${cedis(amountMinor)} advance recorded. Paid calendar days did not change.` : `${cedis(amountMinor)} repayment recorded. No new calendar day was added.`);
+      const d = await api<Data & { result: { transactionRef: string } }>(`/api/susu/${s.id}`, { method: 'POST', json: { action: mode, amount, method, reference: reference || null, note: note || null, requestId: requestId.current } });
+      toast(mode === 'advance' ? `${cedis(amountMinor)} borrowed from savings · ref ${d.result.transactionRef}. Paid calendar days did not change.` : `${cedis(amountMinor)} paid back · ref ${d.result.transactionRef}. No new calendar day was added.`);
       onDone(d);
       onClose();
     } catch (e) {
-      toast(e instanceof ApiError ? e.message : 'Could not record this advance movement.', 'risk');
+      toast(e instanceof ApiError ? e.message : 'Could not record this borrowed-money entry.', 'risk');
     } finally {
       setBusy(false);
     }
   };
   const taking = mode === 'advance';
   return (
-    <Dialog open onClose={onClose} title={taking ? `Advance from savings for ${s.name}` : `Repay ${s.name}’s advance`} footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!valid} onClick={go}>{taking ? 'Record advance' : 'Record repayment'}</Button></>}>
+    <Dialog open onClose={onClose} title={taking ? `Borrow from ${s.name}’s savings` : `Pay back ${s.name}’s borrowed money`} footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!valid} onClick={go}>{taking ? 'Record money given' : 'Record repayment'}</Button></>}>
       <div className="space-y-4 text-sm">
-        <Notice tone="info" title={taking ? 'This is repayable, not a withdrawal' : 'A repayment is not a new contribution'}>
-          {taking ? `The ${page?.daysPaid ?? 0} paid calendar days stay exactly as they are. The advance reduces what is available until it is repaid or deducted when the page closes.` : 'This reduces the outstanding advance. It does not fill another calendar box or charge another collection fee.'}
+        <Notice tone="info" title={taking ? 'This money must be paid back' : 'This is not a new daily payment'}>
+          {taking ? `The ${page?.daysPaid ?? 0} paid calendar days do not change. The amount the saver can collect goes down until this money is paid back.` : 'This reduces the borrowed amount left. It does not fill another calendar day or add another fee.'}
+        </Notice>
+        <Notice tone="warn" title={taking ? 'Pay first, then record' : 'Receive first, then record'}>
+          {taking ? 'Complete the cash, MoMo or bank payment before saving this entry. Dinero-Yard assigns the next transaction reference automatically.' : 'Confirm the repayment has been received before saving. Dinero-Yard assigns the next transaction reference automatically.'}
         </Notice>
         <div className="space-y-1.5 rounded-xl bg-paper p-4">
           {page && <Row label="Saved on this page" value={cedis(page.broughtForwardMinor + page.savedMinor)} />}
-          {page && <Row label="Collection fee if closed" value={`− ${cedis(page.feeMinor)}`} />}
-          <Row label={taking ? 'Already advanced' : 'Outstanding before repayment'} value={cedis(s.advanceOutstandingMinor)} />
-          <div className="border-t border-line pt-1.5"><Row label={<strong>{taking ? 'Available for an advance' : 'Most that can be repaid'}</strong>} value={<strong>{cedis(max)}</strong>} /></div>
+          {page && <Row label="Our fee when the page ends" value={`− ${cedis(page.feeMinor)}`} />}
+          <Row label={taking ? 'Already taken early' : 'Borrowed amount before this payment'} value={cedis(s.advanceOutstandingMinor)} />
+          <div className="border-t border-line pt-1.5"><Row label={<strong>{taking ? 'Can borrow now' : 'Most that can be paid back'}</strong>} value={<strong>{cedis(max)}</strong>} /></div>
         </div>
-        <Field label={taking ? 'Advance amount (GH₵)' : 'Repayment received (GH₵)'} htmlFor="a-amount"><div className="flex gap-2"><Input id="a-amount" mono inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus /><Button type="button" variant="secondary" size="sm" onClick={() => setAmount(String(max / 100))}>All</Button></div></Field>
+        <Field label={taking ? 'Amount to borrow (GH₵)' : 'Amount paid back (GH₵)'} htmlFor="a-amount"><div className="flex gap-2"><Input id="a-amount" mono inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus /><Button type="button" variant="secondary" size="sm" onClick={() => setAmount(String(max / 100))}>All</Button></div></Field>
         {amountMinor > max && <Notice tone="risk">The maximum is {cedis(max)}.</Notice>}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={taking ? 'Paid by' : 'Received by'} htmlFor="a-method"><Select id="a-method" value={method} onChange={(e) => setMethod(e.target.value)}><option>Cash</option><option>MoMo</option><option>Bank</option></Select></Field>
-          <Field label="Reference" htmlFor="a-ref" optional><Input id="a-ref" mono value={reference} onChange={(e) => setReference(e.target.value)} /></Field>
+          <Field label="MoMo / bank reference" htmlFor="a-ref" optional hint="Provider reference, separate from the Dinero-Yard reference."><Input id="a-ref" mono value={reference} onChange={(e) => setReference(e.target.value)} /></Field>
         </div>
-        <Field label="Note" htmlFor="a-note" optional><Input id="a-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder={taking ? 'Why the saver needed the advance' : 'Repayment details'} /></Field>
+        <Field label="Note" htmlFor="a-note" optional><Input id="a-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder={taking ? 'Why the saver borrowed the money' : 'Payment details'} /></Field>
       </div>
     </Dialog>
   );
@@ -322,6 +311,9 @@ export function SaverView({ id }: { id: string }) {
   const split = minor ? splitCash(Math.round(minor), daily) : null;
   const closed = data.pages.filter((p) => p.status === 'CLOSED');
   const future = data.pages.filter((p) => p.status === 'OPEN' && page && p.period > page.period);
+  const earlierWithdrawals = page ? closed.filter((p) => p.period === page.period && p.closeKind === 'WITHDRAWAL' && p.daysPaid > 0) : [];
+  const earlierWithdrawalDays = earlierWithdrawals.reduce((total, item) => total + item.daysPaid, 0);
+  const nextDay = page && page.daysPaid < page.capacity ? page.startDay + page.daysPaid : null;
 
   const collect = async () => {
     setBusy(true);
@@ -358,18 +350,18 @@ export function SaverView({ id }: { id: string }) {
             {s.notes && <p className="mt-2 text-xs text-subtle">{s.notes}</p>}
           </div>
           <div className="flex flex-wrap gap-4 sm:gap-6 sm:text-right">
-            <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Saved on record</div><div className="font-mono text-2xl font-bold tabular text-ink">{cedis(s.heldMinor)}</div></div>
-            {s.advanceOutstandingMinor > 0 && <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Advance due</div><div className="font-mono text-2xl font-bold tabular text-risk">{cedis(s.advanceOutstandingMinor)}</div></div>}
+            <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Total saved</div><div className="font-mono text-2xl font-bold tabular text-ink">{cedis(s.heldMinor)}</div></div>
+            {s.advanceOutstandingMinor > 0 && <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Borrowed amount left</div><div className="font-mono text-2xl font-bold tabular text-risk">{cedis(s.advanceOutstandingMinor)}</div></div>}
             <div><div className="text-[0.6875rem] font-mono uppercase tracking-wider text-subtle">Streak</div><div className="inline-flex items-center gap-1 font-mono text-2xl font-bold tabular text-amber"><Flame size={18} />{s.streak}</div></div>
           </div>
         </div>
         {allowed && (
           <div className="mt-5 flex flex-wrap items-end gap-3 border-t border-line pt-4">
             {s.status === 'ACTIVE' && <>
-              <Field label="Contribution received" htmlFor="sv-amt">
+              <Field label="Payment received" htmlFor="sv-amt">
                 <Input id="sv-amt" mono inputMode="decimal" value={amount} onChange={(e) => { collectionRequestId.current = null; setAmount(e.target.value); }} onKeyDown={(e) => e.key === 'Enter' && split?.days && collect()} placeholder={`GH₵ ${daily / 100}`} className="w-40" />
               </Field>
-              <Button busy={busy} disabled={!split?.days} onClick={collect}>Record</Button>
+              <Button busy={busy} disabled={!split?.days} onClick={collect}>Save payment</Button>
               {[1, 2, 7].map((n) => (
                 <Button key={n} variant="secondary" size="sm" onClick={() => { collectionRequestId.current = null; setAmount(String((daily * n) / 100)); }}>{n === 1 ? '1 day' : `${n} days`}</Button>
               ))}
@@ -377,9 +369,9 @@ export function SaverView({ id }: { id: string }) {
             </>}
             <div className="ml-auto flex gap-2">
               <Button variant="ghost" size="sm" icon={<Pencil size={13} />} onClick={() => setEditing(true)}>Edit</Button>
-              {canApprove(session) && page && page.availableIfClosedMinor > 0 && <Button variant="secondary" size="sm" icon={<HandCoins size={14} />} onClick={() => setAdvanceMode('advance')}>Give advance</Button>}
+              {canApprove(session) && s.status === 'ACTIVE' && page && page.availableIfClosedMinor > 0 && <Button variant="secondary" size="sm" icon={<HandCoins size={14} />} onClick={() => setAdvanceMode('advance')}>Borrow from savings</Button>}
               {s.advanceOutstandingMinor > 0 && <Button variant="secondary" size="sm" onClick={() => setAdvanceMode('repay_advance')}>Record repayment</Button>}
-              {canApprove(session) && page && page.availableIfClosedMinor > 0 && <Button variant="secondary" size="sm" onClick={() => setWithdrawing(true)}>Permanent withdrawal</Button>}
+              {canApprove(session) && page && page.availableIfClosedMinor > 0 && <Button variant="secondary" size="sm" onClick={() => setWithdrawing(true)}>Take money out</Button>}
             </div>
           </div>
         )}
@@ -388,30 +380,42 @@ export function SaverView({ id }: { id: string }) {
       {page && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <Card className="p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink">{periodLabel(page.period)} · page {page.pageNo}</h2>
-              <span className="text-xs text-muted">{page.daysPaid} of {page.capacity} days</span>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-bold text-ink">{periodLabel(page.period)} savings</h2>
+                <p className="mt-0.5 text-xs text-subtle">Current saving period · page {page.pageNo}</p>
+              </div>
+              <Pill tone={page.daysPaid === page.capacity ? 'good' : 'neutral'}>{page.daysPaid} of {page.capacity} days paid</Pill>
             </div>
-            {page.broughtForwardMinor > 0 && <Notice tone="good" className="mb-4"><strong>{cedis(page.broughtForwardMinor)} remains saved.</strong> It was brought forward from an earlier page, so future dates turn green only when a new {cedis(page.dailyMinor)} contribution is recorded.</Notice>}
-            <Booklet page={page} pages={data.pages} today={data.today} />
+            <div className="mb-4 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-xl bg-paper p-3"><span className="block text-[0.6875rem] font-semibold uppercase tracking-wide text-subtle">Saved now</span><strong className="mt-1 block font-mono text-lg text-ink">{cedis(page.broughtForwardMinor + page.savedMinor)}</strong></div>
+              <div className="rounded-xl bg-paper p-3"><span className="block text-[0.6875rem] font-semibold uppercase tracking-wide text-subtle">Paid on this page</span><strong className="mt-1 block text-lg text-ink">{page.daysPaid} day{page.daysPaid === 1 ? '' : 's'}</strong></div>
+              <div className="rounded-xl bg-paper p-3"><span className="block text-[0.6875rem] font-semibold uppercase tracking-wide text-subtle">Next payment</span><strong className="mt-1 block text-lg text-ink">{nextDay ? `Day ${nextDay}` : 'Page complete'}</strong></div>
+            </div>
+            {page.broughtForwardMinor > 0 && <Notice tone="good" className="mb-3"><strong>{cedis(page.broughtForwardMinor)} was already saved before this page.</strong> It stays as money, but it does not fill new calendar days.</Notice>}
+            {earlierWithdrawalDays > 0 && <Notice tone="info" className="mb-4"><strong>Earlier this month:</strong> {earlierWithdrawalDays} paid day{earlierWithdrawalDays === 1 ? '' : 's'} ended when money was taken out. The exact payout is under Past payouts below.</Notice>}
+            <Booklet page={page} today={data.today} />
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[0.6875rem] font-medium text-muted">
-              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-brand" /> Paid on this page</span>
-              {closed.some((p) => p.period === page.period && p.closeKind === 'WITHDRAWAL' && p.daysPaid > 0) && <span className="inline-flex items-center gap-1.5"><span className="relative flex h-3.5 w-3.5 items-center justify-center rounded border border-[#dfa59d] bg-[#fff0ed] text-[#8a2b21]"><X size={9} strokeWidth={3} /></span> Earlier page closed for withdrawal</span>}
-              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded border border-dashed border-[#d98f85] bg-[#fff0ed]" /> Missed so far</span>
-              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded border border-[#819087] bg-[#eef3ec] ring-2 ring-ink" /> Today</span>
-              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded border border-[#d8e1d5] bg-[#eef3ec]" /> Coming up</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-brand" /> Paid</span>
+              {page.startDay < Number(data.today.slice(8, 10)) && page.daysPaid < page.capacity && <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded border border-amber/40 bg-amber-bg" /> Needs payment</span>}
+              {data.today.startsWith(page.period) && Number(data.today.slice(8, 10)) >= page.startDay && Number(data.today.slice(8, 10)) <= page.startDay + page.capacity - 1 && <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded border border-[#819087] bg-[#eef3ec] ring-2 ring-ink" /> Today</span>}
+              <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded border border-[#d8e1d5] bg-[#eef3ec]" /> Later</span>
             </div>
-            <p className="mt-3 text-xs leading-5 text-muted">Green tracks newly recorded contribution days. An X keeps an earlier withdrawal page visible; it does not mean the whole daily amount was withdrawn. The exact amount paid out and kept is shown under Closed pages.</p>
+            <p className="mt-3 text-xs leading-5 text-muted">This calendar shows only this current saving period. Past withdrawals stay in the payout history instead of appearing as missed days.</p>
           </Card>
           <Card className="space-y-2 p-5 text-sm">
-            <h2 className="mb-2 text-sm font-bold text-ink">If this page closed today</h2>
-            {page.broughtForwardMinor > 0 && <Row label="Brought forward" value={cedis(page.broughtForwardMinor)} />}
-            <Row label={`Contributed (${page.daysPaid} × ${cedis(page.dailyMinor)})`} value={cedis(page.savedMinor)} />
-            <Row label="Collection fee (1 day)" value={`− ${cedis(page.feeMinor)}`} />
-            {s.advanceOutstandingMinor > 0 && <Row label="Advance still due" value={`− ${cedis(Math.min(s.advanceOutstandingMinor, page.balanceIfClosedMinor))}`} />}
-            <div className="border-t border-line pt-2"><Row label={<strong className="text-ink">{s.name.split(' ')[0]} could receive now</strong>} value={<strong>{cedis(page.availableIfClosedMinor)}</strong>} /></div>
+            <h2 className="text-sm font-bold text-ink">Your money today</h2>
+            <div className="mb-4 rounded-xl bg-brand p-4 text-white">
+              <span className="block text-xs font-medium text-white/80">Available now</span>
+              <strong className="mt-1 block font-mono text-3xl tabular">{cedis(page.availableIfClosedMinor)}</strong>
+              <span className="mt-1 block text-xs text-white/80">after our fee{s.advanceOutstandingMinor > 0 ? ' and borrowed money' : ''}</span>
+            </div>
+            {page.broughtForwardMinor > 0 && <Row label="Saved from before" value={cedis(page.broughtForwardMinor)} />}
+            <Row label={`Added here (${page.daysPaid} day${page.daysPaid === 1 ? '' : 's'})`} value={cedis(page.savedMinor)} />
+            <Row label="Our fee when this page ends" value={`− ${cedis(page.feeMinor)}`} />
+            {s.advanceOutstandingMinor > 0 && <Row label="Money already taken early" value={`− ${cedis(Math.min(s.advanceOutstandingMinor, page.balanceIfClosedMinor))}`} />}
             {future.length > 0 && <Notice tone="good" className="!mt-4">Paid ahead: {future.map((p) => `${p.daysPaid} day${p.daysPaid === 1 ? '' : 's'} in ${periodLabel(p.period)}`).join(', ')}.</Notice>}
-            <p className="pt-2 text-xs text-subtle">At month end, record a payout or roll the balance over. Rolled-over money is not charged again.</p>
+            <p className="pt-2 text-xs leading-5 text-subtle">At month end, pay this amount out or keep it saved for next month. Money kept is not charged another fee.</p>
           </Card>
         </div>
       )}
@@ -419,13 +423,13 @@ export function SaverView({ id }: { id: string }) {
       <SaverSms data={data} allowed={allowed} onChanged={setData} />
 
       <Card className="p-5">
-        <h2 className="mb-1 text-sm font-bold text-ink">Advances and repayments</h2>
-        <p className="mb-3 text-xs text-muted">These never fill or erase calendar days. An unpaid advance is deducted before a page is paid out or rolled over.</p>
-        {!data.advances.length ? <p className="text-sm text-subtle">No advances recorded.</p> : (
+        <h2 className="mb-1 text-sm font-bold text-ink">Money borrowed and paid back</h2>
+        <p className="mb-3 text-xs text-muted">Borrowing does not add or remove paid calendar days. Any amount still owed comes out before the saver is paid.</p>
+        {!data.advances.length ? <p className="text-sm text-subtle">No borrowed money recorded.</p> : (
           <ul className="divide-y divide-line text-sm">
             {data.advances.map((a) => (
               <li key={a.id} className="flex items-center justify-between gap-3 py-2">
-                <span className="min-w-0"><span className="block font-semibold text-ink">{a.kind === 'ADVANCE' ? 'Advance paid' : a.kind === 'REPAYMENT' ? 'Repayment received' : 'Deducted at page close'}</span><span className="block truncate text-xs text-subtle" suppressHydrationWarning>{dateTime(a.at)}{a.method ? ` · ${a.method}` : ''}{a.reference ? ` · ref ${a.reference}` : ''}{a.by ? ` · ${a.by}` : ''}</span></span>
+                <span className="min-w-0"><span className="block font-semibold text-ink">{a.kind === 'ADVANCE' ? 'Money given early' : a.kind === 'REPAYMENT' ? 'Money paid back' : 'Taken from savings when the page ended'} · <span className="font-mono">{a.transactionRef}</span></span><span className="block truncate text-xs text-subtle" suppressHydrationWarning>{dateTime(a.at)}{a.method ? ` · ${a.method}` : ''}{a.reference ? ` · payment ref ${a.reference}` : ''}{a.by ? ` · ${a.by}` : ''}</span></span>
                 <Pill tone={a.kind === 'ADVANCE' ? 'waiting' : 'good'}>{a.kind === 'ADVANCE' ? '− ' : '+ '}{cedis(a.amountMinor)}</Pill>
               </li>
             ))}
@@ -435,7 +439,7 @@ export function SaverView({ id }: { id: string }) {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">
-          <h2 className="mb-3 text-sm font-bold text-ink">Contributions</h2>
+          <h2 className="mb-3 text-sm font-bold text-ink">Daily payments</h2>
           {!data.payments.length ? <p className="text-sm text-subtle">Nothing collected yet.</p> : (
             <ul className="divide-y divide-line text-sm">
               {data.payments.map((p) => (
@@ -451,17 +455,17 @@ export function SaverView({ id }: { id: string }) {
           )}
         </Card>
         <Card className="p-5">
-          <h2 className="mb-3 text-sm font-bold text-ink">Closed pages</h2>
-          {!closed.length ? <p className="text-sm text-subtle">No pages closed yet. The first closes at the end of {page ? periodLabel(page.period) : 'the month'}.</p> : (
+          <h2 className="mb-3 text-sm font-bold text-ink">Past payouts</h2>
+          {!closed.length ? <p className="text-sm text-subtle">No payouts yet. The first is due at the end of {page ? periodLabel(page.period) : 'the month'}.</p> : (
             <ul className="divide-y divide-line text-sm">
               {closed.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-3 py-2">
                   <span className="min-w-0">
-                    <span className="block font-semibold text-ink">{periodLabel(p.period)} <span className="font-normal text-muted">· {p.daysPaid ? `${p.daysPaid} saved day${p.daysPaid === 1 ? '' : 's'}` : 'no new contributions'} · {(p.feeMinor ?? 0) > 0 ? `fee ${cedis(p.feeMinor ?? 0)}` : 'no additional fee'}</span></span>
+                    <span className="block font-semibold text-ink">{periodLabel(p.period)} <span className="font-normal text-muted">· {p.daysPaid ? `${p.daysPaid} paid day${p.daysPaid === 1 ? '' : 's'}` : 'no new payments'} · {(p.feeMinor ?? 0) > 0 ? `our fee ${cedis(p.feeMinor ?? 0)}` : 'no extra fee'}</span></span>
                     <span className="block text-xs text-subtle" suppressHydrationWarning>{p.closedAt ? dateTime(p.closedAt) : ''}{p.payoutReference ? ` · ref ${p.payoutReference}` : ''}</span>
                   </span>
                   <Pill tone={p.closeKind === 'ROLLOVER' ? 'neutral' : 'good'}>
-                    {p.closeKind === 'ROLLOVER' ? `Rolled over ${cedis(p.carriedMinor ?? 0)}` : p.closeKind === 'WITHDRAWAL' ? `Withdrew ${cedis(p.paidOutMinor ?? 0)}${p.carriedMinor ? ` · kept ${cedis(p.carriedMinor)}` : ''}` : `Paid out ${cedis(p.paidOutMinor ?? 0)}`}
+                    {p.closeKind === 'ROLLOVER' ? `Kept saved ${cedis(p.carriedMinor ?? 0)}` : p.closeKind === 'WITHDRAWAL' ? `Paid ${cedis(p.paidOutMinor ?? 0)}${p.carriedMinor ? ` · kept ${cedis(p.carriedMinor)}` : ''}` : `Paid out ${cedis(p.paidOutMinor ?? 0)}`}
                   </Pill>
                 </li>
               ))}

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, type Db } from '@/server/db';
 import { acceptInvite, createInvite, login, resolveSession, signup, type Ctx } from '@/server/auth';
-import { closePage, closePages, getSaver, listSavers, recordAdvance, recordCollection, repayAdvance, saveSaver, susuOverview, withdraw } from '@/server/susu';
+import { closePage, closePages, getSaver, listSavers, pagesToClose, recordAdvance, recordCollection, repayAdvance, saveSaver, susuOverview, withdraw } from '@/server/susu';
 import { todayIn } from '@/server/day-close';
 import { closeMath, daysInMonth, expectedByToday, nextPeriod, periodOf, splitCash, standing, streak } from '@/lib/susu';
 
@@ -129,7 +129,7 @@ describe('susu desk flows', () => {
     expect(first).toMatchObject({ feeMinor: GHS(10), balanceMinor: GHS(40), paidOutMinor: GHS(15), carriedMinor: GHS(25) });
     const retry = await withdraw(db, owner, { saverId, amountMinor: GHS(15), method: 'MoMo', reference: 'MOMO-15', requestId });
     expect(retry).toEqual(first);
-    await expect(withdraw(db, owner, { saverId, amountMinor: GHS(20), method: 'MoMo', reference: 'MOMO-15', requestId })).rejects.toThrow(/different amount/);
+    await expect(withdraw(db, owner, { saverId, amountMinor: GHS(20), method: 'MoMo', reference: 'MOMO-15', requestId })).rejects.toThrow(/different details/);
 
     const after = await getSaver(db, owner, saverId);
     expect(after.saver.heldMinor).toBe(GHS(25));
@@ -150,15 +150,19 @@ describe('susu desk flows', () => {
     const before = await getSaver(db, owner, saverId);
     expect(before.saver.page).toMatchObject({ daysPaid: 10, savedMinor: GHS(100), feeMinor: GHS(10), balanceIfClosedMinor: GHS(90), availableIfClosedMinor: GHS(90) });
 
-    const advance = await recordAdvance(db, owner, { saverId, amountMinor: GHS(30), method: 'Cash', requestId: randomUUID() });
-    expect(advance).toMatchObject({ amountMinor: GHS(30), outstandingMinor: GHS(30) });
+    const advanceRequestId = randomUUID();
+    const advance = await recordAdvance(db, owner, { saverId, amountMinor: GHS(30), method: 'Cash', note: 'School fees', requestId: advanceRequestId });
+    expect(advance).toMatchObject({ transactionRef: '220069', amountMinor: GHS(30), outstandingMinor: GHS(30) });
+    expect(await recordAdvance(db, owner, { saverId, amountMinor: GHS(30), method: 'Cash', note: 'School fees', requestId: advanceRequestId })).toEqual(advance);
+    await expect(recordAdvance(db, owner, { saverId, amountMinor: GHS(30), method: 'Cash', note: 'Different reason', requestId: advanceRequestId })).rejects.toThrow(/different details/);
     const during = await getSaver(db, owner, saverId);
     expect(during.saver.page).toMatchObject({ daysPaid: 10, savedMinor: GHS(100), balanceIfClosedMinor: GHS(90), availableIfClosedMinor: GHS(60) });
     expect(during.saver.advanceOutstandingMinor).toBe(GHS(30));
     expect(during.payments).toHaveLength(before.payments.length);
     expect(during.advances[0]).toMatchObject({ kind: 'ADVANCE', amountMinor: GHS(30) });
 
-    await repayAdvance(db, owner, { saverId, amountMinor: GHS(20), method: 'Cash', requestId: randomUUID() });
+    const firstRepayment = await repayAdvance(db, owner, { saverId, amountMinor: GHS(20), method: 'Cash', requestId: randomUUID() });
+    expect(firstRepayment.transactionRef).toBe('220070');
     const partial = await getSaver(db, owner, saverId);
     expect(partial.saver.page).toMatchObject({ daysPaid: 10, availableIfClosedMinor: GHS(80) });
     expect(partial.saver.advanceOutstandingMinor).toBe(GHS(10));
@@ -169,17 +173,23 @@ describe('susu desk flows', () => {
     expect(repaid.saver.advanceOutstandingMinor).toBe(0);
     expect(repaid.payments).toHaveLength(before.payments.length);
     expect(repaid.advances.map((a) => a.kind)).toEqual(['REPAYMENT', 'REPAYMENT', 'ADVANCE']);
+    expect(repaid.advances.map((a) => a.transactionRef)).toEqual(['220071', '220070', '220069']);
   });
 
   it('deducts an unpaid advance at permanent page close without double-paying it', async () => {
     const saverId = (await saveSaver(db, owner, { name: 'Advance Settlement', dailyMinor: GHS(10) })).id;
     await recordCollection(db, owner, { saverId, amountMinor: GHS(100) });
     await recordAdvance(db, owner, { saverId, amountMinor: GHS(30), requestId: randomUUID() });
+    await db.query("UPDATE susu_pages SET period = '2000-01' WHERE saver_id = $1", [saverId]);
+    const due = await pagesToClose(db, owner);
+    const page = due.pages.find((p) => p.saver.id === saverId)!;
+    expect(page).toMatchObject({ balanceMinor: GHS(90), advanceSettledMinor: GHS(30), availableBalanceMinor: GHS(60) });
     const result = await withdraw(db, owner, { saverId, amountMinor: GHS(60), method: 'Cash', requestId: randomUUID() });
     expect(result).toMatchObject({ balanceMinor: GHS(90), advanceSettledMinor: GHS(30), paidOutMinor: GHS(60), carriedMinor: 0 });
+    expect(result.settlementTransactionRef).toMatch(/^\d+$/);
     const after = await getSaver(db, owner, saverId);
     expect(after.saver.advanceOutstandingMinor).toBe(0);
-    expect(after.advances[0]).toMatchObject({ kind: 'SETTLEMENT', amountMinor: GHS(30) });
+    expect(after.advances[0]).toMatchObject({ kind: 'SETTLEMENT', transactionRef: result.settlementTransactionRef, amountMinor: GHS(30) });
   });
 
   it('rejects zero and over-limit early withdrawals without changing the booklet', async () => {
@@ -232,6 +242,7 @@ describe('susu desk flows', () => {
     await recordCollection(db, owner, { saverId: k, amountMinor: GHS(30) });
     await saveSaver(db, owner, { id: k, name: 'Abena Appiah', dailyMinor: GHS(10), status: 'PAUSED' });
     await expect(recordCollection(db, owner, { saverId: k, amountMinor: GHS(10) })).rejects.toThrow(/paused/);
+    await expect(recordAdvance(db, owner, { saverId: k, amountMinor: GHS(10), requestId: randomUUID() })).rejects.toThrow(/active/i);
     const paid = await withdraw(db, owner, { saverId: k, method: 'Cash' });
     expect(paid.balanceMinor).toBe(GHS(20));
     await saveSaver(db, owner, { id: k, name: 'Abena Appiah', dailyMinor: GHS(10), status: 'ACTIVE' });
@@ -245,7 +256,7 @@ describe('susu desk flows', () => {
     const retry = await recordCollection(db, owner, { saverId: k, amountMinor: GHS(25), requestId });
     expect(retry).toEqual(first);
     expect((await getSaver(db, owner, k)).saver.page?.daysPaid).toBe(2);
-    await expect(recordCollection(db, owner, { saverId: k, amountMinor: GHS(35), requestId })).rejects.toThrow(/different amount/);
+    await expect(recordCollection(db, owner, { saverId: k, amountMinor: GHS(35), requestId })).rejects.toThrow(/different details/);
     expect((await getSaver(db, owner, k)).payments).toHaveLength(1);
   });
 
@@ -269,6 +280,8 @@ describe('susu desk flows', () => {
     const savers = await listSavers(db, owner);
     const o = await susuOverview(db, owner, savers);
     expect(o.heldMinor).toBe(savers.reduce((s, x) => s + x.heldMinor, 0));
+    expect(o.advancesOutstandingMinor).toBe(savers.reduce((s, x) => s + x.advanceOutstandingMinor, 0));
+    expect(o.netHeldMinor).toBe(o.heldMinor - o.advancesOutstandingMinor);
     expect(o.collectedTodayMinor).toBeGreaterThan(0);
   });
 
@@ -283,5 +296,16 @@ describe('susu desk flows', () => {
       [owner.orgId, periodOf(today)],
     );
     expect(o.feesDueMinor).toBe(Number(rows.fees));
+  });
+
+  it('shows the current calendar while an older month still waits for payout', async () => {
+    const k = (await saveSaver(db, owner, { name: 'Current Calendar', dailyMinor: GHS(10) })).id;
+    await recordCollection(db, owner, { saverId: k, amountMinor: GHS(20) });
+    await db.query("UPDATE susu_pages SET period = '2000-01' WHERE saver_id = $1", [k]);
+    await recordCollection(db, owner, { saverId: k, amountMinor: GHS(10) });
+    const view = await getSaver(db, owner, k);
+    expect(view.saver.page).toMatchObject({ period: periodOf(today), daysPaid: 1 });
+    expect(view.pages.some((p) => p.period === '2000-01' && p.status === 'OPEN')).toBe(true);
+    expect((await pagesToClose(db, owner)).pages.some((p) => p.saver.id === k && p.period === '2000-01')).toBe(true);
   });
 });

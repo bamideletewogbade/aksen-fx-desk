@@ -90,7 +90,7 @@ function AddSaver({ today, defaultAutoSend = false, onClose, onSaved }: { today:
       <div className="space-y-4">
         <Field label="Full name" htmlFor="sv-name"><Input id="sv-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Daily contribution (GH₵)" htmlFor="sv-daily"><Input id="sv-daily" mono inputMode="decimal" value={daily} onChange={(e) => setDaily(e.target.value)} placeholder="10" /></Field>
+          <Field label="Daily amount (GH₵)" htmlFor="sv-daily"><Input id="sv-daily" mono inputMode="decimal" value={daily} onChange={(e) => setDaily(e.target.value)} placeholder="10" /></Field>
           <Field label="Phone" htmlFor="sv-phone" optional><Input id="sv-phone" mono value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="024 412 3456" /></Field>
         </div>
         <Field label="Notes" htmlFor="sv-notes" optional><Input id="sv-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Shop at Makola, collect after 4pm" /></Field>
@@ -101,12 +101,12 @@ function AddSaver({ today, defaultAutoSend = false, onClose, onSaved }: { today:
         </div>
         {toMinor(daily) && (
           <div className="rounded-xl bg-paper p-4 text-sm">
-            <div className="mb-2 font-semibold text-ink">This month’s booklet, if they contribute every day</div>
+            <div className="mb-2 font-semibold text-ink">This month, if they pay every day</div>
             <dl className="space-y-1">
               <div className="flex justify-between gap-3"><dt className="text-muted">Days left this month (from today)</dt><dd className="font-mono tabular text-ink">{left}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-muted">Saved: {left} × {cedis(toMinor(daily)!)}</dt><dd className="font-mono tabular text-ink">{cedis(toMinor(daily)! * left)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-muted">Collection fee: one day’s contribution</dt><dd className="font-mono tabular text-ink">− {cedis(toMinor(daily)!)}</dd></div>
-              <div className="flex justify-between gap-3 border-t border-line pt-1"><dt className="font-semibold text-ink">Available for payout at month end</dt><dd className="font-mono font-semibold tabular text-ink">{cedis(toMinor(daily)! * (left - 1))}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-muted">Our fee: one daily amount</dt><dd className="font-mono tabular text-ink">− {cedis(toMinor(daily)!)}</dd></div>
+              <div className="flex justify-between gap-3 border-t border-line pt-1"><dt className="font-semibold text-ink">The saver can collect at month end</dt><dd className="font-mono font-semibold tabular text-ink">{cedis(toMinor(daily)! * (left - 1))}</dd></div>
             </dl>
             <p className="mt-2 text-xs text-subtle">From next month each page covers the whole month (28–31 days). Missed days just mean fewer days saved; the fee is still one day.</p>
           </div>
@@ -243,11 +243,11 @@ export function SusuView() {
       <PageHeader
         eyebrow={o ? periodLabel(o.period) : 'Susu'}
         title="Susu savings"
-        subtitle="Record daily contributions in each saver’s booklet. One day’s contribution is the collection fee when a page closes."
+        subtitle="Record each daily payment. When a saving page ends, one daily amount is your fee."
         actions={
           <>
             <SummaryButton />
-            <Link href="/susu/close"><Button variant="secondary" icon={<CalendarCheck size={15} />}>Month-end closing{o?.pagesToClose ? ` (${o.pagesToClose})` : ''}</Button></Link>
+            <Link href="/susu/close"><Button variant="secondary" icon={<CalendarCheck size={15} />}>Month-end payouts{o?.pagesToClose ? ` (${o.pagesToClose})` : ''}</Button></Link>
             {allowed && <Button icon={<Plus size={15} />} onClick={() => setAdding(true)}>Add saver</Button>}
           </>
         }
@@ -255,15 +255,15 @@ export function SusuView() {
 
       {!o ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((k) => <Skeleton key={k} className="h-24" />)}</div> : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Tile label="Contributions today" value={cedis(o.collectedTodayMinor)} sub={o.paidTodayCount ? `from ${o.paidTodayCount} saver${o.paidTodayCount === 1 ? '' : 's'}` : 'No contributions yet today'} icon={<PiggyBank size={15} />} tone={o.collectedTodayMinor ? 'good' : undefined} />
-          <Tile label="Held for savers" value={cedis(o.heldMinor)} sub="Everything saved and not yet paid out" icon={<PiggyBank size={15} />} />
-          <Tile label="Collection fees" value={cedis(o.feesThisMonthMinor)} sub={`earned this month · ${cedis(o.feesDueMinor)} estimated on open pages`} icon={<CalendarCheck size={15} />} />
+          <Tile label="Money added today" value={cedis(o.collectedTodayMinor)} sub={o.paidTodayCount ? `from ${o.paidTodayCount} saver${o.paidTodayCount === 1 ? '' : 's'}` : 'No payments yet today'} icon={<PiggyBank size={15} />} tone={o.collectedTodayMinor ? 'good' : undefined} />
+          <Tile label="Savings after borrowed money" value={cedis(o.netHeldMinor)} sub={`${cedis(o.heldMinor)} saved · ${cedis(o.advancesOutstandingMinor)} borrowed`} icon={<PiggyBank size={15} />} />
+          <Tile label="Our fees" value={cedis(o.feesThisMonthMinor)} sub={`received this month · about ${cedis(o.feesDueMinor)} when open pages end`} icon={<CalendarCheck size={15} />} />
           <Tile label="Expected today" value={cedis(o.expectedTodayMinor)} sub={o.savers.active ? `across ${o.savers.active} active saver${o.savers.active === 1 ? '' : 's'}` : 'Add an active saver to set today’s target'} icon={<CalendarCheck size={15} />} />
         </div>
       )}
       {o && o.pagesToClose > 0 && (
         <Notice tone="warn" title={`${o.pagesToClose} page${o.pagesToClose === 1 ? '' : 's'} from last month still open`}>
-          Finish them in <Link href="/susu/close" className="font-semibold underline">month-end closing</Link>: pay out or roll each balance over. Today’s contributions go onto this month’s pages either way.
+          Finish them in <Link href="/susu/close" className="font-semibold underline">month-end payouts</Link>: pay the saver or keep the money saved for this month. Today’s payments still go onto this month’s pages.
         </Notice>
       )}
 
@@ -271,7 +271,7 @@ export function SusuView() {
         <div className="space-y-6">
           {allowed && (data?.savers.length ?? 0) > 0 && (
             <Card className="space-y-4 p-5">
-              <h2 className="text-sm font-bold text-ink">Record a contribution</h2>
+              <h2 className="text-sm font-bold text-ink">Record a daily payment</h2>
               <OneCollection savers={data!.savers} onSaved={reload} />
             </Card>
           )}
@@ -318,8 +318,8 @@ export function SusuView() {
             <ul className="list-disc space-y-1 pl-4">
               <li>Cash fills whole days. Amounts that don’t make a whole day are given back as change.</li>
               <li>Savers can pay for several days at once or catch up missed days. Extra days go onto next month’s page.</li>
-              <li>Closing a page takes one day’s contribution as the collection fee. 31 days of GH₵10 = GH₵310, with GH₵300 available for payout or rollover.</li>
-              <li>At month end each balance is paid out or rolled over. Rolled-over money is never charged again.</li>
+              <li>Dinero-Yard keeps one daily amount as the fee. For example, 31 days of GH₵10 gives GH₵300 to the saver.</li>
+              <li>At month end, pay the saver or keep the money saved for next month. Money kept is not charged again.</li>
             </ul>
           </Card>
         </div>

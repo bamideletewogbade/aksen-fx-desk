@@ -557,4 +557,30 @@ CREATE INDEX susu_advance_saver_idx ON susu_advance_transactions (saver_id, crea
 CREATE INDEX susu_advance_org_idx ON susu_advance_transactions (org_id, created_at DESC)
 `,
   },
+  {
+    // Customer-facing references for every advance movement use one atomic,
+    // desk-wide sequence. Existing history is backfilled chronologically.
+    id: '014_susu_transaction_references',
+    sql: `
+ALTER TABLE organizations ADD COLUMN susu_transaction_seq bigint NOT NULL DEFAULT 220068;
+ALTER TABLE susu_advance_transactions ADD COLUMN transaction_ref text;
+
+WITH ranked AS (
+  SELECT id, org_id, ROW_NUMBER() OVER (PARTITION BY org_id ORDER BY created_at, id) AS n
+  FROM susu_advance_transactions
+)
+UPDATE susu_advance_transactions a
+SET transaction_ref = (220068 + ranked.n)::text
+FROM ranked
+WHERE a.id = ranked.id;
+
+UPDATE organizations o
+SET susu_transaction_seq = 220068 + (
+  SELECT COUNT(*) FROM susu_advance_transactions a WHERE a.org_id = o.id
+);
+
+ALTER TABLE susu_advance_transactions ALTER COLUMN transaction_ref SET NOT NULL;
+CREATE UNIQUE INDEX susu_advance_transaction_ref_idx ON susu_advance_transactions (org_id, transaction_ref)
+`,
+  },
 ];
