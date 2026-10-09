@@ -1,31 +1,49 @@
 import Link from 'next/link';
-import { ArrowRight, Bot, CalendarCheck, Landmark, MessageCircle, MonitorPlay, ShieldCheck } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Landmark, LockKeyhole, ShieldCheck, Users } from 'lucide-react';
 import { Topbar } from '@/components/navigation/topbar';
 import { Hero } from '@/components/marketing/hero';
-import { PhoneSimulator } from '@/components/marketing/phone-simulator';
-import { ForensicLab } from '@/components/marketing/forensic-lab';
+import { DayOnDesk } from '@/components/marketing/day-on-desk';
 import { DemoChat } from '@/components/marketing/demo-chat';
 import { Reveal } from '@/components/marketing/reveal';
 import { Pebbles } from '@/components/marketing/pebbles';
-import { DayOnDesk } from '@/components/marketing/day-on-desk';
 
 export const metadata = {
   title: 'Aksen OTC · Desk software for licensed currency operators',
   description: 'One inbox for WhatsApp and SMS rate requests, locked quote links, payment checks against your own statement, two-person payout approval and a daily close for Nigeria and Ghana currency desks.',
 };
 
-const FACTS = [
-  { icon: ShieldCheck, t: 'Software only', d: 'Your licences, accounts and money stay yours. We don’t hold customer funds.', tint: 'from-[#e7fbc9] to-[#d3efb0]' },
-  { icon: Landmark, t: 'Your statement decides', d: 'No bank connection needed to start.', tint: 'from-[#e3eefb] to-[#cfe0f5]' },
-  { icon: MessageCircle, t: 'One inbox for every chat', d: 'WhatsApp and SMS in one place. Anyone on your team can take over a chat.', tint: 'from-[#dcf5e6] to-[#c3ebd2]' },
-  { icon: Bot, t: 'The assistant quotes. People pay.', d: 'It answers routine rate questions. Only your team confirms funds and payouts.', tint: 'from-[#f1ece2] to-[#e5dccb]' },
+const SAFEGUARDS = [
+  {
+    icon: ShieldCheck,
+    tag: 'Zero custody',
+    title: 'Your accounts and float stay 100% yours',
+    description: 'We build the operating software, not a bank or wallet. Your licences, bank accounts, and mobile money lines stay under your name. Aksen never touches, holds, or pools customer funds.',
+    signal: '0 customer deposits handled',
+    accent: 'bg-[#dcf5e6] text-[#175b3b]',
+  },
+  {
+    icon: Landmark,
+    tag: 'Fraud immunity',
+    title: 'A screenshot never releases cash',
+    description: 'Receipts can be fabricated in seconds. In Aksen, a payout is impossible until an operator confirms the credit line directly on your desk’s official bank or mobile money statement.',
+    signal: '100% statement-matched payouts',
+    accent: 'bg-[#fff0d4] text-[#8b5100]',
+  },
+  {
+    icon: Users,
+    tag: 'Four-eyes control',
+    title: 'Two people sign off larger payouts',
+    description: 'Prevent accidental duplicate payments or rogue transfers. Set your desk threshold so one operator verifies incoming funds and an authorized teammate approves the outgoing payment.',
+    signal: 'Tamper-evident audit trail',
+    accent: 'bg-[#e8effb] text-[#1d4f91]',
+  },
 ];
 
 const PILOT = [
-  { t: 'Walkthrough', d: 'We see how you work today' },
-  { t: 'Set-up', d: 'Rates, accounts, roles in one session' },
-  { t: 'Shadow', d: 'Two weeks alongside your process' },
-  { t: 'Live', d: 'When day close matches' },
+  { step: '01', title: 'Walkthrough', desc: 'A 20-minute review of your desk’s volume, corridors, and current workflow.' },
+  { step: '02', title: 'Set-up', desc: 'Configure rates, WhatsApp lines, accounts, and operator roles in one working session.' },
+  { step: '03', title: 'Shadow run', desc: 'Run Aksen alongside your current chats and spreadsheets for two weeks with zero disruption.' },
+  { step: '04', title: 'Go live', desc: 'Transition completely only when your day-end balances match to the exact pesewa.' },
 ];
 
 export default function LandingPage() {
@@ -34,105 +52,115 @@ export default function LandingPage() {
       <Topbar />
       <Hero />
 
-      {/* How it works */}
-      <section id="how" className="relative scroll-mt-16 overflow-clip bg-gradient-to-b from-white via-white to-[#f4f8f2] px-4 py-24 sm:px-6 lg:px-8">
+      {/* Centerpiece: A Day on the Desk */}
+      <DayOnDesk />
+
+      {/* Safeguards: Core operator protections */}
+      <section id="safeguards" className="relative scroll-mt-16 overflow-clip bg-gradient-to-b from-white via-white to-[#f4f8f2] px-4 py-24 sm:px-6 lg:px-8 border-b border-line">
         <Pebbles tone="light" />
         <div className="relative mx-auto max-w-7xl space-y-12">
-          <Reveal className="max-w-2xl">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-brand">How it works</span>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Your customer asks on WhatsApp. <span className="text-brand">Your desk sees every step.</span></h2>
+          <Reveal className="max-w-3xl">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-brand">Operator Safeguards</span>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl lg:text-5xl">
+              Three controls your desk <span className="text-brand">never compromises on</span>.
+            </h2>
+            <p className="mt-4 text-base text-muted sm:text-lg">
+              Designed specifically for licensed currency desks in Nigeria and Ghana. No black boxes, no third-party custody, and no shortcuts around your statement.
+            </p>
           </Reveal>
-          <Reveal delay={120}><PhoneSimulator /></Reveal>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {SAFEGUARDS.map((s, i) => {
+              const Icon = s.icon;
+              return (
+                <Reveal key={s.tag} delay={i * 100}>
+                  <div className="flex h-full flex-col justify-between rounded-3xl border border-line bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${s.accent}`}>
+                          <Icon size={22} />
+                        </span>
+                        <span className="rounded-full bg-[#f1f5ee] px-3 py-1 font-mono text-[0.6875rem] font-bold text-subtle">
+                          {s.tag}
+                        </span>
+                      </div>
+                      <h3 className="mt-6 text-xl font-bold tracking-tight text-ink">{s.title}</h3>
+                      <p className="mt-3 text-sm leading-relaxed text-muted">{s.description}</p>
+                    </div>
+                    <div className="mt-8 flex items-center gap-2 border-t border-line/70 pt-4 text-xs font-semibold text-brand">
+                      <CheckCircle2 size={15} />
+                      <span>{s.signal}</span>
+                    </div>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* Controls */}
-      <section id="controls" className="relative scroll-mt-16 overflow-clip bg-[#0b1310] px-4 py-24 text-white sm:px-6 lg:px-8">
+      {/* Pilot + Walkthrough Booking */}
+      <section id="pilot" className="relative scroll-mt-16 overflow-clip bg-[#09140f] px-4 py-24 text-white sm:px-6 lg:px-8">
         <div aria-hidden className="absolute inset-0 [background-image:linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black_35%,transparent_80%)]" />
         <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lime/40 to-transparent" />
         <Pebbles tone="dark" />
-        <div className="relative mx-auto max-w-7xl space-y-10">
-          <Reveal className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl">
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-lime">Controls</span>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">A screenshot can’t release a payout. Your statement can.</h2>
-            </div>
-            <p className="text-sm text-white/55">Pick a case and watch where the money stops.</p>
-          </Reveal>
-          <Reveal delay={120}><ForensicLab /></Reveal>
-        </div>
-      </section>
 
-      {/* Facts + pilot */}
-      <section id="pricing" className="relative scroll-mt-16 overflow-clip bg-[radial-gradient(ellipse_at_top_left,#eaf5e3,transparent_55%),radial-gradient(ellipse_at_bottom_right,#e8eff8,transparent_50%)] px-4 py-24 sm:px-6 lg:px-8">
-        <Pebbles tone="light" />
-        <div className="relative mx-auto max-w-7xl space-y-14">
+        <div className="relative mx-auto max-w-7xl space-y-16">
+          <Reveal className="max-w-3xl">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-lime">Pilot Process</span>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+              Start with a shadow pilot, <span className="text-white/45">not a leap of faith</span>.
+            </h2>
+            <p className="mt-4 text-base text-white/65 sm:text-lg">
+              We never ask you to switch cold turkey. Run Aksen alongside your current books until your reconciliations match to the pesewa.
+            </p>
+          </Reveal>
+
+          {/* 4-step pilot timeline */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {FACTS.map((f, i) => (
-              <Reveal key={f.t} delay={i * 90}>
-                <div className="h-full rounded-2xl border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${f.tint}`}><f.icon size={19} className="text-ink" /></span>
-                  <div className="mt-4 font-semibold">{f.t}</div>
-                  <div className="mt-0.5 text-sm text-muted">{f.d}</div>
+            {PILOT.map((p, i) => (
+              <Reveal key={p.step} delay={i * 90}>
+                <div className="h-full rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur">
+                  <span className="font-mono text-xs font-bold text-lime">{p.step}</span>
+                  <div className="mt-2 text-lg font-bold text-white">{p.title}</div>
+                  <p className="mt-2 text-sm text-white/60 leading-relaxed">{p.desc}</p>
                 </div>
               </Reveal>
             ))}
           </div>
 
-          <Reveal>
-            <div className="rounded-3xl border border-white/80 bg-white/75 p-8 shadow-sm backdrop-blur sm:p-10">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Start with a pilot, not a leap.</h2>
-                <span className="text-sm text-muted">Set-up plus a monthly desk fee, agreed after the walkthrough.</span>
-              </div>
-              <ol className="relative mt-10 grid gap-8 sm:grid-cols-4 sm:gap-4">
-                <span aria-hidden className="absolute left-4 right-4 top-4 hidden h-0.5 origin-left scale-x-0 bg-gradient-to-r from-brand via-lime to-[#cfe0c9] transition-transform delay-300 duration-[1600ms] ease-out group-data-[shown=true]:scale-x-100 sm:block" />
-                {PILOT.map((p, i) => (
-                  <li key={p.t} className="relative translate-y-2 opacity-0 transition-all duration-500 group-data-[shown=true]:translate-y-0 group-data-[shown=true]:opacity-100" style={{ transitionDelay: `${400 + i * 300}ms` }}>
-                    <span className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-brand font-mono text-sm font-bold text-lime shadow">{i + 1}</span>
-                    <div className="mt-3 font-semibold">{p.t}</div>
-                    <div className="text-sm text-muted">{p.d}</div>
-                  </li>
-                ))}
-              </ol>
+          {/* Walkthrough CTA & interactive chat */}
+          <div id="walkthrough" className="scroll-mt-20 rounded-3xl border border-white/10 bg-white/[0.05] p-6 backdrop-blur sm:p-10 lg:p-12">
+            <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
+              <Reveal className="space-y-6">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-lime">Talk to us</span>
+                <h3 className="text-3xl font-bold tracking-tight sm:text-4xl">See it live on your own numbers.</h3>
+                <p className="text-sm text-white/70 leading-relaxed max-w-md">
+                  Answer a few quick questions in the chat to tell us about your desk, and we’ll schedule a 20-minute tailored walkthrough.
+                </p>
+                <div className="pt-2">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+                  >
+                    Or open the sample desk right now <ArrowRight size={15} />
+                  </Link>
+                </div>
+              </Reveal>
+              <Reveal delay={120}>
+                <DemoChat />
+              </Reveal>
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 
-      {/* Conversation */}
-      <section id="demo" className="relative scroll-mt-16 overflow-clip border-t border-line bg-white px-4 py-24 sm:px-6 lg:px-8">
-        <div aria-hidden className="absolute -right-40 top-10 h-[26.25rem] w-[26.25rem] rounded-full bg-lime/25 blur-3xl" />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
-          <Reveal className="space-y-6">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-brand">Talk to us</span>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">See it on a working desk.</h2>
-            <p className="max-w-md text-muted">Answer a few quick questions and we’ll set up a walkthrough. Rather look first? The sample desk is open.</p>
-            <ul className="space-y-3">
-              {[
-                { icon: MessageCircle, t: 'You answer five questions', d: 'About a minute.' },
-                { icon: CalendarCheck, t: 'We arrange a walkthrough', d: 'On your own trades, at a time that suits you.' },
-                { icon: MonitorPlay, t: 'You decide on a pilot', d: 'Nothing goes live until the numbers match.' },
-              ].map((s) => (
-                <li key={s.t} className="flex items-start gap-3">
-                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#eef4ec] text-brand"><s.icon size={17} /></span>
-                  <span><strong className="block text-sm text-ink">{s.t}</strong><span className="text-sm text-muted">{s.d}</span></span>
-                </li>
-              ))}
-            </ul>
-            <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">Open the sample desk <ArrowRight size={14} /></Link>
-          </Reveal>
-          <Reveal delay={150}><DemoChat /></Reveal>
-        </div>
-      </section>
-
-      <DayOnDesk />
-
+      {/* Footer */}
       <footer className="border-t border-line bg-paper px-4 py-10 sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
           <span><strong className="text-ink">Aksen OTC</strong> by Aksen Labs</span>
           <span>Aksen does not exchange currency or hold customer funds.</span>
-          <Link href="/login" className="font-semibold text-brand">Sign in</Link>
+          <Link href="/login" className="font-semibold text-brand hover:underline">Sign in</Link>
         </div>
       </footer>
     </div>

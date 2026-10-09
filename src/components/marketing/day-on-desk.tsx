@@ -25,6 +25,7 @@ type DeskMoment = {
   status: string;
   icon: ComponentType<{ size?: number; className?: string }>;
   tone: string;
+  detail: { tag: string; value: string };
 };
 
 const MOMENTS: DeskMoment[] = [
@@ -37,6 +38,7 @@ const MOMENTS: DeskMoment[] = [
     status: 'Ready for requests',
     icon: SunMedium,
     tone: 'bg-[#f7f1d5] text-[#705b14]',
+    detail: { tag: 'Today’s Corridors', value: 'NGN/GHS 106.20 · GHS/NGN 103.90 · Float checked' },
   },
   {
     time: '09:18',
@@ -47,16 +49,18 @@ const MOMENTS: DeskMoment[] = [
     status: 'Waiting for customer',
     icon: MessageCircle,
     tone: 'bg-[#dff4e7] text-[#175b3b]',
+    detail: { tag: 'Customer Quote', value: '₦1,500,000 → GH₵ 14,124 · 15m rate lock on link' },
   },
   {
     time: '11:42',
     label: 'Evidence arrives',
     title: 'A receipt starts a check. It never finishes one.',
-    story: 'The customer uploads payment evidence. Dinero-Yard keeps the trade on hold until an operator finds the matching credit on the desk’s own statement.',
+    story: 'The customer uploads payment evidence. The desk keeps the trade on hold until an operator finds the matching credit on your own statement.',
     note: 'Screenshot received · no credit confirmed',
     status: 'Statement check needed',
     icon: FileCheck2,
     tone: 'bg-[#fff0d4] text-[#8b5100]',
+    detail: { tag: 'Statement Rule', value: 'Screenshot received · HOLD until bank ledger match' },
   },
   {
     time: '12:06',
@@ -67,6 +71,7 @@ const MOMENTS: DeskMoment[] = [
     status: 'Awaiting second approval',
     icon: Users,
     tone: 'bg-[#e8effb] text-[#1d4f91]',
+    detail: { tag: 'Dual Control', value: 'Kwame matched NIP-8821 · Routed to Adwoa (>GH₵ 10k)' },
   },
   {
     time: '15:37',
@@ -77,6 +82,7 @@ const MOMENTS: DeskMoment[] = [
     status: 'Trade complete',
     icon: BadgeCheck,
     tone: 'bg-[#e7fbc9] text-[#175b3b]',
+    detail: { tag: 'Settled Reference', value: 'Approved by Adwoa · MTN MoMo #44712 · Audit locked' },
   },
   {
     time: '18:10',
@@ -87,10 +93,11 @@ const MOMENTS: DeskMoment[] = [
     status: 'Close reviewed',
     icon: MoonStar,
     tone: 'bg-[#28382f] text-[#c2f576]',
+    detail: { tag: 'Day Close Reconciled', value: '12 trades · GH₵ 142,800 · Zero unaccounted variance' },
   },
 ];
 
-function DeskScreen({ moment, index }: { moment: DeskMoment; index: number }) {
+function DeskScreen({ moment, index, onSelect }: { moment: DeskMoment; index: number; onSelect: (i: number) => void }) {
   const Icon = moment.icon;
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#f5f7f3] text-ink shadow-[0_2rem_6rem_rgba(0,0,0,0.35)]">
@@ -103,6 +110,24 @@ function DeskScreen({ moment, index }: { moment: DeskMoment; index: number }) {
           </div>
         </div>
         <span className="rounded-full bg-[#eef4ec] px-3 py-1 font-mono text-[0.6875rem] font-bold text-brand">{moment.time}</span>
+      </div>
+
+      {/* Quick-jump timeline pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto border-b border-line bg-white/60 px-3 py-2 sm:px-4">
+        {MOMENTS.map((m, i) => (
+          <button
+            key={m.time}
+            type="button"
+            onClick={() => onSelect(i)}
+            className={`cursor-pointer rounded-lg px-2.5 py-1 font-mono text-[0.6875rem] font-bold transition-all ${
+              i === index
+                ? 'bg-ink text-lime shadow-sm scale-105'
+                : 'text-muted hover:bg-[#eef4ec] hover:text-ink'
+            }`}
+          >
+            {m.time}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-3 border-b border-line bg-white px-3 py-3 sm:px-5">
@@ -135,7 +160,14 @@ function DeskScreen({ moment, index }: { moment: DeskMoment; index: number }) {
               <p className="mt-2 text-sm leading-relaxed text-muted">{moment.note}</p>
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-2 rounded-xl bg-[#f3f6f1] px-3 py-2.5 text-xs font-semibold text-ink">
+
+          {/* Real operational signal badge */}
+          <div className="mt-3.5 rounded-xl border border-line/70 bg-[#fafcfa] px-3 py-2">
+            <div className="text-[0.625rem] font-mono font-bold uppercase tracking-wider text-subtle">{moment.detail.tag}</div>
+            <div className="mt-0.5 font-mono text-xs font-semibold text-ink truncate">{moment.detail.value}</div>
+          </div>
+
+          <div className="mt-3.5 flex items-center gap-2 rounded-xl bg-[#f3f6f1] px-3 py-2.5 text-xs font-semibold text-ink">
             {index === 2 ? <LockKeyhole size={14} className="text-amber" /> : index === 3 ? <Users size={14} className="text-info" /> : <Check size={14} className="text-brand" />}
             {moment.status}
           </div>
@@ -177,6 +209,14 @@ export function DayOnDesk() {
 
   const moment = MOMENTS[active];
 
+  const scrollToMoment = (index: number) => {
+    setActive(index);
+    const element = momentRefs.current[index];
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <section id="day-on-the-desk" className="relative scroll-mt-16 overflow-clip bg-[#08110d] px-4 py-20 text-white sm:px-6 sm:py-28 lg:px-8">
       <div aria-hidden className="absolute inset-0 [background-image:radial-gradient(circle_at_20%_8%,rgba(194,245,118,0.13),transparent_24%),radial-gradient(circle_at_80%_72%,rgba(77,130,188,0.13),transparent_26%)]" />
@@ -192,7 +232,7 @@ export function DayOnDesk() {
 
         <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)] lg:gap-16">
           <div className="lg:sticky lg:top-24">
-            <DeskScreen moment={moment} index={active} />
+            <DeskScreen moment={moment} index={active} onSelect={scrollToMoment} />
             <div className="mt-5 flex items-center gap-3" aria-hidden>
               <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/10"><span className="block h-full rounded-full bg-lime transition-[width] duration-500" style={{ width: `${((active + 1) / MOMENTS.length) * 100}%` }} /></span>
               <span className="font-mono text-xs text-white/45">{active + 1}/{MOMENTS.length}</span>
