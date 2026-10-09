@@ -311,8 +311,6 @@ export function SaverView({ id }: { id: string }) {
   const split = minor ? splitCash(Math.round(minor), daily) : null;
   const closed = data.pages.filter((p) => p.status === 'CLOSED');
   const future = data.pages.filter((p) => p.status === 'OPEN' && page && p.period > page.period);
-  const earlierWithdrawals = page ? closed.filter((p) => p.period === page.period && p.closeKind === 'WITHDRAWAL' && p.daysPaid > 0) : [];
-  const earlierWithdrawalDays = earlierWithdrawals.reduce((total, item) => total + item.daysPaid, 0);
   const nextDay = page && page.daysPaid < page.capacity ? page.startDay + page.daysPaid : null;
 
   const collect = async () => {
@@ -391,8 +389,6 @@ export function SaverView({ id }: { id: string }) {
               <div className="rounded-xl bg-paper p-3"><span className="block text-[0.6875rem] font-semibold uppercase tracking-wide text-subtle">Paid on this page</span><strong className="mt-1 block text-lg text-ink">{page.daysPaid} day{page.daysPaid === 1 ? '' : 's'}</strong></div>
               <div className="rounded-xl bg-paper p-3"><span className="block text-[0.6875rem] font-semibold uppercase tracking-wide text-subtle">Next payment</span><strong className="mt-1 block text-lg text-ink">{nextDay ? `Day ${nextDay}` : 'Page complete'}</strong></div>
             </div>
-            {page.broughtForwardMinor > 0 && <Notice tone="good" className="mb-3"><strong>{cedis(page.broughtForwardMinor)} was already saved before this page.</strong> It stays as money, but it does not fill new calendar days.</Notice>}
-            {earlierWithdrawalDays > 0 && <Notice tone="info" className="mb-4"><strong>Earlier this month:</strong> {earlierWithdrawalDays} paid day{earlierWithdrawalDays === 1 ? '' : 's'} ended when money was taken out. The exact payout is under Past payouts below.</Notice>}
             <Booklet page={page} today={data.today} />
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[0.6875rem] font-medium text-muted">
               <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-brand" /> Paid</span>
