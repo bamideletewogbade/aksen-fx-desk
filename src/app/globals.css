@@ -49,14 +49,12 @@
 }
 
 /*
- * Desktop density. The system is rem-based, so this one root value keeps the
- * public site, authentication screens and operator workspace in step. It
- * recreates the preferred 90% browser view without changing layout
- * breakpoints. Phones and tablets stay at 100% for readable text and touch
- * targets.
+ * Desktop scale. Sizing is rem-based, so this root value keeps the public
+ * site, authentication screens, and operator workspace cleanly proportional.
+ * 100% restores natural size and readability without shrinking components.
  */
 @media (min-width: 1200px) {
-  html { font-size: 90%; }
+  html { font-size: 100%; }
 }
 
 body {
